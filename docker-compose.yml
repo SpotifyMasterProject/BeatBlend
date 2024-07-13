@@ -5,3 +5,9 @@ services:
       - "8000:8080"
     volumes:
       - ./server/app:/code/app
+  client:
+    build: client
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./client/src:/app/src

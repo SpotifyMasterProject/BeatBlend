@@ -1,9 +1,16 @@
 # spotify-xai
 
-To start the server, run `docker compose up` in a terminal. Make sure the path points to the project root path containing the `docker-compose.yml`.
+### Prerequisites
+- Python v3.12
+- Ensure Docker and docker-compose are installed.
+- Ensure Node.js (including npm) v20.15.1 (LTS) is installed.
 
-If a docker file has been modified, run `docker compose build` before starting the server.
+### Initialization
+To start the server and client, run `docker compose up` in a terminal.
+Make sure the path points to the project root containing the `docker-compose.yml`.
+Any info about initialization from the `README.md` within the client folder can be ignored.
 
-To stop the server, press `ctrl` + `c` in the same terminal.
+If a docker file has been modified, run `docker compose build` before initializing.
+In some cases where changes are not cloned to the docker image, the flag `--no-cache` might be necessary.
 
-Client TBA...
+To stop the server and client, press `ctrl` + `c` in the same terminal.
