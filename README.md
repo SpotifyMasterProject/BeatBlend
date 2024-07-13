@@ -14,3 +14,6 @@ If a docker file has been modified, run `docker compose build` before initializi
 In some cases where changes are not cloned to the docker image, the flag `--no-cache` might be necessary.
 
 To stop the server and client, press `ctrl` + `c` in the same terminal.
+
+### Access
+- Main Application: http://localhost:8080/
