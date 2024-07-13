@@ -2,12 +2,12 @@ services:
   server:
     build: server
     ports:
-      - "8000:8080"
+      - "8000:8000"
     volumes:
       - ./server/app:/code/app
   client:
     build: client
     ports:
-      - "5173:5173"
+      - "8080:8080"
     volumes:
       - ./client/src:/app/src

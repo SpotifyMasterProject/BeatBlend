@@ -6,6 +6,6 @@ RUN npm install --ignore-scripts
 
 COPY . .
 
-EXPOSE 5173
+EXPOSE 8080
 
 CMD npm run dev
