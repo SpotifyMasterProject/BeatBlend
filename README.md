@@ -15,5 +15,5 @@ In some cases where changes are not cloned to the docker image, the flag `--no-c
 
 To stop the server and client, press `ctrl` + `c` in the same terminal.
 
-###Access
+### Access
 - Main Application: http://localhost:8080/
