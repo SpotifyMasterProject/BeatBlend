@@ -11,3 +11,8 @@ services:
       - "8080:5173"
     volumes:
       - ./client/src:/app/src
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - VITE_SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
+      - VITE_SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
+      - VITE_SPOTIFY_REDIRECT_URI=${SPOTIFY_REDIRECT_URI}
