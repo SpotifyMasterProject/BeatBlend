@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
 
-class AuthCode(BaseModel):
+class User(BaseModel):
     auth_code: str
+    username: str

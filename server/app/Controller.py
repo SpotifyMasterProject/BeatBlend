@@ -1,9 +1,13 @@
 import base64
+import jwt
 import os
 import requests
 
+from datetime import timedelta, datetime, timezone
 from fastapi import FastAPI
-from models.authCode import AuthCode
+from models.guest import Guest
+from models.token import Token
+from models.user import User
 from starlette.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -24,10 +28,32 @@ def read_root():
 
 
 @app.post("/auth-codes")
-def store_auth_code(code: AuthCode):
+def spotify_login(user: User) -> Token:
     global spotify_token
-    spotify_token = exchange_code_for_token(code.auth_code)
-    return {"Test successful": "Token received."}
+    spotify_token = exchange_code_for_token(user.auth_code)
+    return generate_token(user.username)
+
+
+@app.post("/token")
+def guest_access(guest: Guest) -> Token:
+    return generate_token(guest.username)
+
+
+def generate_token(username: str) -> Token:
+    jwt_expire_minutes = os.getenv("JWT_EXPIRE_MINUTES", 30)
+    secret_key = os.getenv("JWT_SECRET_KEY")
+    algorithm = os.getenv("JWT_ALGORITHM")
+
+    to_encode = {"sub": username}
+    access_token_expires = timedelta(minutes=jwt_expire_minutes)
+    expire = datetime.now(timezone.utc) + (access_token_expires or timedelta(minutes=30))
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(
+        to_encode,
+        secret_key,
+        algorithm=algorithm
+    )
+    return Token(access_token=encoded_jwt, token_type="bearer")
 
 
 def exchange_code_for_token(auth_code: str) -> str:
