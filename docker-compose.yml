@@ -5,6 +5,9 @@ services:
       - "8000:8000"
     volumes:
       - ./server/app:/code/app
+    environment:
+      - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
+      - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
   client:
     build: client
     ports:
@@ -14,5 +17,4 @@ services:
     environment:
       - CHOKIDAR_USEPOLLING=true
       - VITE_SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
-      - VITE_SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
       - VITE_SPOTIFY_REDIRECT_URI=${SPOTIFY_REDIRECT_URI}
