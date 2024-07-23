@@ -7,7 +7,7 @@ from datetime import timedelta, datetime, timezone
 from fastapi import FastAPI, HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordBearer
 from jwt import InvalidTokenError
-from models.guest import Guest
+from models.spotifyUser import SpotifyUser
 from models.token import Token
 from models.user import User
 from starlette.middleware.cors import CORSMiddleware
@@ -76,18 +76,19 @@ def exchange_code_for_token(auth_code: str) -> str:
     return response.json()["access_token"]
 
 
+#TODO: also include id
 @app.get("/")
 def read_root(username: Annotated[str, Depends(verify_token)]):
     return {"Hello": "World!", "username": username}
 
 
 @app.post("/auth-codes")
-def spotify_login(user: User) -> Token:
+def authorize_spotify(user: SpotifyUser) -> Token:
     global spotify_token
     spotify_token = exchange_code_for_token(user.auth_code)
     return generate_token(user.username)
 
 
 @app.post("/token")
-def guest_access(guest: Guest) -> Token:
-    return generate_token(guest.username)
+def authorize(user: User) -> Token:
+    return generate_token(user.username)
