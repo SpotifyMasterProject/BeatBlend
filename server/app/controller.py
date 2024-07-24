@@ -2,14 +2,15 @@ import base64
 import jwt
 import os
 import requests
+import uuid
 
 from datetime import timedelta, datetime, timezone
 from fastapi import FastAPI, HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordBearer
 from jwt import InvalidTokenError
-from models.spotifyUser import SpotifyUser
 from models.token import Token
-from models.user import User
+from models.user import User, SpotifyUser
+from redis.asyncio import Redis
 from starlette.middleware.cors import CORSMiddleware
 from typing import Annotated
 
@@ -21,16 +22,17 @@ app.add_middleware(
     allow_methods=['*'],
     allow_headers=['*']
 )
+redis = Redis(host="redis", port=6379, decode_responses=True)
 
 spotify_token = ""
 
 
-def generate_token(username: str) -> Token:
+def generate_token(user: User) -> Token:
     jwt_expire_minutes = int(os.getenv("JWT_EXPIRE_MINUTES", 60))
     secret_key = os.getenv("JWT_SECRET_KEY")
     algorithm = os.getenv("JWT_ALGORITHM")
 
-    to_encode = {"sub": username}
+    to_encode = {"sub": user.id, "username": user.username}
     access_token_expires = timedelta(minutes=jwt_expire_minutes)
     expire = datetime.now(timezone.utc) + (access_token_expires or timedelta(minutes=30))
     to_encode.update({"exp": expire})
@@ -49,12 +51,12 @@ def verify_token(token: Annotated[str, Depends(OAuth2PasswordBearer(tokenUrl="to
 
     try:
         payload = jwt.decode(token, key=secret_key, algorithms=[algorithm])
-        username = payload.get("sub")
-        if username is None:
+        user_id = payload.get("sub")
+        if user_id is None:
             raise auth_exception
     except InvalidTokenError:
         raise auth_exception
-    return username
+    return user_id
 
 
 def exchange_code_for_token(auth_code: str) -> str:
@@ -76,19 +78,28 @@ def exchange_code_for_token(auth_code: str) -> str:
     return response.json()["access_token"]
 
 
-#TODO: also include id
 @app.get("/")
-def read_root(username: Annotated[str, Depends(verify_token)]):
-    return {"Hello": "World!", "username": username}
+async def read_root(user_id: Annotated[str, Depends(verify_token)]):
+    if await redis.exists(user_id) == 0:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authorized!")
+    result = await redis.get(str(user_id))
+    user = User.model_validate_json(result)
+    return {"Hello World": "User. Your details are:", "user_id": user.id, "username": user.username}
 
 
 @app.post("/auth-codes")
-def authorize_spotify(user: SpotifyUser) -> Token:
-    global spotify_token
-    spotify_token = exchange_code_for_token(user.auth_code)
-    return generate_token(user.username)
+async def authorize_spotify(user: SpotifyUser) -> Token:
+    #TODO: replace the spotify token getting with spotipy
+    #global spotify_token
+    #spotify_token = exchange_code_for_token(user.auth_code)
+
+    user.id = str(uuid.uuid4())
+    await redis.set(user.id, user.model_dump_json())
+    return generate_token(user)
 
 
 @app.post("/token")
-def authorize(user: User) -> Token:
-    return generate_token(user.username)
+async def authorize(user: User) -> Token:
+    user.id = str(uuid.uuid4())
+    await redis.set(user.id, user.model_dump_json())
+    return generate_token(user)
