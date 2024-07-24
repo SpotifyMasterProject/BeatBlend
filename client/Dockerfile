@@ -1,6 +1,6 @@
 FROM node:20-alpine AS builder
-WORKDIR /app
 
+WORKDIR /app
 COPY package*.json ./
 RUN npm install --ignore-scripts
 

@@ -6,4 +6,6 @@ RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 
 COPY ./app /code/app
 
-CMD uvicorn app.Controller:app --host 0.0.0.0 --port 8000 --reload
+WORKDIR /code/app
+
+CMD uvicorn controller:app --host 0.0.0.0 --port 8000 --reload
