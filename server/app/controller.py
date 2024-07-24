@@ -81,7 +81,8 @@ def exchange_code_for_token(auth_code: str) -> str:
 @app.get("/")
 async def read_root(user_id: Annotated[str, Depends(verify_token)]):
     if await redis.exists(user_id) == 0:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authorized!")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authorized! Invalid user ID.")
+    #Add check if userid matches username?
     result = await redis.get(str(user_id))
     user = User.model_validate_json(result)
     return {"Hello World": "User. Your details are:", "user_id": user.id, "username": user.username}
