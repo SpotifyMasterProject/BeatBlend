@@ -58,7 +58,7 @@ def verify_token(token: Annotated[str, Depends(OAuth2PasswordBearer(tokenUrl="to
 
 
 def exchange_code_for_token(auth_code: str) -> str:
-    id_secret = f"{os.getenv("SPOTIFY_CLIENT_ID")}:{os.getenv("SPOTIFY_CLIENT_SECRET")}"
+    id_secret = f'{os.getenv("SPOTIFY_CLIENT_ID")}:{os.getenv("SPOTIFY_CLIENT_SECRET")}'
     base64_encoded = base64.b64encode(id_secret.encode()).decode()
 
     response = requests.post(
