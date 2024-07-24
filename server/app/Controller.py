@@ -1,10 +1,17 @@
 import base64
+import jwt
 import os
 import requests
 
-from fastapi import FastAPI
-from models.authCode import AuthCode
+from datetime import timedelta, datetime, timezone
+from fastapi import FastAPI, HTTPException, status, Depends
+from fastapi.security import OAuth2PasswordBearer
+from jwt import InvalidTokenError
+from models.spotifyUser import SpotifyUser
+from models.token import Token
+from models.user import User
 from starlette.middleware.cors import CORSMiddleware
+from typing import Annotated
 
 app = FastAPI()
 app.add_middleware(
@@ -18,16 +25,36 @@ app.add_middleware(
 spotify_token = ""
 
 
-@app.get("/")
-def read_root():
-    return {"Hello": "World!"}
+def generate_token(username: str) -> Token:
+    jwt_expire_minutes = int(os.getenv("JWT_EXPIRE_MINUTES", 60))
+    secret_key = os.getenv("JWT_SECRET_KEY")
+    algorithm = os.getenv("JWT_ALGORITHM")
+
+    to_encode = {"sub": username}
+    access_token_expires = timedelta(minutes=jwt_expire_minutes)
+    expire = datetime.now(timezone.utc) + (access_token_expires or timedelta(minutes=30))
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(
+        to_encode,
+        secret_key,
+        algorithm=algorithm
+    )
+    return Token(access_token=encoded_jwt, token_type="bearer")
 
 
-@app.post("/auth-codes")
-def store_auth_code(code: AuthCode):
-    global spotify_token
-    spotify_token = exchange_code_for_token(code.auth_code)
-    return {"Test successful": "Token received."}
+def verify_token(token: Annotated[str, Depends(OAuth2PasswordBearer(tokenUrl="token"))]) -> str:
+    secret_key = os.getenv("JWT_SECRET_KEY")
+    algorithm = os.getenv("JWT_ALGORITHM")
+    auth_exception = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authorized!")
+
+    try:
+        payload = jwt.decode(token, key=secret_key, algorithms=[algorithm])
+        username = payload.get("sub")
+        if username is None:
+            raise auth_exception
+    except InvalidTokenError:
+        raise auth_exception
+    return username
 
 
 def exchange_code_for_token(auth_code: str) -> str:
@@ -47,3 +74,21 @@ def exchange_code_for_token(auth_code: str) -> str:
         }
     )
     return response.json()["access_token"]
+
+
+#TODO: also include id
+@app.get("/")
+def read_root(username: Annotated[str, Depends(verify_token)]):
+    return {"Hello": "World!", "username": username}
+
+
+@app.post("/auth-codes")
+def authorize_spotify(user: SpotifyUser) -> Token:
+    global spotify_token
+    spotify_token = exchange_code_for_token(user.auth_code)
+    return generate_token(user.username)
+
+
+@app.post("/token")
+def authorize(user: User) -> Token:
+    return generate_token(user.username)
