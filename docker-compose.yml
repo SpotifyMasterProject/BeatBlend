@@ -12,6 +12,8 @@ services:
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - JWT_ALGORITHM=${JWT_ALGORITHM}
       - JWT_EXPIRE_MINUTES=${JWT_EXPIRE_MINUTES}
+    depends_on:
+      - redis
   client:
     build: client
     ports:
@@ -22,3 +24,7 @@ services:
       - CHOKIDAR_USEPOLLING=true
       - VITE_SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
       - VITE_SPOTIFY_REDIRECT_URI=${SPOTIFY_REDIRECT_URI}
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"

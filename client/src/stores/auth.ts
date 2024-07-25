@@ -2,34 +2,40 @@ import {defineStore} from "pinia";
 import {computed, ref} from "vue";
 import {User} from "@/types/User";
 import router from "@/router";
+import {jwtDecode} from "jwt-decode";
 
 export const useAuthStore = defineStore('auth', () => {
     const user = ref<User>()
     const token = ref<string>()
 
+    //TODO: Probably needs some fixing (probably not only this variable)
     const authorized = computed<boolean>(() => {
         return token.value !== undefined
     })
 
     const storedUserData = localStorage.getItem('user')
     const storedToken = sessionStorage.getItem('token')
-    // if (storedUserData && storedToken) { //TODO: *1 investigate if needed
-    if (storedToken) {
-        // user.value = new User(JSON.parse(storedUserData))
+    if (storedUserData && storedToken) {
+        user.value = new User(JSON.parse(storedUserData))
         token.value = JSON.parse(storedToken)
     }
 
     const authorize = async function (access_token: string) {
         sessionStorage.setItem('token', JSON.stringify(access_token))
-        token.value = access_token //TODO: investigate if removable after implementing get user and store details *1
+        token.value = access_token
 
-        //TODO: get user and store details
+        const decodedToken = jwtDecode<{sub: string, username: string}>(access_token)
+        const authenticatedUser = new User({id: decodedToken.sub, username: decodedToken.username})
+        localStorage.setItem('user', JSON.stringify(authenticatedUser))
+        user.value = authenticatedUser
+
         await router.push({name: 'home'})
     }
 
     const deauthorize = async function () {
         user.value = undefined
         token.value = undefined
+        sessionStorage.removeItem('token')
         localStorage.removeItem('user')
         await router.push({name: ''})
     }
