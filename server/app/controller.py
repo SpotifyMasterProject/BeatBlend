@@ -4,6 +4,7 @@ import os
 import requests
 import uuid
 
+from contextlib import asynccontextmanager
 from datetime import timedelta, datetime, timezone
 from fastapi import FastAPI, HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordBearer
@@ -13,8 +14,17 @@ from models.user import User, SpotifyUser
 from redis.asyncio import Redis
 from starlette.middleware.cors import CORSMiddleware
 from typing import Annotated
+from websocket_manager import WebsocketManager
 
-app = FastAPI()
+manager = WebsocketManager()
+
+@asynccontextmanager
+async def lifespan(_: FastAPI): #idk might need to rename parameter
+    await manager.connect()
+    yield
+    await manager.disconnect()
+
+app = FastAPI(lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=['*'],
@@ -23,7 +33,6 @@ app.add_middleware(
     allow_headers=['*']
 )
 redis = Redis(host="redis", port=6379, decode_responses=True)
-
 spotify_token = ""
 
 
