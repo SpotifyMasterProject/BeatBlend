@@ -4,9 +4,12 @@ import asyncio
 
 from contextlib import asynccontextmanager
 from database_broadcaster import DatabaseBroadcaster
+from event import Event
 from typing import Any, AsyncGenerator, AsyncIterator
 
 
+# This WS code is inspired by the encode/broadcaster package.
+# If something needs to be fixed or changed, look at their GitHub repo.
 class WebsocketManager:
     def __init__(self) -> None:
         self._broadcaster = DatabaseBroadcaster()
@@ -58,18 +61,6 @@ class WebsocketManager:
                 del self._subscribers[channel]
                 await self._broadcaster.unsubscribe(channel)
             await queue.put(None)
-
-
-class Event:
-    def __init__(self, channel: str, message: str) -> None:
-        self.channel = channel
-        self.message = message
-
-    def __eq__(self, other: object) -> bool:
-        return isinstance(other, Event) and self.channel == other.channel and self.message == other.message
-
-    def __repr__(self) -> str:
-        return f"Event(channel={self.channel!r}, message={self.message!r})"
 
 
 class Subscriber:

@@ -1,10 +1,12 @@
 import asyncio
 import typing
 
+from event import Event
 from redis.asyncio import Redis
-from websocket_manager import Event
 
 
+# This WS code is inspired by the encode/broadcaster package.
+# If something needs to be fixed or changed, look at their GitHub repo.
 class DatabaseBroadcaster:
     def __init__(self):
         self._connection = Redis(host='redis', port=6379, db=0)
