@@ -7,7 +7,7 @@ import uuid
 
 from contextlib import asynccontextmanager
 from datetime import timedelta, datetime, timezone
-from fastapi import FastAPI, HTTPException, status, Depends, WebSocket
+from fastapi import FastAPI, HTTPException, status, Depends, WebSocket, WebSocketDisconnect
 from fastapi.security import OAuth2PasswordBearer
 from jwt import InvalidTokenError
 from models.token import Token
@@ -128,8 +128,11 @@ async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
 
     async with manager.subscribe(channel="test") as subscriber:
-        async for event in subscriber:
-            await websocket.send_text(event.message)
+        try:
+            async for event in subscriber:
+                await websocket.send_text(event.message)
+        except WebSocketDisconnect:
+            pass
 
 
 async def test_websocket():
