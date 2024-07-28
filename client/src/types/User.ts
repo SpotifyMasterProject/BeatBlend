@@ -6,7 +6,7 @@ export class User {
         id: string
         username: string
     }) {
-        this.id = data.id;
+        this.id = data.id
         this.username = data.username
     }
 }
