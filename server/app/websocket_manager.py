@@ -60,6 +60,8 @@ class WebsocketManager:
             if not self._subscribers.get(channel):
                 del self._subscribers[channel]
                 await self._broadcaster.unsubscribe(channel)
+            if not self._subscribers:
+                await self._broadcaster.clear()
             await queue.put(None)
 
 
