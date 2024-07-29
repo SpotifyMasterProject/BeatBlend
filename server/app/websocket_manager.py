@@ -14,7 +14,7 @@ class WebsocketManager:
     def __init__(self) -> None:
         self._broadcaster = DatabaseBroadcaster()
         self._subscribers: dict[str, set[asyncio.Queue[Event | None]]] = {}
-        self._listener_task: asyncio.Task[None] | None = None  # was not here in original code
+        self._listener_task: asyncio.Task[None] | None = None
 
     async def __aenter__(self) -> WebsocketManager:
         await self.connect()
@@ -60,8 +60,6 @@ class WebsocketManager:
             if not self._subscribers.get(channel):
                 del self._subscribers[channel]
                 await self._broadcaster.unsubscribe(channel)
-            if not self._subscribers:
-                await self._broadcaster.clear()
             await queue.put(None)
 
 
