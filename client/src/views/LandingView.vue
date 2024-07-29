@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import {onMounted, ref} from "vue";
+import {onMounted, ref} from 'vue'
 import Button from 'primevue/button'
-import InputText from "primevue/inputtext";
-import {authService} from "@/services/authService";
+import InputText from 'primevue/inputtext'
+import {authService} from '@/services/authService'
 
 const username = ref<string>('')
 

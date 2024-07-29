@@ -1,13 +1,13 @@
-import apiClient from "@/services/axios";
-import {useAuthStore} from "@/stores/auth";
+import apiClient from '@/services/axios'
+import {useAuthStore} from '@/stores/auth'
 
 export const authService = {
     async authorize(username: string) {
         await apiClient.post('/token', {
             username: username
         }).then(async (response) => {
-            await storeAuthorization(response.data?.['access_token']);
-            console.log('Logged in as guest with username: ' + username);
+            await storeAuthorization(response.data?.['access_token'])
+            console.log('Logged in as guest with username: ' + username)
         })
     },
 
@@ -16,8 +16,8 @@ export const authService = {
             username: username,
             auth_code: auth_code
         }).then(async (response) => {
-            await storeAuthorization(response.data?.['access_token']);
-            console.log('Logged in via spotify with username: ' + username);
+            await storeAuthorization(response.data?.['access_token'])
+            console.log('Logged in via spotify with username: ' + username)
         })
     }
 }

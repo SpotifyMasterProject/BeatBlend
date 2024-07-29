@@ -1,8 +1,8 @@
-import {defineStore} from "pinia";
-import {computed, ref} from "vue";
-import {User} from "@/types/User";
-import router from "@/router";
-import {jwtDecode} from "jwt-decode";
+import {defineStore} from 'pinia'
+import {computed, ref} from 'vue'
+import {User} from '@/types/User'
+import router from '@/router'
+import {jwtDecode} from 'jwt-decode'
 
 export const useAuthStore = defineStore('auth', () => {
     const user = ref<User>()
