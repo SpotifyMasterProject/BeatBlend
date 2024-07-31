@@ -1,35 +1,99 @@
 @import './base.css';
 
-#app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  font-weight: normal;
-}
+
 
 a,
 .green {
   text-decoration: none;
-  color: hsla(160, 100%, 37%, 1);
+  color: hsla(96.8, 60%, 50%, 1);
   transition: 0.4s;
   padding: 3px;
 }
 
 @media (hover: hover) {
   a:hover {
-    background-color: hsla(160, 100%, 37%, 0.2);
+    background-color: hsla(96.8, 100%, 37%, 0.2);
   }
 }
 
-@media (min-width: 1024px) {
+
+/* Screen Type 1: Centered Button and Logo */
+.type1 {
+  background-color: #272525;
+  display:flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  text-align: center;
+}
+.type1 .logo{
+  margin-top: 180px;
+}
+.type1 .container{
+  background-color: #272525;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+.type1 .button-container button,
+.type1 .button-container select {
+
+  font-size: 1.5rem;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  background-color: hsla(160, 100%, 37%, 1);
+  color: white;
+  transition: background-color 0.3s;
+}
+
+.type1 .button-container button:hover,
+.type1 .button-container select:hover {
+  background-color: hsla(160, 100%, 37%, 0.8);
+}
+
+/* Screen Type 2: Centered 3-Part Layout */
+.type2 {
+  display: flex;
+  flex-direction: column;
+  padding: 30px 0;
+  box-sizing: border-box;
+}
+.type2 header{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 2rem;
+}
+.type2 .middle{
+  flex-grow: 1;
+  padding: 0 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.type2 .previously-played{
+  height: 220px;
+  padding: 0 2rem;
+  overflow-y: auto;
+}
+
+@media (min-width: 0px) {
   body {
+    background-color: #272525;
     display: flex;
-    place-items: center;
+    justify-content: center;
   }
 
   #app {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    background-color: #272525;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     padding: 0 2rem;
   }
 }
