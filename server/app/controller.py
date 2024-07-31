@@ -7,11 +7,12 @@ import uuid
 
 from contextlib import asynccontextmanager
 from datetime import timedelta, datetime, timezone
-from fastapi import FastAPI, HTTPException, status, Depends, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, status, Depends, WebSocket, WebSocketDisconnect, Request
 from fastapi.security import OAuth2PasswordBearer
 from jwt import InvalidTokenError
 from models.token import Token
 from models.user import User, SpotifyUser
+from models.session import Session
 from redis.asyncio import Redis
 from starlette.middleware.cors import CORSMiddleware
 from typing import Annotated
@@ -91,6 +92,20 @@ def exchange_code_for_token(auth_code: str) -> str:
     return response.json()["access_token"]
 
 
+def extract_user_id_from_token(request: Request) -> str:
+    """
+    Extracts the user ID from the authorization token provided in the request headers.
+
+    :param request: The request object that includes the Authorization header (provided by FastAPI).
+    :return: The user ID from the decoded JWT token.
+    """
+    bearer = request.headers.get("Authorization")
+    token = bearer.split(" ")[1]
+    payload = jwt.decode(token, options={"verify_signature": False})
+    user_id = payload["sub"]
+    return user_id
+
+
 @app.get("/")
 async def read_root(user_id: Annotated[str, Depends(verify_token)]):
     if await redis.exists(user_id) == 0:
@@ -117,6 +132,15 @@ async def authorize(user: User) -> Token:
     user.id = str(uuid.uuid4())
     await redis.set(user.id, user.model_dump_json())
     return generate_token(user)
+
+
+@app.post("/sessions")
+async def create_new_session(request: Request, session: Session) -> Session:
+    session.id = str(uuid.uuid4())
+    session.host = extract_user_id_from_token(request)
+    await redis.set(session.id, session.model_dump_json())
+    return session
+
 
 
 # This WS code is inspired by the encode/broadcaster package.
