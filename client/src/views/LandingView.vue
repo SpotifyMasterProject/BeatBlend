@@ -3,6 +3,10 @@ import {onMounted, ref} from 'vue'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import {authService} from '@/services/authService'
+import LogoIntroScreen from "@/components/LogoIntroScreen.vue";
+import {Routerlink} from 'vue-router';
+import Navigation from "@/components/Navigation.vue";
+
 
 const username = ref<string>('')
 
@@ -43,16 +47,15 @@ const authorize = function () {
 </script>
 
 <template>
-  <div id="app" class="login-container">
-    <Button @click="redirectToSpotify" class="spotify-button">
-      Login via Spotify
-    </Button>
-
-    <div class="guest-login">
-      <label for="guestInput">Login as guest</label>
-      <div class="input-group">
-        <InputText id="guestInput" type="text" placeholder="Username" v-model="username" @keyup.enter="authorize"/>
-      </div>
+  <div class="type1">
+    <header>
+      <logo-intro-screen/>
+      <nav>
+        <Navigation/>
+      </nav>
+    </header>
+    <div class="container">
+      <start-blend-button />
     </div>
   </div>
 </template>

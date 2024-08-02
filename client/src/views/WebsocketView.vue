@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import {onBeforeUnmount, onMounted, ref} from 'vue'
 import WebsocketService from '@/services/websocketService'
+import LogoIntroScreen from "@/components/LogoIntroScreen.vue";
+import Navigation from "@/components/Navigation.vue";
 
 const receivedMessages = ref<string[]>([])
 const wsService = new WebsocketService()
@@ -19,12 +21,20 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div>
-    <h1>WebSocket Example</h1>
-    <h2>Received Messages:</h2>
-    <div v-if="receivedMessages.length">
-      <div v-for="(msg, index) in receivedMessages" :key="index">
-        <pre>{{ msg }}</pre>
+  <div class="type1">
+    <header>
+      <logo-intro-screen/>
+      <nav>
+        <Navigation/>
+      </nav>
+    </header>
+    <div class = type2>
+      <h1>WebSocket Example</h1>
+      <h2>Received Messages:</h2>
+      <div v-if="receivedMessages.length">
+        <div v-for="(msg, index) in receivedMessages" :key="index">
+          <pre>{{ msg }}</pre>
+        </div>
       </div>
     </div>
   </div>
