@@ -55,12 +55,12 @@ body, html {
 }
 @media (max-width: 600px) {
     body {
-        font-size: 14px; /* Slightly smaller text on smaller screens */
+        font-size: 14px;
     }
 }
 
 @media (min-width: 1200px) {
     body {
-        font-size: 16px; /* Larger text on larger screens for better readability */
+        font-size: 16px;
     }
 }
