@@ -13,7 +13,7 @@ from jwt import InvalidTokenError
 from models.token import Token
 from models.user import User, SpotifyUser
 from models.session import Session
-from redis.asyncio import Redis
+from redis_user.asyncio import Redis
 from starlette.middleware.cors import CORSMiddleware
 from typing import Annotated
 from websocket_manager import WebsocketManager
@@ -37,7 +37,8 @@ app.add_middleware(
     allow_methods=['*'],
     allow_headers=['*']
 )
-redis = Redis(host="redis", port=6379, decode_responses=True)
+redis_user = Redis(host="redis", port=6379, decode_responses=True, db=0)
+redis_session = Redis(host="redis", port=6379, decode_responses=True, db=1)
 spotify_token = ""
 
 
@@ -92,26 +93,12 @@ def exchange_code_for_token(auth_code: str) -> str:
     return response.json()["access_token"]
 
 
-def extract_user_id_from_token(request: Request) -> str:
-    """
-    Extracts the user ID from the authorization token provided in the request headers.
-
-    :param request: The request object that includes the Authorization header (provided by FastAPI).
-    :return: The user ID from the decoded JWT token.
-    """
-    bearer = request.headers.get("Authorization")
-    token = bearer.split(" ")[1]
-    payload = jwt.decode(token, options={"verify_signature": False})
-    user_id = payload["sub"]
-    return user_id
-
-
 @app.get("/")
 async def read_root(user_id: Annotated[str, Depends(verify_token)]):
-    if await redis.exists(user_id) == 0:
+    if await redis_user.exists(user_id) == 0:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authorized! Invalid user ID.")
     # Add check if userid matches username?
-    result = await redis.get(str(user_id))
+    result = await redis_user.get(str(user_id))
     user = User.model_validate_json(result)
     return {"Hello World": "User. Your details are:", "user_id": user.id, "username": user.username}
 
@@ -123,24 +110,56 @@ async def authorize_spotify(user: SpotifyUser) -> Token:
     # spotify_token = exchange_code_for_token(user.auth_code)
 
     user.id = str(uuid.uuid4())
-    await redis.set(user.id, user.model_dump_json())
+    await redis_user.set(user.id, user.model_dump_json())
     return generate_token(user)
 
 
 @app.post("/token")
 async def authorize(user: User) -> Token:
     user.id = str(uuid.uuid4())
-    await redis.set(user.id, user.model_dump_json())
+    await redis_user.set(user.id, user.model_dump_json())
     return generate_token(user)
 
 
 @app.post("/sessions")
-async def create_new_session(request: Request, session: Session) -> Session:
+async def create_new_session(user_id: Annotated[str, Depends(verify_token)], session: Session) -> Session:
+    if await redis_user.exists(user_id) == 0:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authorized! Invalid user ID.")
     session.id = str(uuid.uuid4())
-    session.host = extract_user_id_from_token(request)
-    await redis.set(session.id, session.model_dump_json())
+    session.host = str(user_id)
+    await redis_session.set(session.id, session.model_dump_json())
     return session
 
+
+@app.get("/sessions")
+async def get_session() -> list[Session]:
+    return [session_id for session_id in redis_session.scan_iter()]
+
+
+@app.post("/sessions/{session_id}/guests")
+async def add_guest(guest_id: Annotated[str, Depends(verify_token)], session_id: str):  # do guests already have token?
+    if await redis_session.exists(session_id) == 0:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid session ID.")
+    result = await redis_session.get(session_id)
+    session = Session.model_validate_json(result)
+    session.guests.append(str(guest_id))
+    await redis_session.set(session_id, session.model_dump_json())
+
+
+@app.delete("/sessions/{session_id}/guests/{guest_id}")
+async def remove_guest(user_id: Annotated[str, Depends(verify_token)], session_id: str, guest_id: str):
+    if await redis_user.exists(user_id) == 0:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authorized! Invalid user ID.")
+    if await redis_session.exists(session_id) == 0:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invalid session ID.")
+    result = await redis_session.get(session_id)
+    session = Session.model_validate_json(result)
+    if session.host != str(user_id):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not host of session.")
+    if guest_id in session.guests:
+        session.guests.remove(guest_id)
+    else:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Guest not part of session.")
 
 
 # This WS code is inspired by the encode/broadcaster package.
