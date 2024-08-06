@@ -180,7 +180,7 @@ async def join_session(guest_id: Annotated[str, Depends(verify_token)], invite_t
 
 
 @app.delete("/sessions/{session_id}/guests/{guest_id}")
-async def remove_guest(user_id: Annotated[str, Depends(verify_token)], session_id: str, guest_id: str) -> None:
+async def remove_guest(user_id: Annotated[str, Depends(verify_token)], session_id: str, guest_id: str) -> Session:
     if await redis.exists(f'user:{user_id}') == 0:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authorized! Invalid user ID.")
     if await redis.exists(f'session:{session_id}') == 0:
@@ -195,6 +195,8 @@ async def remove_guest(user_id: Annotated[str, Depends(verify_token)], session_i
         await manager.publish(channel=f"session:{session.id}", message=f"Host has removed guest {guest_id} from the session")
     else:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Guest not part of session.")
+
+    return session
 
 
 @app.websocket("/ws/{session_id}")
