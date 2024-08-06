@@ -23,7 +23,7 @@ manager = WebsocketManager()
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):  # idk might need to rename parameter
-    asyncio.create_task(test_websocket())
+    # asyncio.create_task(test_websocket())
     await manager.connect()
     yield
     await manager.disconnect()
@@ -129,16 +129,18 @@ async def create_new_session(user_id: Annotated[str, Depends(verify_token)], ses
 
     session.invite_token = str(uuid.uuid4())
     # TODO: adjust URL
-    session.invite_link = f'https://beatblend.com/sessions/join/{session.invite_token}'
+    session.invite_link = f'http://localhost:5173/sessions/join/{session.invite_token}'
 
     await redis.set(f'session:{session.id}', session.model_dump_json())
     await redis.set(f'invite:{session.invite_token}', session.id)
+
+    await manager.publish(channel=f"session:{session.id}", message="New session created")
     return session
 
 
 @app.get("/sessions")
 async def get_session() -> list[Session]:
-    session_keys = [session_id for session_id in redis.scan_iter(match='session:*')]
+    session_keys = [session_id async for session_id in redis.scan_iter(match='session:*')]
 
     sessions = []
     for session_key in session_keys:
@@ -172,12 +174,13 @@ async def join_session(guest_id: Annotated[str, Depends(verify_token)], invite_t
     if guest_id not in session.guests:
         session.guests.append(guest_id)
         await redis.set(f'session:{session.id}', session.model_dump_json())
+        await manager.publish(channel=f"session:{session.id}", message=f"Guest {guest_id} has joined the session")
 
     return session
 
 
 @app.delete("/sessions/{session_id}/guests/{guest_id}")
-async def remove_guest(user_id: Annotated[str, Depends(verify_token)], session_id: str, guest_id: str):
+async def remove_guest(user_id: Annotated[str, Depends(verify_token)], session_id: str, guest_id: str) -> None:
     if await redis.exists(f'user:{user_id}') == 0:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authorized! Invalid user ID.")
     if await redis.exists(f'session:{session_id}') == 0:
@@ -189,8 +192,22 @@ async def remove_guest(user_id: Annotated[str, Depends(verify_token)], session_i
     if guest_id in session.guests:
         session.guests.remove(guest_id)
         await redis.set(f'session:{session.id}', session.model_dump_json())
+        await manager.publish(channel=f"session:{session.id}", message=f"Host has removed guest {guest_id} from the session")
     else:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Guest not part of session.")
+
+
+@app.websocket("/ws/{session_id}")
+async def websocket_session(websocket: WebSocket, session_id: str):
+    await websocket.accept()
+    channel = f'session:{session_id}'
+
+    async with manager.subscribe(channel=channel) as subscriber:
+        try:
+            async for event in subscriber:
+                await websocket.send_text(event.message)
+        except WebSocketDisconnect:
+            pass
 
 
 # This WS code is inspired by the encode/broadcaster package.
