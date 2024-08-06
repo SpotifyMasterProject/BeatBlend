@@ -160,7 +160,7 @@ async def get_session() -> list[Session]:
 #     await redis.set(f'session:{session_id}', session.model_dump_json())
 
 
-@app.post("/session/join/{invite_token}")
+@app.post("/sessions/join/{invite_token}")
 async def join_session(guest_id: Annotated[str, Depends(verify_token)], invite_token: str) -> Session:
     if await redis.exists(f'user:{guest_id}') == 0:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authorized! Invalid user ID.")
