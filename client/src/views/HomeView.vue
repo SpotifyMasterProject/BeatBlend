@@ -44,12 +44,6 @@ const flowerData = [
       <Flower :features="flowerData" :size="300" :circleRadius="100" />
       <Flower :features="flowerData" :size="300" :circleRadius="100" />
       <Flower :features="flowerData" :size="300" :circleRadius="100" />
-
-
-
-
-
-
     </div>
     <div class="previously-played">
 
