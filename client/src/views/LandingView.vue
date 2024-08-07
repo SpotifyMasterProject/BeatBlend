@@ -3,7 +3,7 @@ import {onMounted, ref} from 'vue'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import {authService} from '@/services/authService'
-
+import {isMobile} from '../services/layoutService'
 const username = ref<string>('')
 
 const urlParams = new URLSearchParams(window.location.search)
@@ -43,36 +43,37 @@ const authorize = function () {
 </script>
 
 <template>
-  <div id="app" class="login-container">
-    <Button @click="redirectToSpotify" class="spotify-button">
-      Login via Spotify
-    </Button>
+  <div class="landing-view">
+    <div class="login-container">
+      <Button @click="redirectToSpotify" class="button spotify-button">
+        Login via Spotify
+      </Button>
 
-    <div class="guest-login">
-      <label for="guestInput">Login as guest</label>
-      <div class="input-group">
-        <InputText id="guestInput" type="text" placeholder="Username" v-model="username" @keyup.enter="authorize"/>
+      <div class="session-scanner">
+        <Button v-if="isMobile" class="button">Scan Session QR</Button>
+        <span v-else class="fallback-text">Use mobile to join Session</span>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
+
+.landing-view {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
 .login-container {
-  display: grid;
-  grid-auto-rows: 40px;
-  grid-template-areas:
-    "spotify"
-    "guest";
+  display: flex;
+  flex-direction: column;
   gap: 20px;
   justify-items: center;
-  margin-top: 50px;
+  width: 200px;
 }
 
-.spotify-button {
-  grid-area: spotify;
-  background-color: #1db954;
-  color: white;
+.button {
   padding: 8px 16px; /* Reduced padding */
   border: none;
   border-radius: 25px;
@@ -81,27 +82,23 @@ const authorize = function () {
   height: 40px;
 }
 
-.guest-login {
-  grid-area: guest;
+.spotify-button {
+  background-color: #1db954;
+  color: white;
+}
+
+.session-scanner {
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  justify-content: center;
 }
 
-.input-group {
-  display: flex;
-  align-items: center;
-  margin-top: 10px;
+.session-scanner .button {
+  background-color: #F9F9F9;
+  color: black;
 }
 
-.input-group input {
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+.session-scanner .fallback-text {
+  color: white;
 }
 
-.input-group i {
-  margin-left: -30px;
-  cursor: pointer;
-}
 </style>
