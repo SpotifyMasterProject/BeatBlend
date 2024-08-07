@@ -93,7 +93,7 @@ def exchange_code_for_token(auth_code: str) -> str:
 
 
 def validate_user_id(user_id):
-    if await redis.exists(f'user:{user_id}') == 0:
+    if await redis.exists(get_user_key(user_id)) == 0:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authorized! Invalid user ID.")
 
 
