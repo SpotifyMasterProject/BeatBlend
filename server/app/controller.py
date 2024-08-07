@@ -92,12 +92,28 @@ def exchange_code_for_token(auth_code: str) -> str:
     return response.json()["access_token"]
 
 
-@app.get("/")
-async def read_root(user_id: Annotated[str, Depends(verify_token)]):
+def validate_user_id(user_id):
     if await redis.exists(f'user:{user_id}') == 0:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authorized! Invalid user ID.")
+
+
+def get_user_key(user_id):
+    return f'user:{user_id}'
+
+
+def get_session_key(session_id):
+    return f'session:{session_id}'
+
+
+def get_invite_key(invite_token):
+    return f'invite:{invite_token}'
+
+
+@app.get("/")
+async def read_root(user_id: Annotated[str, Depends(verify_token)]):
+    validate_user_id(user_id)
     # Add check if userid matches username?
-    result = await redis.get(f'user:{user_id}')
+    result = await redis.get(get_user_key(user_id))
     user = User.model_validate_json(result)
     return {"Hello World": "User. Your details are:", "user_id": user.id, "username": user.username}
 
@@ -109,21 +125,20 @@ async def authorize_spotify(user: SpotifyUser) -> Token:
     # spotify_token = exchange_code_for_token(user.auth_code)
 
     user.id = str(uuid.uuid4())
-    await redis.set(f'user:{user.id}', user.model_dump_json())
+    await redis.set(get_user_key(user.id), user.model_dump_json())
     return generate_token(user)
 
 
 @app.post("/token")
 async def authorize(user: User) -> Token:
     user.id = str(uuid.uuid4())
-    await redis.set(f'user:{user.id}', user.model_dump_json())
+    await redis.set(get_user_key(user.id), user.model_dump_json())
     return generate_token(user)
 
 
 @app.post("/sessions")
 async def create_new_session(user_id: Annotated[str, Depends(verify_token)], session: Session) -> Session:
-    if await redis.exists(f'user:{user_id}') == 0:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authorized! Invalid user ID.")
+    validate_user_id(user_id)
     session.id = str(uuid.uuid4())
     session.host = str(user_id)
 
@@ -131,10 +146,10 @@ async def create_new_session(user_id: Annotated[str, Depends(verify_token)], ses
     # TODO: adjust URL
     session.invite_link = f'http://localhost:5173/sessions/join/{session.invite_token}'
 
-    await redis.set(f'session:{session.id}', session.model_dump_json())
-    await redis.set(f'invite:{session.invite_token}', session.id)
+    await redis.set(get_session_key(session.id), session.model_dump_json())
+    await redis.set(get_invite_key(session.invite_token), session.id)
 
-    await manager.publish(channel=f"session:{session.id}", message="New session created")
+    await manager.publish(channel=get_session_key(session.id), message="New session created")
     return session
 
 
@@ -150,6 +165,7 @@ async def get_session() -> list[Session]:
     return sessions
 
 
+# TODO: delete if onboarding using session_ids is not required
 # @app.post("/sessions/{session_id}/guests")
 # async def add_guest(guest_id: Annotated[str, Depends(verify_token)], session_id: str):
 #     if await redis.exists(f'session:{session_id}') == 0:
@@ -162,37 +178,35 @@ async def get_session() -> list[Session]:
 
 @app.post("/sessions/join/{invite_token}")
 async def join_session(guest_id: Annotated[str, Depends(verify_token)], invite_token: str) -> Session:
-    if await redis.exists(f'user:{guest_id}') == 0:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authorized! Invalid user ID.")
-    if await redis.exists(f'invite:{invite_token}') == 0:
+    validate_user_id(guest_id)
+    if await redis.exists(get_invite_key(invite_token)) == 0:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invalid invite link.")
 
-    session_id = await redis.get(f'invite:{invite_token}')
-    result = await redis.get(f'session:{session_id}')
+    session_id = await redis.get(get_invite_key(invite_token))
+    result = await redis.get(get_session_key(session_id))
     session = Session.model_validate_json(result)
 
     if guest_id not in session.guests:
         session.guests.append(guest_id)
-        await redis.set(f'session:{session.id}', session.model_dump_json())
-        await manager.publish(channel=f"session:{session.id}", message=f"Guest {guest_id} has joined the session")
+        await redis.set(get_session_key(session.id), session.model_dump_json())
+        await manager.publish(channel=get_session_key(session.id), message=f"Guest {guest_id} has joined the session")
 
     return session
 
 
 @app.delete("/sessions/{session_id}/guests/{guest_id}")
 async def remove_guest(user_id: Annotated[str, Depends(verify_token)], session_id: str, guest_id: str) -> Session:
-    if await redis.exists(f'user:{user_id}') == 0:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authorized! Invalid user ID.")
-    if await redis.exists(f'session:{session_id}') == 0:
+    validate_user_id(user_id)
+    if await redis.exists(get_session_key(session_id)) == 0:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invalid session ID.")
-    result = await redis.get(f'session:{session_id}')
+    result = await redis.get(get_session_key(session_id))
     session = Session.model_validate_json(result)
     if session.host != str(user_id):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not host of session.")
     if guest_id in session.guests:
         session.guests.remove(guest_id)
-        await redis.set(f'session:{session.id}', session.model_dump_json())
-        await manager.publish(channel=f"session:{session.id}", message=f"Host has removed guest {guest_id} from the session")
+        await redis.set(get_session_key(session.id), session.model_dump_json())
+        await manager.publish(channel=get_session_key(session.id), message=f"Host has removed guest {guest_id} from the session")
     else:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Guest not part of session.")
 
@@ -202,7 +216,7 @@ async def remove_guest(user_id: Annotated[str, Depends(verify_token)], session_i
 @app.websocket("/ws/{session_id}")
 async def websocket_session(websocket: WebSocket, session_id: str):
     await websocket.accept()
-    channel = f'session:{session_id}'
+    channel = get_session_key(session_id)
 
     async with manager.subscribe(channel=channel) as subscriber:
         try:
