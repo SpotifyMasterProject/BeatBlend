@@ -92,9 +92,14 @@ def exchange_code_for_token(auth_code: str) -> str:
     return response.json()["access_token"]
 
 
-async def validate_user_id(user_id):
+async def validate_user_id(user_id: str) -> None:
     if await redis.exists(get_user_key(user_id)) == 0:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authorized! Invalid user ID.")
+
+
+async def validate_session_id(session_id: str) -> None:
+    if await redis.exists(get_session_key(session_id)) == 0:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invalid session ID.")
 
 
 def get_user_key(user_id) -> str:
@@ -116,6 +121,7 @@ async def remove_guest(session: Session, guest_id: str) -> None:
         await manager.publish(channel=get_session_key(session.id), message=f"Guest {guest_id} was removed from session")
     else:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Guest not part of session.")
+
 
 @app.get("/", status_code=status.HTTP_200_OK)
 async def read_root(user_id: Annotated[str, Depends(verify_token)]) -> dict:
@@ -207,8 +213,7 @@ async def join_session(guest_id: Annotated[str, Depends(verify_token)], invite_t
 @app.delete("/sessions/{session_id}/leave", status_code=status.HTTP_204_NO_CONTENT)
 async def leave_session(guest_id: Annotated[str, Depends(verify_token)], session_id: str) -> None:
     await validate_user_id(guest_id)
-    if await redis.exists(get_session_key(session_id)) == 0:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invalid session ID.")
+    await validate_session_id(session_id)
     result = await redis.get(get_session_key(session_id))
     session = Session.model_validate_json(result)
     await remove_guest(session, guest_id)
@@ -217,8 +222,7 @@ async def leave_session(guest_id: Annotated[str, Depends(verify_token)], session
 @app.delete("/sessions/{session_id}/guests/{guest_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_guest(user_id: Annotated[str, Depends(verify_token)], session_id: str, guest_id: str) -> None:
     await validate_user_id(user_id)
-    if await redis.exists(get_session_key(session_id)) == 0:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invalid session ID.")
+    await validate_session_id(session_id)
     result = await redis.get(get_session_key(session_id))
     session = Session.model_validate_json(result)
     if session.host != str(user_id):
