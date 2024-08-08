@@ -166,4 +166,3 @@ cython_debug/
 client/package-lock.json
 .DS_Store
 /client
-client/package-lock.json
