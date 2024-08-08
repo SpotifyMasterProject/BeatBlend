@@ -92,33 +92,47 @@ def exchange_code_for_token(auth_code: str) -> str:
     return response.json()["access_token"]
 
 
-def validate_user_id(user_id):
+async def validate_user_id(user_id: str) -> None:
     if await redis.exists(get_user_key(user_id)) == 0:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authorized! Invalid user ID.")
 
 
-def get_user_key(user_id):
+async def validate_session_id(session_id: str) -> None:
+    if await redis.exists(get_session_key(session_id)) == 0:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invalid session ID.")
+
+
+def get_user_key(user_id) -> str:
     return f'user:{user_id}'
 
 
-def get_session_key(session_id):
+def get_session_key(session_id) -> str:
     return f'session:{session_id}'
 
 
-def get_invite_key(invite_token):
+def get_invite_key(invite_token) -> str:
     return f'invite:{invite_token}'
 
 
-@app.get("/")
-async def read_root(user_id: Annotated[str, Depends(verify_token)]):
-    validate_user_id(user_id)
+async def remove_guest(session: Session, guest_id: str) -> None:
+    if guest_id in session.guests:
+        session.guests.remove(guest_id)
+        await redis.set(get_session_key(session.id), session.model_dump_json())
+        await manager.publish(channel=get_session_key(session.id), message=f"Guest {guest_id} was removed from session")
+    else:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Guest not part of session.")
+
+
+@app.get("/", status_code=status.HTTP_200_OK)
+async def read_root(user_id: Annotated[str, Depends(verify_token)]) -> dict:
+    await validate_user_id(user_id)
     # Add check if userid matches username?
     result = await redis.get(get_user_key(user_id))
     user = User.model_validate_json(result)
     return {"Hello World": "User. Your details are:", "user_id": user.id, "username": user.username}
 
 
-@app.post("/auth-codes")
+@app.post("/auth-codes", status_code=status.HTTP_201_CREATED)
 async def authorize_spotify(user: SpotifyUser) -> Token:
     # TODO: replace the spotify token getting with spotipy
     # global spotify_token
@@ -129,16 +143,16 @@ async def authorize_spotify(user: SpotifyUser) -> Token:
     return generate_token(user)
 
 
-@app.post("/token")
+@app.post("/token", status_code=status.HTTP_201_CREATED)
 async def authorize(user: User) -> Token:
     user.id = str(uuid.uuid4())
     await redis.set(get_user_key(user.id), user.model_dump_json())
     return generate_token(user)
 
 
-@app.post("/sessions")
+@app.post("/sessions", status_code=status.HTTP_201_CREATED, response_model=Session)
 async def create_new_session(user_id: Annotated[str, Depends(verify_token)], session: Session) -> Session:
-    validate_user_id(user_id)
+    await validate_user_id(user_id)
     session.id = str(uuid.uuid4())
     session.host = str(user_id)
 
@@ -153,7 +167,7 @@ async def create_new_session(user_id: Annotated[str, Depends(verify_token)], ses
     return session
 
 
-@app.get("/sessions")
+@app.get("/sessions", status_code=status.HTTP_200_OK, response_model=list[Session])
 async def get_session() -> list[Session]:
     session_keys = [session_id async for session_id in redis.scan_iter(match='session:*')]
 
@@ -166,19 +180,21 @@ async def get_session() -> list[Session]:
 
 
 # TODO: delete if onboarding using session_ids is not required
-# @app.post("/sessions/{session_id}/guests")
-# async def add_guest(guest_id: Annotated[str, Depends(verify_token)], session_id: str):
+# @app.post("/sessions/{session_id}/guests", status_code=status.HTTP_200_OK, response_model=Session)
+# async def add_guest(guest_id: Annotated[str, Depends(verify_token)], session_id: str) -> Session:
 #     if await redis.exists(f'session:{session_id}') == 0:
 #         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid session ID.")
 #     result = await redis.get(f'session:{session_id}')
 #     session = Session.model_validate_json(result)
 #     session.guests.append(str(guest_id))
 #     await redis.set(f'session:{session_id}', session.model_dump_json())
+#
+#     return session
 
 
-@app.post("/sessions/join/{invite_token}")
+@app.post("/sessions/join/{invite_token}", status_code=status.HTTP_200_OK, response_model=Session)
 async def join_session(guest_id: Annotated[str, Depends(verify_token)], invite_token: str) -> Session:
-    validate_user_id(guest_id)
+    await validate_user_id(guest_id)
     if await redis.exists(get_invite_key(invite_token)) == 0:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invalid invite link.")
 
@@ -194,23 +210,24 @@ async def join_session(guest_id: Annotated[str, Depends(verify_token)], invite_t
     return session
 
 
-@app.delete("/sessions/{session_id}/guests/{guest_id}")
-async def remove_guest(user_id: Annotated[str, Depends(verify_token)], session_id: str, guest_id: str) -> Session:
-    validate_user_id(user_id)
-    if await redis.exists(get_session_key(session_id)) == 0:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invalid session ID.")
+@app.delete("/sessions/{session_id}/leave", status_code=status.HTTP_204_NO_CONTENT)
+async def leave_session(guest_id: Annotated[str, Depends(verify_token)], session_id: str) -> None:
+    await validate_user_id(guest_id)
+    await validate_session_id(session_id)
+    result = await redis.get(get_session_key(session_id))
+    session = Session.model_validate_json(result)
+    await remove_guest(session, guest_id)
+
+
+@app.delete("/sessions/{session_id}/guests/{guest_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_guest(user_id: Annotated[str, Depends(verify_token)], session_id: str, guest_id: str) -> None:
+    await validate_user_id(user_id)
+    await validate_session_id(session_id)
     result = await redis.get(get_session_key(session_id))
     session = Session.model_validate_json(result)
     if session.host != str(user_id):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not host of session.")
-    if guest_id in session.guests:
-        session.guests.remove(guest_id)
-        await redis.set(get_session_key(session.id), session.model_dump_json())
-        await manager.publish(channel=get_session_key(session.id), message=f"Host has removed guest {guest_id} from the session")
-    else:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Guest not part of session.")
-
-    return session
+    await remove_guest(session, guest_id)
 
 
 @app.websocket("/ws/{session_id}")
