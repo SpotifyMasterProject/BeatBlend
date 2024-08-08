@@ -174,14 +174,16 @@ async def get_session() -> list[Session]:
 
 
 # TODO: delete if onboarding using session_ids is not required
-# @app.post("/sessions/{session_id}/guests")
-# async def add_guest(guest_id: Annotated[str, Depends(verify_token)], session_id: str):
+# @app.post("/sessions/{session_id}/guests", status_code=status.HTTP_200_OK, response_model=Session)
+# async def add_guest(guest_id: Annotated[str, Depends(verify_token)], session_id: str) -> Session:
 #     if await redis.exists(f'session:{session_id}') == 0:
 #         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid session ID.")
 #     result = await redis.get(f'session:{session_id}')
 #     session = Session.model_validate_json(result)
 #     session.guests.append(str(guest_id))
 #     await redis.set(f'session:{session_id}', session.model_dump_json())
+#
+#     return session
 
 
 @app.post("/sessions/join/{invite_token}", status_code=status.HTTP_200_OK, response_model=Session)
