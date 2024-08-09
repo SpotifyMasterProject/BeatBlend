@@ -16,7 +16,7 @@ const props = defineProps({
   },
   size: {
     type: Number,
-    default: 200,
+    default: 100,
   },
   circleRadius: {
     type: Number,
