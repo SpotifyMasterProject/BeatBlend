@@ -102,6 +102,11 @@ async def validate_session_id(session_id: str) -> None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invalid session ID.")
 
 
+async def validate_host(session: Session, user_id: str) -> None:
+    if session.host != str(user_id):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not host of session.")
+
+
 def get_user_key(user_id) -> str:
     return f'user:{user_id}'
 
@@ -210,6 +215,19 @@ async def join_session(guest_id: Annotated[str, Depends(verify_token)], invite_t
     return session
 
 
+@app.post("/sessions/{session_id}/end", status_code=status.HTTP_200_OK)
+async def end_session(user_id: Annotated[str, Depends(verify_token)], session_id: str):
+    await validate_user_id(user_id)
+    await validate_session_id(session_id)
+    result = await redis.get(get_session_key(session_id))
+    session = Session.model_validate_json(result)
+    await validate_host(session, user_id)
+    # TODO: create session artifact
+    redis.delete(get_invite_key(session.invite_token))
+    redis.delete(get_session_key(session.id))
+    # return artifact
+
+
 @app.delete("/sessions/{session_id}/leave", status_code=status.HTTP_204_NO_CONTENT)
 async def leave_session(guest_id: Annotated[str, Depends(verify_token)], session_id: str) -> None:
     await validate_user_id(guest_id)
@@ -225,8 +243,7 @@ async def remove_guest(user_id: Annotated[str, Depends(verify_token)], session_i
     await validate_session_id(session_id)
     result = await redis.get(get_session_key(session_id))
     session = Session.model_validate_json(result)
-    if session.host != str(user_id):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not host of session.")
+    await validate_host(session, user_id)
     await remove_guest(session, guest_id)
 
 
