@@ -2,6 +2,15 @@
 import LogoIntroScreen from "@/components/LogoIntroScreen.vue";
 import Navigation from "@/components/Navigation.vue";
 import Flower from "@/components/Flower.vue";
+import PreviouslyPlayed from "@/components/PreviouslyPlayed.vue";
+import { ref, onMounted } from "vue";
+
+
+const showPreviouslyPlayed = ref(false);
+
+const toggleVisibility = () => {
+  showPreviouslyPlayed.value = !showPreviouslyPlayed.value;
+};
 
 const flowerData = [
   { value: 0.4, color: '#144550' },
@@ -26,7 +35,7 @@ const flowerData = [
       </div>
 
     </header>
-    <div class="middle">
+    <div class="middle" :class="{ expanded: !showPreviouslyPlayed }">
       <Flower :features="flowerData" :size="300" :circleRadius="100" />
       <Flower :features="flowerData" :size="300" :circleRadius="100" />
       <Flower :features="flowerData" :size="300" :circleRadius="100" />
@@ -45,8 +54,22 @@ const flowerData = [
       <Flower :features="flowerData" :size="300" :circleRadius="100" />
       <Flower :features="flowerData" :size="300" :circleRadius="100" />
     </div>
-    <div class="previously-played">
-
+    <div
+      class="previously-played"
+      :class="{ minimized: !showPreviouslyPlayed }"
+    >
+      <div class="table-header-container">
+        <h3>Previously Played</h3>
+        <button
+          class="text-sm rounded min-h-[32px] px-3 py-0.5 font-semibold hover:bg-gray-800"
+          @click="toggleVisibility"
+        >
+          {{ showPreviouslyPlayed ? "Hide" : "Show" }}
+        </button>
+      </div>
+      <div v-show="showPreviouslyPlayed">
+        <PreviouslyPlayed></PreviouslyPlayed>
+      </div>
     </div>
   </div>
 </template>
