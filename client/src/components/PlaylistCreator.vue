@@ -109,7 +109,7 @@ const startSession = () => {
         <div class="songs">
             <h2 class="songs-header">Add 3 songs to start the blend</h2>
             <AutoComplete
-                class="search" v-model="selectedSong"
+                class="search input-default" v-model="selectedSong"
                 @option-select="selectSong"
                 :suggestions="filteredSongs"
                 @complete="search"
@@ -184,18 +184,6 @@ const startSession = () => {
   color: var(--font-color);
 }
 
-.search.p-autocomplete {
-  display: block;
-  background-color: var(--backcore-color2);
-  border-radius: 15px;
-  font-size: 16px;
-  border: solid;
-  border-color: var(--backcore-color3); 
-  border-width: 2px;    
-  padding: 5px 10px;
-  box-sizing: border-box;
-}
-
 .title, .songs input {
   background-color: var(--backcore-color3);
   font-family: inherit;
@@ -218,7 +206,7 @@ input:focus {
     border-radius: 10px;
     overflow-y: auto;
     padding: 5px;
-    width: 30%;
+    width: min(30%, 300px);
 }
 
 .selected-song {
@@ -301,6 +289,6 @@ input:focus {
     color: white;
 }
 .start-session:disabled {
-    color: #c4c4c4;
+    color: var(--button-disabled-font-color);
 }
 </style>
