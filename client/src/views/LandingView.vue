@@ -4,6 +4,13 @@ import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import {authService} from '@/services/authService'
 import {isMobile} from '../services/layoutService'
+import LogoIntroScreen from "@/components/LogoIntroScreen.vue";
+import StartBlendButton from "@/components/StartBlendButton.vue";
+import Navigation from "@/components/Navigation.vue";
+import StartScreen from '@/components/StartScreen.vue';
+
+
+const showStartScreen = ref(true);
 const username = ref<string>('')
 
 const urlParams = new URLSearchParams(window.location.search)
@@ -40,6 +47,10 @@ const authorize = function () {
         console.log(error)
       })
 }
+
+const handleComplete = () => {
+  showStartScreen.value = false;
+}
 </script>
 
 <template>
@@ -53,9 +64,10 @@ const authorize = function () {
         <Button v-if="isMobile" class="button">Scan Session QR</Button>
         <span v-else class="fallback-text">Use mobile to join Session</span>
       </div>
-    </div>
+    </transition>
   </div>
 </template>
+
 
 <style scoped>
 

@@ -163,3 +163,5 @@ cython_debug/
 
 #VSCode
 .vscode/
+client/package-lock.json
+.DS_Store
