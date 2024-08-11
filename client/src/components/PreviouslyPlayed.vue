@@ -5,7 +5,7 @@
         <thead>
           <tr>
             <th class="icon-header"></th>  <!-- Empty for the icon -->
-            <th>Track Name</th>
+            <th class="track-name">Track Name</th>
             <th>Album</th>
             <th>Artists</th>
             <th>Danceability</th>
@@ -22,7 +22,7 @@
             <td class="icon-cell">
               <img src="../assets/table-play-icon.png" alt="play-icon" class="song-icon">
             </td>
-            <td>{{ song.name }}</td>
+            <td class="track-name">{{ song.name }}</td>
             <td>{{ song.album }}</td>
             <td>{{ song.artists.join(', ') }}</td>
             <td>{{ song.danceability }}</td>
@@ -156,6 +156,10 @@ const songs = ref([
 .song-table th.icon-header, .song-table td.icon-cell {
   width: 20px;
   text-align: center;
+}
+
+.song-table th.track-name, .song-table td.track-name {
+  width: 180px;
 }
 
 .song-table img.song-icon {
