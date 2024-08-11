@@ -298,5 +298,9 @@ input:focus {
     padding: 8px 20px;
     cursor: pointer;
     font-weight: bold;
+    color: white;
+}
+.start-session:disabled {
+    color: #c4c4c4;
 }
 </style>
