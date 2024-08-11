@@ -222,10 +222,9 @@ async def end_session(user_id: Annotated[str, Depends(verify_token)], session_id
     result = await redis.get(get_session_key(session_id))
     session = Session.model_validate_json(result)
     await validate_host(session, user_id)
-    # TODO: create session artifact
     redis.delete(get_invite_key(session.invite_token))
     redis.delete(get_session_key(session.id))
-    # return artifact
+    # TODO: create and return session artifact
 
 
 @app.delete("/sessions/{session_id}/leave", status_code=status.HTTP_204_NO_CONTENT)
