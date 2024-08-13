@@ -23,7 +23,6 @@ async def authorize_spotify(user: SpotifyUser) -> Token:
     # TODO: replace the spotify token getting with spotipy
     # global spotify_token
     # spotify_token = exchange_code_for_token(user.auth_code)
-
     user = await service.create_user(user)
     return service.generate_token(user)
 
@@ -63,7 +62,6 @@ async def add_guest(guest_id: Annotated[str, Depends(service.verify_token)], ses
 async def join_session(guest_id: Annotated[str, Depends(service.verify_token)], invite_token: str) -> Session:
     await service.validate_user(guest_id)
     await service.validate_invite(invite_token)
-
     return await service.add_guest_to_session(guest_id, "", invite_token)
 
 
@@ -71,7 +69,6 @@ async def join_session(guest_id: Annotated[str, Depends(service.verify_token)], 
 async def remove_guest(host_id: Annotated[str, Depends(service.verify_token)], session_id: str, guest_id: str) -> None:
     await service.validate_user(host_id)
     await service.validate_session(session_id)
-
     await service.remove_guest_from_session(host_id, guest_id, session_id)
 
 
@@ -79,14 +76,12 @@ async def remove_guest(host_id: Annotated[str, Depends(service.verify_token)], s
 async def leave_session(guest_id: Annotated[str, Depends(service.verify_token)], session_id: str) -> None:
     await service.validate_user(guest_id)
     await service.validate_session(session_id)
-
     await service.remove_guest_from_session("", guest_id, session_id)
 
 
 @app.websocket("/ws/{session_id}")
 async def websocket_session(websocket: WebSocket, session_id: str):
     await websocket.accept()
-
     await service.establish_ws_connection_to_session(websocket, session_id)
 
 
