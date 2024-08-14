@@ -144,6 +144,7 @@ type2. previously-played.minimized{
   display: flex;
   align-items: center;
   justify-content: center;
+  background-color: rgba(0, 0, 0, 0.5);
   z-index: 1000;
 }
 </style>
