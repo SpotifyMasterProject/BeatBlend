@@ -3,13 +3,19 @@ import LogoIntroScreen from "@/components/LogoIntroScreen.vue";
 import Navigation from "@/components/Navigation.vue";
 import Flower from "@/components/Flower.vue";
 import PreviouslyPlayed from "@/components/PreviouslyPlayed.vue";
+import AddMoreSong from "@/components/AddMoreSong.vue";
 import { ref, onMounted } from "vue";
 
 
 const showPreviouslyPlayed = ref(false);
+const showAddMoreSongPopup = ref(false);
 
 const toggleVisibility = () => {
   showPreviouslyPlayed.value = !showPreviouslyPlayed.value;
+};
+
+const toggleAddMoreSongPopup = () => {
+  showAddMoreSongPopup.value = !showAddMoreSongPopup.value;
 };
 
 const flowerData = [
@@ -25,7 +31,7 @@ const flowerData = [
   <div class="type2">
     <header>
       <div class="search-bar-background">
-      <input class="search-bar" type="text" placeholder="Search" />
+      <input class="search-bar" type="text" placeholder="Search" @click="toggleAddMoreSongPopup"/>
       </div>
       <div class="logo-nav-container">
         <logo-intro-screen/>
@@ -69,6 +75,13 @@ const flowerData = [
       </div>
       <div v-show="showPreviouslyPlayed" class="table-scroll">
         <PreviouslyPlayed></PreviouslyPlayed>
+      </div>
+    </div>
+
+    <!-- Popup Overlay -->
+    <div v-if="showAddMoreSongPopup" class="popup-overlay" @click="toggleAddMoreSongPopup">
+      <div class="popup-content" @click.stop>
+        <AddMoreSong @close-popup="toggleAddMoreSongPopup"/>
       </div>
     </div>
   </div>
@@ -120,5 +133,17 @@ type2. previously-played.minimized{
   max-height: 700px; /* Adjust based on your UI requirements */
   overflow-y: auto;
   overflow-x: hidden; /* Assuming you don't want horizontal scrolling */
+}
+
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
 }
 </style>
