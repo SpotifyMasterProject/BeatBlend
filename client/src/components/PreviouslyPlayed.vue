@@ -119,13 +119,12 @@ const songs = ref([
   background-color: #363636;
   padding: 5px 0px 5px 0px;
   border-radius: 15px;
-  overflow: hidden;
+  max-height: 500px;
 }
 
 .song-table {
   width: 100%;
   color: #D9D9D9;
-  overflow: hidden;
 }
 
 .song-table table {
@@ -133,7 +132,6 @@ const songs = ref([
   border-collapse: collapse;
   border-radius: 15px;
   table-layout: fixed;
-  overflow: hidden;
 }
 .song-table th {
   padding: 8px;
@@ -143,6 +141,10 @@ const songs = ref([
   color: #D9D9D9;
   font-size: 15px;
   font-weight: bold;
+  position: sticky;
+  top: 0;
+  background-color: #363636;
+  z-index: 999;
 }
 .song-table td {
   padding: 8px;
