@@ -32,6 +32,10 @@ const petalPath = computed(() => {
 });
 
 function lightenColor(color: string, percent: number) {
+  if (!color || typeof color !== 'string' || color.length !== 7 || color[0] !== '#') {
+    console.error('Invalid color format:', color);
+    return '#FFFFFF'; // Return a default color (white) in case of an error
+  }
   const num = parseInt(color.slice(1), 16),
       amt = Math.round(2.55 * percent),
       R = (num >> 16) + amt,
