@@ -12,26 +12,15 @@
   --audio-color3: #EEE8C4;
   --audio-color4: #E4832E;
   --audio-color5: #BB7DEC;
+
+  --button-disabled-font-color: #c4c4c4;
 }
 
 /* semantic color variables for this project */
 :root {
-<<<<<<< HEAD
-  --color-background: var(--vt-c-black);
-  --color-background-soft: var(--vt-c-white-soft);
-  --color-background-mute: var(--vt-c-white-mute);
-
-  --color-border: var(--vt-c-divider-light-2);
-  --color-border-hover: var(--vt-c-divider-light-1);
-
-  --color-heading: var(--vt-c-text-light-1);
-  --color-text: var(--vt-c-text-light-1);
-
-=======
   --color-background-soft: var(--backcore-color1);
   --color-background-core: var(--backcore-color2);
   --color-background-third: var(--backcore-color3);
->>>>>>> 6f4851c88abccd92dcd6fd90227113395ac7e547
   --section-gap: 160px;
 }
 
@@ -72,52 +61,8 @@ body, html {
     }
 }
 
-<<<<<<< HEAD
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  font-weight: normal;
-}
-
-html,
-body {
-  height: 100vh;
-  width: 100vw;
-  margin: 0;
-}
-
-body {
-  height: 100vh;
-  color: var(--color-text);
-  background: var(--color-background);
-  transition:
-    color 0.5s,
-    background-color 0.5s;
-  line-height: 1.6;
-  font-family:
-    Inter,
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    Roboto,
-    Oxygen,
-    Ubuntu,
-    Cantarell,
-    'Fira Sans',
-    'Droid Sans',
-    'Helvetica Neue',
-    sans-serif;
-  font-size: 15px;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-=======
 @media (min-width: 1200px) {
     body {
         font-size: 16px;
     }
 }
->>>>>>> 6f4851c88abccd92dcd6fd90227113395ac7e547

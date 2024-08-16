@@ -1,33 +1,18 @@
 <script setup lang="ts">
-import {onMounted, ref} from 'vue'
+import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router';
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import {authService} from '@/services/authService'
-import {isMobile} from '../services/layoutService'
 import LogoIntroScreen from "@/components/LogoIntroScreen.vue";
 import StartBlendButton from "@/components/StartBlendButton.vue";
 import Navigation from "@/components/Navigation.vue";
 import StartScreen from '@/components/StartScreen.vue';
 
-
 const showStartScreen = ref(true);
-const username = ref<string>('')
-
-const urlParams = new URLSearchParams(window.location.search)
-const code = urlParams.get('code')
-const state = urlParams.get('state')
-
-onMounted(async () => {
-  if (code != null) {
-    await authService.authorizeSpotify('username_placeholder', code)
-        .then((response) => {
-          console.log(response)
-        })
-        .catch((error) => {
-          console.log(error)
-        })
-  }
-})
+const username = ref<string>('');
+// TODO: get this from BE, if inviteToken is present.
+const hostUsername = ref<string>('Ibra');
 
 const redirectToSpotify = async () => {
   window.location.href = 'https://accounts.spotify.com/authorize?' +
@@ -38,31 +23,46 @@ const redirectToSpotify = async () => {
       //'&state='
 }
 
-const authorize = function () {
-  if (username.value === '') {
-    return
-  }
-  authService.authorize(username.value)
-      .catch((error) => {
-        console.log(error)
-      })
-}
-
 const handleComplete = () => {
   showStartScreen.value = false;
 }
+
+const joinSession = (inviteToken) => {
+  console.log(`Joining session ${inviteToken}`);
+}
+
 </script>
 
 <template>
-  <div class="landing-view">
-    <div class="login-container">
-      <Button @click="redirectToSpotify" class="button spotify-button">
-        Login via Spotify
-      </Button>
-
-      <div class="session-scanner">
-        <Button v-if="isMobile" class="button">Scan Session QR</Button>
-        <span v-else class="fallback-text">Use mobile to join Session</span>
+  <div>
+    <transition name="fade">
+      <StartScreen v-if="showStartScreen" @animation-complete="handleComplete" key="start-screen" />
+      <div class="type1" v-else>
+        <header>
+          <LogoIntroScreen/>
+          <nav>
+            <Navigation />
+          </nav>
+        </header>
+        <div class="login-container">
+          <Button v-if="!$route.params.inviteToken" class="button spotify-button" @click="redirectToSpotify">
+            Login via Spotify
+          </Button>
+          <div v-else class="guest-login">
+            <p class="invite-text">
+              You have been invited to
+              <span class="highlight">a new blend!</span>
+            </p>
+            <p class="host-info">
+              <strong>{{ hostUsername }}</strong>
+              invited you to the blend. Enter username to join.</p>
+            <InputText id="username" v-model="username" placeholder="Username" class="input-default" />
+            <Button
+              @click="() => joinSession($route.params.inviteToken)"
+              class="join-button"
+              :disabled="!username.length">Join</Button>
+          </div>
+        </div>
       </div>
     </transition>
   </div>
@@ -71,18 +71,66 @@ const handleComplete = () => {
 
 <style scoped>
 
-.landing-view {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-}
 .login-container {
+  --login-container-height: 200px;
   display: flex;
   flex-direction: column;
   gap: 20px;
   justify-items: center;
+  align-items: center;
   width: 200px;
+  position: absolute;
+  height: var(--login-container-height);
+  top: calc(50% - var(--login-container-height) / 2);
+}
+
+.guest-login {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  background-color: var(--backcore-color3);
+  border-radius: 10px;
+  width: 200px;
+  padding:20px;
+}
+
+
+.invite-text {
+  color: white;
+  font-size: 16px;
+  font-weight: bold;
+  font-style: italic;
+  text-align: center;
+}
+
+.highlight {
+  color: var(--logo-highlight-color);
+}
+
+.guest-login input {
+  color: white;
+}
+
+.join-button {
+  background-color: var(--logo-highlight-color);
+  color: white;
+  width: 80%;
+  border: none;
+  border-radius: 25px;
+  font-size: 14px;
+  height: 30px;
+  font-weight: bold;
+}
+
+.join-button:disabled {
+  color: var(--button-disabled-font-color);
+}
+
+.host-info {
+  color: white;
+  font-size: 14px;
+  text-align: center;
 }
 
 .button {
@@ -99,18 +147,11 @@ const handleComplete = () => {
   color: white;
 }
 
-.session-scanner {
-  display: flex;
-  justify-content: center;
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.3s ease;
 }
-
-.session-scanner .button {
-  background-color: #F9F9F9;
-  color: black;
-}
-
-.session-scanner .fallback-text {
-  color: white;
+.fade-enter, .fade-leave-to /* .fade-leave-active in Vue 2 */ {
+  opacity: 0;
 }
 
 </style>

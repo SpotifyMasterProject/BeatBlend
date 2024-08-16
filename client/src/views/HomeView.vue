@@ -2,6 +2,15 @@
 import LogoIntroScreen from "@/components/LogoIntroScreen.vue";
 import Navigation from "@/components/Navigation.vue";
 import Flower from "@/components/Flower.vue";
+import PreviouslyPlayed from "@/components/PreviouslyPlayed.vue";
+import { ref, onMounted } from "vue";
+
+
+const showPreviouslyPlayed = ref(false);
+
+const toggleVisibility = () => {
+  showPreviouslyPlayed.value = !showPreviouslyPlayed.value;
+};
 
 const flowerData = [
   { value: 0.4, color: '#144550' },
@@ -26,7 +35,7 @@ const flowerData = [
       </div>
 
     </header>
-    <div class="middle">
+    <div class="middle" :class="{ expanded: !showPreviouslyPlayed }">
       <Flower :features="flowerData" :size="300" :circleRadius="100" />
       <Flower :features="flowerData" :size="300" :circleRadius="100" />
       <Flower :features="flowerData" :size="300" :circleRadius="100" />
@@ -45,8 +54,71 @@ const flowerData = [
       <Flower :features="flowerData" :size="300" :circleRadius="100" />
       <Flower :features="flowerData" :size="300" :circleRadius="100" />
     </div>
-    <div class="previously-played">
-
+    <div
+      class="previously-played"
+      :class="{ minimized: !showPreviouslyPlayed }"
+    >
+      <div class="table-header-container">
+        <h3>Previously Played</h3>
+        <button
+          class="text-sm rounded min-h-[32px] px-3 py-0.5 font-semibold hover:bg-gray-800"
+          @click="toggleVisibility"
+        >
+          {{ showPreviouslyPlayed ? "Hide" : "Show" }}
+        </button>
+      </div>
+      <div v-show="showPreviouslyPlayed" class="table-scroll">
+        <PreviouslyPlayed></PreviouslyPlayed>
+      </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+
+type2. previously-played.minimized{
+  height: auto;
+}
+.type2 .previously-played .table-header-container {
+  display: flex;
+  flex-direction: row;  /* Aligns the header and button horizontally */
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background-color: #272525;
+}
+.type2 .previously-played.minimized .table-header-container {
+  padding-bottom: 0; /* No padding when minimized */
+}
+.type2 .previously-played:not(.minimized) .table-header-container {
+  padding-bottom: 10px; /* Adds space between the header/button and the table when shown */
+}
+.type2 .previously-played h3 {
+  margin: 0;
+  font-size:16px;
+  width: 100%;
+}
+.type2 .previously-played button {
+  padding: 8px 16px;
+  background-color: #6BA149;
+  color: #D9D9D9;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+.type2 .previously-played button:hover {
+  background-color: #6AA834;
+  transform: scale(1.05); /* Slightly enlarge the button on hover */
+}
+.previously-played .table-scroll {
+  max-height: 700px; /* Adjust based on your UI requirements */
+  overflow-y: auto;
+  overflow-x: hidden; /* Assuming you don't want horizontal scrolling */
+}
+</style>
