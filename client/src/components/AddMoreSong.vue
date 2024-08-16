@@ -157,15 +157,15 @@ const addNewSongs = () => {
   top: 10px;
   right: 10px;
   background: transparent;
-  border: 2px solid var(--font-color);
+  border: none;
   border-radius: 25%;
   color: var(--font-color);
-  width: 25px;
-  height: 25px;
+  width: 30px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 25px;
   cursor: pointer;
   transition: background-color 0.3s ease, transform 0.2s ease;
 }
@@ -173,7 +173,7 @@ const addNewSongs = () => {
 .close-button:hover {
   background-color: var(--backcore-color1);
   color: #CCCCCC;
-  transform: scale(1.05);
+  transform: scale(1.07);
 }
 
 .start-session {
