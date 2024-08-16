@@ -3,8 +3,8 @@ from __future__ import annotations
 import asyncio
 
 from contextlib import asynccontextmanager
-from server.app.ws.database_broadcaster import DatabaseBroadcaster
-from server.app.ws.event import Event
+from ws.database_broadcaster import DatabaseBroadcaster
+from ws.event import Event
 from typing import Any, AsyncGenerator, AsyncIterator
 
 
