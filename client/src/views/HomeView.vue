@@ -9,6 +9,8 @@ import { HostSession } from "@/types/Session";
 
 const showPreviouslyPlayed = ref(false);
 
+const LOCAL_IP_ADDRESS = import.meta.env.VITE_LOCAL_IP_ADDRESS;
+
 const toggleVisibility = () => {
   showPreviouslyPlayed.value = !showPreviouslyPlayed.value;
 };
@@ -17,7 +19,7 @@ const toggleVisibility = () => {
 const sessions = [
     new HostSession({
         id: "123",
-        invitationLink: "http://localhost:8080/sessions/join/123",
+        invitationLink: `http://${LOCAL_IP_ADDRESS}/sessions/join/123`,
         guests: [],
         playlistName: "Playlist 1",
         playlist: [],
@@ -26,7 +28,7 @@ const sessions = [
     }),
     new HostSession({
         id: "234",
-        invitationLink: "http://localhost:8080/sessions/join/234",
+        invitationLink: `http://${LOCAL_IP_ADDRESS}/sessions/join/123`,
         guests: [],
         playlistName: "Playlist 2",
         playlist: [],
@@ -97,6 +99,7 @@ const flowerData = [
           <PreviouslyPlayed></PreviouslyPlayed>
         </div>
       </div>
+      <qrcode-vue :value="sessions[selectedSessionIndex].invitationLink" />
     </div>
   </div>
 </template>
