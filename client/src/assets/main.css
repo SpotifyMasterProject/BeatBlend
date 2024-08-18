@@ -137,3 +137,15 @@ a,
     display: none;
   }
 }
+
+.input-default {
+  display: block;
+  background-color: var(--backcore-color2);
+  border-radius: 15px;
+  font-size: 16px;
+  border: solid;
+  border-color: var(--backcore-color3);
+  border-width: 2px;
+  padding: 5px 10px;
+  box-sizing: border-box;
+}

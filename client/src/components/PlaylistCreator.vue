@@ -59,7 +59,6 @@ const startSession = () => {
 };
 
 </script>
-
 <template>
     <div class="playlist-creator">
         <InputText class="title" type="text" v-model="title" placeholder="Playlist Title..." />
@@ -117,7 +116,7 @@ input:focus {
     border-radius: 10px;
     overflow-y: auto;
     padding: 5px;
-    width: 30%;
+    width: min(30%, 300px);
 }
 
 .start-session {
@@ -134,6 +133,6 @@ input:focus {
     color: white;
 }
 .start-session:disabled {
-    color: #c4c4c4;
+    color: var(--button-disabled-font-color);
 }
 </style>
