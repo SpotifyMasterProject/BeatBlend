@@ -178,8 +178,6 @@ class Service:
     async def establish_ws_connection_to_session(self, websocket: WebSocket, session_id: str) -> None:
         channel = self.repo.get_session_key(session_id)
 
-        self.manager.publish(channel=self.repo.get_session_key(session_id))
-
         async with self.manager.subscribe(channel=channel) as subscriber:
             try:
                 async for event in subscriber:
