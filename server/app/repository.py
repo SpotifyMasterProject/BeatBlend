@@ -4,10 +4,10 @@ from models.session import Session
 from typing import Optional
 from models.user import User
 
-
 class Repository:
     def __init__(self):
         self.redis = Redis(host="redis", port=6379, decode_responses=True)
+
 
     @staticmethod
     def get_user_key(user_id) -> str:

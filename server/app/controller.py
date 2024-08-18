@@ -1,13 +1,25 @@
-from service import lifespan
+from contextlib import asynccontextmanager
+from ws.websocket_manager import WebsocketManager
 from fastapi import FastAPI, status, Depends, WebSocket
 from service import Service
 from models.token import Token
 from models.user import User, SpotifyUser
-from models.session import Session
+from models.session import Session, AnonymousSession, GuestSession, anonymizeSession, guestSession
+from models.song import Song
+from recommender.songs_dataset import SongsDataset
 from starlette.middleware.cors import CORSMiddleware
 from typing import Annotated
 
-service = Service()
+manager = WebsocketManager()
+service = Service(manager)
+songsDataset = SongsDataset("./recommender/dataset.csv")
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    await manager.connect()
+    yield
+    await manager.disconnect()
+
 app = FastAPI(lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
@@ -17,12 +29,11 @@ app.add_middleware(
     allow_headers=['*']
 )
 
-
 @app.post("/auth-codes", status_code=status.HTTP_201_CREATED)
 async def authorize_spotify(user: SpotifyUser) -> Token:
     # TODO: replace the spotify token getting with spotipy
-    # global spotify_token
-    # spotify_token = exchange_code_for_token(user.auth_code)
+    spotify_token = Service.exchange_code_for_token(user.auth_code)
+    user.username = Service.get_spotify_name(spotify_token)
     user = await service.create_user(user)
     return service.generate_token(user)
 
@@ -47,8 +58,8 @@ async def create_new_session(user_id: Annotated[str, Depends(service.verify_toke
 
 
 @app.get("/sessions", status_code=status.HTTP_200_OK, response_model=list[Session])
-async def get_session() -> list[Session]:
-    return await service.get_all_sessions()
+async def get_sessions(user_id: Annotated[str, Depends(service.verify_token)]) -> list[Session]:
+    return await service.get_sessions(user_id)
 
 
 # TODO: delete if onboarding using session_ids is not required
@@ -58,11 +69,31 @@ async def add_guest(guest_id: Annotated[str, Depends(service.verify_token)], ses
     return await service.add_guest_to_session(guest_id, session_id, "")
 
 
-@app.post("/sessions/join/{invite_token}", status_code=status.HTTP_200_OK, response_model=Session)
+@app.post("/sessions/join/{invite_token}", status_code=status.HTTP_200_OK, response_model=GuestSession)
 async def join_session(guest_id: Annotated[str, Depends(service.verify_token)], invite_token: str) -> Session:
     await service.validate_user(guest_id)
     await service.validate_invite(invite_token)
-    return await service.add_guest_to_session(guest_id, "", invite_token)
+    session = await service.add_guest_to_session(guest_id, "", invite_token)
+    return guestSession(session)
+
+@app.get("/sessions/join/{invite_token}", status_code=status.HTTP_200_OK, response_model=AnonymousSession)
+async def get_session(invite_token: str) -> Session:
+    await service.validate_invite(invite_token)
+    session = await service.get_session_by_invite(invite_token)
+    hostUser = await service.get_user(session.host)
+    return anonymizeSession(session, hostUser)
+
+
+@app.get("/sessions/{session_id}", status_code=status.HTTP_200_OK, response_model=GuestSession)
+async def get_session(session_id: str) -> Session:
+    await service.validate_session(session_id)
+    session = await service.get_session_by_id(session_id)
+    return guestSession(session)
+
+@app.get("/songs/{pattern}", status_code=status.HTTP_200_OK, response_model=list[Song])
+async def get_songs(user_id: Annotated[str, Depends(service.verify_token)], pattern: str) -> list[Song]:
+    await service.validate_user(user_id)
+    return songsDataset.get_matching_songs(pattern)
 
 
 @app.delete("/sessions/{session_id}/guests/{guest_id}", status_code=status.HTTP_204_NO_CONTENT)
