@@ -1,13 +1,16 @@
 <script setup lang="ts">
+import Button from 'primevue/button';
 import LogoIntroScreen from "@/components/LogoIntroScreen.vue";
 import Navigation from "@/components/Navigation.vue";
 import Flower from "@/components/Flower.vue";
 import PreviouslyPlayed from "@/components/PreviouslyPlayed.vue";
 import QrcodeVue from 'qrcode.vue'
+import AddMoreSong from "@/components/AddMoreSong.vue";
 import { ref, onMounted } from "vue";
 import { HostSession } from "@/types/Session";
 
 const showPreviouslyPlayed = ref(false);
+const showAddMoreSongPopup = ref(false);
 
 const LOCAL_IP_ADDRESS = import.meta.env.VITE_LOCAL_IP_ADDRESS;
 
@@ -37,6 +40,9 @@ const sessions = [
 ]; 
 
 const selectedSessionIndex = ref(0);
+const toggleAddMoreSongPopup = () => {
+  showAddMoreSongPopup.value = !showAddMoreSongPopup.value;
+};
 
 const flowerData = [
   { value: 0.4, color: '#144550' },
@@ -51,14 +57,11 @@ const flowerData = [
 <template>
   <div class="type2">
     <header>
-      <div class="search-bar-background">
-      <input class="search-bar" type="text" placeholder="Search" />
+      <div class="function-icon-container">
+        <Button icon="pi pi-search" severity="success" text raised rounded aria-label="Search" @click="toggleAddMoreSongPopup" />
       </div>
       <div class="logo-nav-container">
         <logo-intro-screen/>
-        <nav>
-          <Navigation/>
-        </nav>
       </div>
 
     </header>
@@ -101,10 +104,43 @@ const flowerData = [
       </div>
       <qrcode-vue :value="sessions[selectedSessionIndex].invitationLink" />
     </div>
+
+    <!-- Popup Overlay -->
+    <div v-if="showAddMoreSongPopup" class="popup-overlay" @click="toggleAddMoreSongPopup">
+      <div class="popup-content" @click.stop>
+        <AddMoreSong @close-popup="toggleAddMoreSongPopup"/>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
+.function-icon-container {
+  position: absolute;
+  top: 55px;
+  left: 40px;
+  z-index: 1000;
+}
+
+
+.function-icon-container button {
+  width: 45px;
+  height: 45px;
+  align-items: center;
+  justify-content: center;
+  background-color: #6BA149;
+  color: #D9D9D9;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: bold;
+  border-radius: 25%;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.function-icon-container button:hover {
+  background-color: #6AA834;
+  transform: scale(1.05);
+}
 
 .previously-played.minimized{
   height: auto;
@@ -165,9 +201,22 @@ const flowerData = [
   transform: scale(1.05); /* Slightly enlarge the button on hover */
 }
 .previously-played .table-scroll {
-  max-height: 700px; /* Adjust based on your UI requirements */
+  max-height: 700px;
   overflow-y: auto;
-  overflow-x: hidden; /* Assuming you don't want horizontal scrolling */
+  overflow-x: hidden;
+}
+
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.7);
+  z-index: 1000;
 }
 
 .footer-section {

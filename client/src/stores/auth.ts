@@ -28,8 +28,6 @@ export const useAuthStore = defineStore('auth', () => {
         const authenticatedUser = new User({id: decodedToken.sub, username: decodedToken.username})
         localStorage.setItem('user', JSON.stringify(authenticatedUser))
         user.value = authenticatedUser
-
-        await router.push({name: 'home'})
     }
 
     const deauthorize = async function () {
@@ -37,7 +35,6 @@ export const useAuthStore = defineStore('auth', () => {
         token.value = undefined
         sessionStorage.removeItem('token')
         localStorage.removeItem('user')
-        await router.push({name: ''})
     }
 
     return {

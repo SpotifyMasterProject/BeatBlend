@@ -1,0 +1,196 @@
+<template>
+    <div class="songs">
+        <h2 class="songs-header">{{ headerText }}</h2>
+        <AutoComplete
+            class="search" v-model="localSelectedSong"
+            @option-select="selectSong"
+            :suggestions="filteredSongs"
+            @complete="search"
+            variant="filled"
+            :unstyled="false"
+            overlayClass="overlay"
+            placeholder="Search">
+            <template #option="slotProps">
+                <div class="song">
+                    <i class="pi pi-play"></i>
+                    <div class="song-details">
+                        <span class="song-title">{{ slotProps.option.name }}</span>
+                        <span class="song-artists">{{ combineArtists(slotProps.option.artists) }}</span>
+                    </div>
+                </div>
+            </template>
+        </AutoComplete>
+        <div class="selected-songs">
+            <div class="selected-song" v-for="song in localSelectedSongs" :key="song.id">
+                <SongItem :song="song">
+                    <i class="pi pi-trash delete-icon" @click="removeSong(song)"></i>
+                </SongItem>
+            </div>
+        </div>
+    </div>
+</template>
+
+<script setup>
+import { ref, watch, nextTick } from 'vue';
+import AutoComplete from 'primevue/autocomplete';
+import { useSongs } from '@/composables/useSongs.ts';
+import SongItem from '@/components/SongItem.vue';
+
+const props = defineProps({
+    initialSongs: {
+        type: Array,
+        required: true,
+    },
+    headerText: {
+        type: String,
+        required: true,
+    },
+    selectedSongs: {
+        type: Array,
+        default: () => [],
+    }
+});
+
+const emit = defineEmits(['update:selectedSongs']);
+
+const { filteredSongs, selectedSong: localSelectedSong, selectedSongs: localSelectedSongs, combineArtists, search, selectSong, removeSong } = useSongs(props.initialSongs);
+
+// Prevent recursive updates by using a flag
+let isInternalUpdate = false;
+
+// Watch for changes in the selectedSongs prop (modelValue) and update localSelectedSongs accordingly
+watch(
+  () => props.selectedSongs,
+  (newVal) => {
+    if (isInternalUpdate) {
+            isInternalUpdate = false; // Reset the flag
+            return; // Prevent this watch from triggering an update loop
+        }
+
+    console.log("parent selected update:", newVal)
+    // If the parent clears selectedSongs, clear the localSelectedSongs as well
+    if (newVal.length === 0 && localSelectedSongs.value.length > 0) {
+            nextTick(() => {
+                localSelectedSongs.value = [];
+                localSelectedSong.value = null;
+                filteredSongs.value = [...props.initialSongs]; // Reset filteredSongs
+            });
+        }
+  }
+);
+
+// Watch for changes in localSelectedSongs and emit the update to the parent
+watch(localSelectedSongs, (newVal) => {
+    isInternalUpdate = true;
+    emit('update:selectedSongs', newVal);
+});
+</script>
+
+<style scoped>
+.songs {
+  background-color: var(--backcore-color1);
+  height: 100%;
+  margin: 10px var(--margin-inline) 80px;
+  padding-inline: var(--margin-inline);
+  border-radius: 15px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.songs-header {
+  color: var(--font-color);
+}
+
+.search.p-autocomplete {
+  display: block;
+  background-color: var(--backcore-color2);
+  border-radius: 15px;
+  font-size: 16px;
+  border: solid;
+  border-color: var(--backcore-color3);
+  border-width: 2px;
+  padding: 5px 10px;
+  box-sizing: border-box;
+}
+
+.songs input {
+  background-color: var(--backcore-color3);
+  font-family: inherit;
+  color: var(--font-color);
+}
+
+input:focus {
+    outline: none;
+}
+
+.songs .search.p-autocomplete ::placeholder {
+    color: var(--backcore-color3);
+}
+
+.p-autocomplete-overlay.overlay {
+    margin-top: 10px;
+    background-color: var(--backcore-color3);
+    color: var(--font-color);
+    font-family: inherit;
+    border-radius: 10px;
+    overflow-y: auto;
+    padding: 5px;
+    width: 30%;
+}
+
+.search .p-autocomplete-loader {
+  color: var(--font-color);
+}
+
+.p-autocomplete-overlay.overlay .song {
+    display: flex;
+    flex-direction: row;
+    justify-content: start;
+    align-items: center;
+    gap: 8px;
+    color: var(--font-color);
+    border-radius: 5px;
+    padding: 5px;
+    margin-inline: 5px;
+    width: 100%;
+}
+
+.p-autocomplete-overlay.overlay .song-details, .song-details {
+    display: flex;
+    flex-direction: column;
+    justify-content: start;
+    gap: 2px;
+}
+
+.overlay .p-autocomplete-list {
+    gap: 7px;
+}
+
+.p-autocomplete-overlay.overlay .song:hover {
+    background-color: var(--backcore-color1);
+}
+
+.p-autocomplete-overlay.overlay .song-title, .song-title {
+    font-weight: bold;
+}
+
+.p-autocomplete-overlay.overlay .song-artists, .song-artists {
+    font-size: 12px;
+}
+
+.selected-songs {
+    overflow-y: auto;
+    max-height: 70%;
+}
+
+.selected-songs .selected-song .delete-icon {
+    color: var(--font-color);
+    cursor: pointer;
+    padding-right: 10px;
+}
+
+.selected-songs .selected-song .delete-icon:hover {
+    color: red;
+}
+</style>
