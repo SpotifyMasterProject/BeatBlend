@@ -1,15 +1,22 @@
 <script setup lang="ts">
+import Button from 'primevue/button';
 import LogoIntroScreen from "@/components/LogoIntroScreen.vue";
 import Navigation from "@/components/Navigation.vue";
 import Flower from "@/components/Flower.vue";
 import PreviouslyPlayed from "@/components/PreviouslyPlayed.vue";
+import AddMoreSong from "@/components/AddMoreSong.vue";
 import { ref, onMounted } from "vue";
 
 
 const showPreviouslyPlayed = ref(false);
+const showAddMoreSongPopup = ref(false);
 
 const toggleVisibility = () => {
   showPreviouslyPlayed.value = !showPreviouslyPlayed.value;
+};
+
+const toggleAddMoreSongPopup = () => {
+  showAddMoreSongPopup.value = !showAddMoreSongPopup.value;
 };
 
 const flowerData = [
@@ -24,14 +31,11 @@ const flowerData = [
 <template>
   <div class="type2">
     <header>
-      <div class="search-bar-background">
-      <input class="search-bar" type="text" placeholder="Search" />
+      <div class="function-icon-container">
+        <Button icon="pi pi-search" severity="success" text raised rounded aria-label="Search" @click="toggleAddMoreSongPopup" />
       </div>
       <div class="logo-nav-container">
         <logo-intro-screen/>
-        <nav>
-          <Navigation/>
-        </nav>
       </div>
 
     </header>
@@ -71,12 +75,44 @@ const flowerData = [
         <PreviouslyPlayed></PreviouslyPlayed>
       </div>
     </div>
+
+    <!-- Popup Overlay -->
+    <div v-if="showAddMoreSongPopup" class="popup-overlay" @click="toggleAddMoreSongPopup">
+      <div class="popup-content" @click.stop>
+        <AddMoreSong @close-popup="toggleAddMoreSongPopup"/>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
+.function-icon-container {
+  position: absolute;
+  top: 55px;
+  left: 40px;
+  z-index: 1000;
+}
 
-type2. previously-played.minimized{
+.function-icon-container button {
+  width: 45px;
+  height: 45px;
+  align-items: center;
+  justify-content: center;
+  background-color: #6BA149;
+  color: #D9D9D9;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: bold;
+  border-radius: 25%;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.function-icon-container button:hover {
+  background-color: #6AA834;
+  transform: scale(1.05);
+}
+
+.type2. previously-played.minimized{
   height: auto;
 }
 .type2 .previously-played .table-header-container {
@@ -117,8 +153,21 @@ type2. previously-played.minimized{
   transform: scale(1.05); /* Slightly enlarge the button on hover */
 }
 .previously-played .table-scroll {
-  max-height: 700px; /* Adjust based on your UI requirements */
+  max-height: 700px;
   overflow-y: auto;
-  overflow-x: hidden; /* Assuming you don't want horizontal scrolling */
+  overflow-x: hidden;
+}
+
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.7);
+  z-index: 1000;
 }
 </style>
