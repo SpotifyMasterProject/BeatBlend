@@ -6,27 +6,26 @@ export const authService = {
         await apiClient.post('/token', {
             username: username
         }).then(async (response) => {
-            await storeAuthorization(response.data?.['access_token'])
+            await storeAuthorization(response.data?.['accessToken'])
             console.log('Logged in as guest with username: ' + username)
         })
     },
 
-    async authorizeSpotify(username: string, auth_code: string) {
+    async authorizeSpotify(authCode: string) {
         await apiClient.post('/auth-codes', {
-            username: username,
-            auth_code: auth_code
+            authCode
         }).then(async (response) => {
-            await storeAuthorization(response.data?.['access_token'])
-            console.log('Logged in via spotify with username: ' + username)
+            await storeAuthorization(response.data?.['accessToken'], /* isHost= */true)
+            console.log('Logged in via spotify with username')
         })
     }
 }
 
-const storeAuthorization = async function (token: string) {
+const storeAuthorization = async function (token: string, isHost = false) {
     const authStore = useAuthStore()
 
     if (token === undefined) {
         throw new Error('Authorization response did not include an access token.')
     }
-    await authStore.authorize(token)
+    await authStore.authorize(token, isHost)
 }
