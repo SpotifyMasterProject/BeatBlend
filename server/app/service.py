@@ -2,7 +2,7 @@ import os
 import jwt
 import uuid
 
-from server.app.ws.websocket_manager import WebsocketManager
+from ws.websocket_manager import WebsocketManager
 from contextlib import asynccontextmanager
 from repository import Repository
 from fastapi.security import OAuth2PasswordBearer

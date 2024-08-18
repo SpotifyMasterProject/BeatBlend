@@ -1,7 +1,7 @@
 import asyncio
 import typing
 
-from event import Event
+from ws.event import Event
 from redis.asyncio import Redis
 
 
