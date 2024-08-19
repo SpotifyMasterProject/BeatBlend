@@ -1,5 +1,6 @@
 from typing import Optional, List
 from pydantic import BaseModel
+from song import Song
 
 
 class Session(BaseModel):
@@ -9,4 +10,4 @@ class Session(BaseModel):
     guests: Optional[List[str]] = []
     invite_token: Optional[str] = None
     invite_link: Optional[str] = None
-    playlist: Optional[List[str]] = []
+    playlist: Optional[List[Song]] = []
