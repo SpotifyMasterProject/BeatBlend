@@ -158,3 +158,13 @@ class Service:
                     await websocket.send_text(event.message)
             except WebSocketDisconnect:
                 pass
+
+    async def add_song_to_session(self, user_id: str, session_id: str, song_id: str) -> Session:
+        result = await self.repo.get_session_by_id(session_id)
+        session = Session.model_validate_json(result)
+        session.playlist.append(song_id)
+
+        await self.repo.set_session(session)
+        await manager.publish(channel=self.repo.get_session_key(session.id), message=f"User {user_id} has added a song")
+
+        return session

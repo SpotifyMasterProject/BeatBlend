@@ -73,17 +73,10 @@ async def remove_guest(host_id: Annotated[str, Depends(service.verify_token)], s
 
 
 @app.patch("/sessions/{session_id}/songs", status_code=status.HTTP_200_OK)
-async def add_song(user_id: Annotated[str, Depends(verify_token)], session_id: str, song_id: str) -> Session:
-    await validate_user_id(user_id)
-    await validate_session_id(session_id)
-    result = await redis.get(get_session_key(session_id))
-    session = Session.model_validate_json(result)
-    session.playlist.append(song_id)
-
-    await redis.set(get_session_key(session.id), session.model_dump_json())
-    await manager.publish(channel=get_session_key(session.id), message=f"User {user_id} has added a song")
-
-    return session
+async def add_song(user_id: Annotated[str, Depends(service.verify_token)], session_id: str, song_id: str) -> Session:
+    await service.validate_user(user_id)
+    await service.validate_session(session_id)
+    return await service.add_song_to_session(user_id, session_id, song_id)
 
 
 @app.delete("/sessions/{session_id}/leave", status_code=status.HTTP_204_NO_CONTENT)
