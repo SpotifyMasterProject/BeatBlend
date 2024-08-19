@@ -52,7 +52,7 @@ class Service:
         )
         return Token(access_token=encoded_jwt, token_type="bearer")
 
-    # @staticmethod
+    @staticmethod
     def exchange_code_for_token(auth_code: str) -> str:
          print(auth_code)
          id_secret = f'{os.getenv("SPOTIFY_CLIENT_ID")}:{os.getenv("SPOTIFY_CLIENT_SECRET")}'
