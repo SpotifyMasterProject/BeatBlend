@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import {ref,watch,onMounted} from 'vue';
+import {ref,onMounted} from 'vue';
 import LogoIntroScreen from "@/components/LogoIntroScreen.vue";
 import Navigation from "@/components/Navigation.vue";
 import Flower from "@/components/Flower.vue";
+import type { CSSProperties } from 'vue';
 
 // Petal and their color & value -- Adapt length not correct yet
 const flowerData = ref([
@@ -34,6 +35,29 @@ const flowerData = ref([
     { value: 0.3, color: '#E4832E' },
     { value: 0.8, color: '#BB7DEC' },
   ],
+
+  [
+    { value: 0.5, color: '#144550' },
+    { value: 0.7, color: '#31431E' },
+    { value: 0.4, color: '#EEE8C4' },
+    { value: 0.6, color: '#E4832E' },
+    { value: 0.5, color: '#BB7DEC' },
+  ],
+  [
+    { value: 0.5, color: '#144550' },
+    { value: 0.4, color: '#31431E' },
+    { value: 0.6, color: '#EEE8C4' },
+    { value: 0.6, color: '#E4832E' },
+    { value: 0.2, color: '#BB7DEC' },
+  ],
+  [
+    { value: 0.4, color: '#144550' },
+    { value: 0.8, color: '#31431E' },
+    { value: 0.3, color: '#EEE8C4' },
+    { value: 0.3, color: '#E4832E' },
+    { value: 0.8, color: '#BB7DEC' },
+  ],
+
   // Add more flowers as needed
 ]);
 
@@ -104,30 +128,104 @@ function toggleInfo(){
   infoVisible.value = !infoVisible.value;
 }
 
-// Generate a random offset
-function generateRandomOffset(range: number) {
-  return Math.random() * range - range / 2;
-}
+// Define a grid size and positions for flowers
+const gridSize = 80;
+const maxVerticalMoves = 3;
 
-// Store initial x and y for each new flower
-const maxOffset = 50;
-const flowerOffsets = ref(flowerData.value.map(() => ({
-  x: generateRandomOffset(maxOffset),
-  y: generateRandomOffset(maxOffset),
-})));
+let containerWidth = 0;
+let containerHeight = 0;
 
-//Function stores positions so they remain constant when zooming
-const getFlowerStyles = (index: number) => {
-  const baseSize = 200;
-  //const size = baseSize * zoomLevel.value;
-  const size = baseSize;
+onMounted(() => {
+  const container = document.querySelector('.visualization-container');
+  if (container) {
+    containerWidth = container.clientWidth;
+    containerHeight = container.clientHeight;
+  }
+});
 
-  const { x, y } = flowerOffsets.value[index];
+
+// Assign positions randomly
+const generateRandomGridPositions = (flowerCount: number) => {
+  const positions = [];
+  let currentX = 0;
+  let currentY = Math.floor(Math.random() * gridSize * maxVerticalMoves); //Random vertical placement for the first flower
+  let verticalNrFlowers = 1; //Nr of flowers vertically
+  let lastVerticalDirection = 0;
+
+  for (let i = 0; i < flowerCount; i++) {
+    if (i == 0) {
+      positions.push({ x:0, y:currentY}); // First flower starts in first column and random Y
+    } else {
+      const stayInColumn = Math.random() > 0.5; //Decide whether to stay in same column or move to right
+      const maxStack = (currentY <= gridSize || currentY >= gridSize * (maxVerticalMoves-1)) ? 3 : 2; // Determine maximum vertical based on currentY position
+
+      if (stayInColumn && verticalNrFlowers < maxStack) {
+        let verticalDirection = lastVerticalDirection;
+
+        if (lastVerticalDirection === 1) {
+          verticalDirection = 1;
+        } else if (lastVerticalDirection === -1) {
+          verticalDirection = -1;
+        } else {
+          if (currentY <= gridSize) { // If currentY too close to top, next flower will be placed down
+            verticalDirection = 1;
+          } else if (currentY >= gridSize * maxVerticalMoves) { // If currentY too close to bottom, next flower will be placed up
+            verticalDirection = -1;;
+          } else {
+            verticalDirection = Math.random() > 0.5 ? 1 : -1;
+          }
+        }
+        lastVerticalDirection = verticalDirection
+        const verticalMove = verticalDirection * gridSize * (Math.random() > 0.5 ? 1.5 : 2);
+        currentY += verticalMove;
+        verticalNrFlowers++;
+        positions.push({x: currentX, y: currentY});
+      } else {
+        verticalNrFlowers = 0;
+        const horizontalMove = gridSize * (Math.random() > 0.5 ? 1.5 : 2);
+        currentX += horizontalMove;
+        verticalNrFlowers = 1;
+
+        lastVerticalDirection = 0;
+
+        // Define first currentY, when moved horizontally
+        const randomStartPositions = [0, gridSize * maxVerticalMoves, gridSize * Math.floor(maxVerticalMoves / 2)];
+        currentY = randomStartPositions[Math.floor(Math.random() * randomStartPositions.length)];
+
+        positions.push({ x: currentX, y: currentY });
+      }
+    }
+  }
+
+  return positions;
+};
+
+const gridPositions = ref(generateRandomGridPositions(flowerData.value.length));
+
+
+// Function to calculate styles for each flower based on grid positions
+const getFlowerStyles = (index: number): CSSProperties => {
+  const position = gridPositions.value[index];
+
+  if (!position) {
+    console.error(`Position for flower at index ${index} is undefined.`);
+    return {
+      position: 'absolute',
+      left: `0px`,
+      top: `0px`,
+      width: `160px`,
+      height: `160px`,
+    };
+  }
+
+  const { x, y } = position;
 
   return {
-    width: `${size}px`,
-    height: `${size}px`,
-    transform: `translate(${x}px, ${y}px)`,
+    position: 'absolute',
+    left: `${x + 40}px`,
+    top: `${y + 40}px`,
+    width: `160px`,
+    height: `160px`,
   };
 };
 
@@ -167,8 +265,8 @@ onMounted(() => {
           >
             <Flower
                 :features="flower"
-                :size="400"
-                :circleRadius="80"
+                :size="80"
+                :circleRadius="40"
             />
           </div>
         </div>
