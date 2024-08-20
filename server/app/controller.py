@@ -31,11 +31,11 @@ app.add_middleware(
 
 @app.post("/auth-codes", status_code=status.HTTP_201_CREATED)
 async def authorize_spotify(user: SpotifyUser) -> Token:
-    # TODO: replace the spotify token getting with spotipy
-    spotify_token = Service.exchange_code_for_token(user.auth_code)
-    user.username = Service.get_spotify_name(spotify_token)
+    token_info = service.spotipy_oauth.get_access_token(user.auth_code)
+    token = Token(**token_info)
+    user.username = Service.get_spotify_name(token.access_token)
     user = await service.create_user(user)
-    return service.generate_token(user)
+    return token
 
 
 @app.post("/token", status_code=status.HTTP_201_CREATED)

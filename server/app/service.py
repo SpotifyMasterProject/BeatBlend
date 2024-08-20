@@ -1,10 +1,10 @@
 import os
 import jwt
 import uuid
-import base64
 
 import requests
 from ws.websocket_manager import WebsocketManager
+from spotipy.oauth2 import SpotifyOAuth
 from repository import Repository
 from fastapi.security import OAuth2PasswordBearer
 from jwt import InvalidTokenError
@@ -19,6 +19,12 @@ class Service:
     def __init__(self, manager: WebsocketManager):
         self.repo = Repository()
         self.manager = manager
+        self.spotipy_oauth = SpotifyOAuth(
+            client_id=os.getenv("SPOTIFY_CLIENT_ID"),
+            client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
+            redirect_uri=os.getenv("SPOTIFY_REDIRECT_URI"),
+            scope="user-library-read"  # scope defines functionalities
+        )
 
     @staticmethod
     def verify_token(token: Annotated[str, Depends(OAuth2PasswordBearer(tokenUrl="token"))]) -> str:
@@ -51,26 +57,6 @@ class Service:
             algorithm=algorithm
         )
         return Token(access_token=encoded_jwt, token_type="bearer")
-
-    @staticmethod
-    def exchange_code_for_token(auth_code: str) -> str:
-         print(auth_code)
-         id_secret = f'{os.getenv("SPOTIFY_CLIENT_ID")}:{os.getenv("SPOTIFY_CLIENT_SECRET")}'
-         base64_encoded = base64.b64encode(id_secret.encode()).decode()
-    
-         response = requests.post(
-             "https://accounts.spotify.com/api/token",
-             headers={
-                 "content-type": "application/x-www-form-urlencoded",
-                 "Authorization": "Basic " + base64_encoded,
-             },
-             data={
-                 "grant_type": "authorization_code",
-                 "code": auth_code,
-                 "redirect_uri": os.getenv("SPOTIFY_REDIRECT_URI"),
-             }
-         )
-         return response.json()["access_token"]
 
     @staticmethod
     def get_spotify_name(access_token: str) -> str:
