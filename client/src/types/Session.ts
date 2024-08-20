@@ -7,7 +7,7 @@ export class Session {
     inviteLink: string
     guests: User[]
     playlist: Song[]
-    creationDate: string
+    creationDate: Date
     isRunning: boolean
 
     constructor(data: {
@@ -17,7 +17,7 @@ export class Session {
         guests: User[]
         playlistName: string
         playlist: Song[]
-        creationDate: string
+        creationDate: Date
         isRunning: boolean
     }) {
         this.id = data.id
