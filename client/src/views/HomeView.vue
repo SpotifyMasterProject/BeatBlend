@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {ref,onMounted} from 'vue';
+import {ref, watch, onMounted} from 'vue';
 import LogoIntroScreen from "@/components/LogoIntroScreen.vue";
 import Navigation from "@/components/Navigation.vue";
 import Flower from "@/components/Flower.vue";
@@ -62,65 +62,75 @@ const flowerData = ref([
 ]);
 
 //Zoom Function for the main visualization --> will be adapted at a later point
-//const zoomLevel = ref(1);
-//const minZoom = 0.5;
-//const maxZoom = 2;
+const zoomLevel = ref(1);
+const minZoom = 0.5;
+const maxZoom = 2;
 
-//const visualizationStyle = ref({
-//  transform: `scale(${zoomLevel.value})`,
-//  transformOrigin: 'bottom left',
-//});
+const visualizationStyle = ref({
+  transform: `scale(${zoomLevel.value})`,
+  transformOrigin: 'bottom left',
+});
 
-//const isScrollEnabled = ref(false);
+const isScrollEnabled = ref(false);
 
-//function zoomIn() {
-//  zoomLevel.value = Math.min(zoomLevel.value + 0.1, maxZoom)
-//  updateZoom();
-//}
-//function zoomOut() {
-//  zoomLevel.value = Math.max(zoomLevel.value - 0.1, minZoom);
-//  updateZoom();
-//}
+function zoomIn() {
+  zoomLevel.value = Math.min(zoomLevel.value + 0.1, maxZoom)
+  updateZoom();
+}
+function zoomOut() {
+  zoomLevel.value = Math.max(zoomLevel.value - 0.1, minZoom);
+  updateZoom();}
 
-// function updateZoom() {
-//   console.log('Updating Zoom:', zoomLevel.value);
-//   visualizationStyle.value.transform = `scale(${zoomLevel.value})`;
-//   isScrollEnabled.value = zoomLevel.value > 1;
-//   console.log('Scroll Enabled:', isScrollEnabled.value);
-// }
+function updateZoom() {
+  console.log('Updating Zoom:', zoomLevel.value);
 
-// function adjustZoomToFitContainer() {
-//   const container = document.querySelector('.visualization-container');
-//   if (container) {
-//     const containerWidth = container.clientWidth;
-//     const containerHeight = container.clientHeight;
+  if (zoomLevel.value <1){
+    visualizationStyle.value.transformOrigin = 'bottom left';
+  } else {
+    visualizationStyle.value.transformOrigin = 'top left';
+  }
 
-//     const maxFlowerSize = 200; // Adjust based on the largest flower size
-//     const numFlowers = flowerData.value.length;
+  visualizationStyle.value.transform = `scale(${zoomLevel.value})`;
+  isScrollEnabled.value = zoomLevel.value > 1;
 
-//     // Assuming a simple grid layout for calculating total size
-//     const totalWidth = maxFlowerSize * Math.sqrt(numFlowers);
-//     const totalHeight = maxFlowerSize * Math.sqrt(numFlowers);
+}
+function adjustZoomToFitContainer() {
+  const container = document.querySelector('.visualization-container');
+  if (container) {
+    const containerWidth = container.clientWidth;
+    const containerHeight = container.clientHeight;
 
-//     const requiredZoom = Math.min(
-//         containerWidth / totalWidth,
-//         containerHeight / totalHeight
-//     );
+    const maxFlowerSize = 200; // Adjust based on the largest flower size
+    const numFlowers = flowerData.value.length;
 
-//     zoomLevel.value = Math.min(requiredZoom, maxZoom);
-//     updateZoom();
-//   }
-// }
+    // Assuming a simple grid layout for calculating total size
+    const totalWidth = maxFlowerSize * Math.sqrt(numFlowers);
+    const totalHeight = maxFlowerSize * Math.sqrt(numFlowers);
 
-// watch(flowerData, () => {
-//   const flowerCount = flowerData.value.length;
+    const requiredZoom = Math.min(
+        containerWidth / totalWidth,
+        containerHeight / totalHeight
+    );
 
-//   //needs to be adapted once layout is correct//
-//   if (flowerCount > 10) {
-//     zoomLevel.value = minZoom;
-//     updateZoom();
-//   }
-// }, { immediate: true });
+    zoomLevel.value = Math.min(requiredZoom, maxZoom);
+    updateZoom();
+
+    if (zoomLevel.value === minZoom) {
+      (visualizationStyle.value as any).left = '0px';
+      (visualizationStyle.value as any).bottom = '0px';
+    }
+  }
+}
+
+ watch(flowerData, () => {
+   const flowerCount = flowerData.value.length;
+
+   //needs to be adapted once layout is correct//
+   if (flowerCount > 10) {
+     zoomLevel.value = minZoom;
+     updateZoom();
+   }
+ }, { immediate: true });
 
 //Information Button to read more about how the visualization can be read
 const infoVisible = ref(true);
@@ -142,7 +152,6 @@ onMounted(() => {
     containerHeight = container.clientHeight;
   }
 });
-
 
 // Assign positions randomly
 const generateRandomGridPositions = (flowerCount: number) => {
@@ -230,9 +239,8 @@ const getFlowerStyles = (index: number): CSSProperties => {
 };
 
 onMounted(() => {
-  console.log('Component Mounted');
-//  adjustZoomToFitContainer(); // Fit visualization to container size on mount
-//  updateZoom();
+  adjustZoomToFitContainer(); // Fit visualization to container size on mount
+  updateZoom();
 });
 
 </script>
@@ -254,20 +262,26 @@ onMounted(() => {
       <div class="info-box" :class="{ active: infoVisible }" @click="toggleInfo">
         <div> i </div>
       </div>
-      <div :class="['visualization-container']">
-        <div class="visualization">
-          <!-- Loop through each flower and apply the styles -->
-          <div
-              v-for="(flower, index) in flowerData"
-              :key="index"
-              :style="getFlowerStyles(index)"
-              class="flower-wrapper"
-          >
-            <Flower
-                :features="flower"
-                :size="80"
-                :circleRadius="40"
-            />
+      <div class="zoom-controls">
+        <button @click="zoomIn">+</button>
+        <button @click="zoomOut">-</button>
+      </div>
+      <div :class="['visualization-container']" >
+        <div class = "scroll-wrapper">
+          <div class="visualization" :style="visualizationStyle">
+            <!-- Loop through each flower and apply the styles -->
+            <div
+                v-for="(flower, index) in flowerData"
+                :key="index"
+                :style="getFlowerStyles(index)"
+                class="flower-wrapper"
+            >
+              <Flower
+                  :features="flower"
+                  :size="80"
+                  :circleRadius="40"
+              />
+            </div>
           </div>
         </div>
       </div>

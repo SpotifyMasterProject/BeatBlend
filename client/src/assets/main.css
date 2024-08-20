@@ -128,8 +128,8 @@ a,
   flex-direction: column;
   box-sizing: border-box;
   border-radius: 18px;
-  overflow-y: hidden;
   position: relative;
+  overflow: hidden;
 }
 .type2 .info-box {
   background-color: #D9D9D9;
@@ -166,17 +166,47 @@ a,
   width: 100%;
   height: 100%;
   position: relative;
-  overflow: auto;
+  overflow: visible;
 }
 
-.type2 .visualization-container.scroll-enabled {
+.type2 .scroll-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 35px;
+  bottom: 10px;
   overflow: auto;
+  margin-right: 0px;
+  margin-bottom: 0px;
+  padding-left: 10px;
+  padding-bottom: 10px;
 }
+
+.type2 .scroll-wrapper::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+  background-color: var(--backcore-color2);
+  border-radius: 12px;
+}
+
+.type2 .scroll-wrapper::-webkit-scrollbar-thumb {
+  background-color: var(--backcore-color3);
+  border-radius: 12px;
+}
+
+.type2 .scroll-wrapper::-webkit-scrollbar-thumb:hover {
+  background-color: var(--backcore-color1);
+}
+
+.type2 .scroll-wrapper::-webkit-scrollbar-corner {
+  background-color: var(--backcore-color1);
+}
+
 .type2 .zoom-controls {
   position: absolute;
-  top: 5px;
-  right: 0px;
-  z-index: 100;
+  top: 40px;
+  right: 10px;
+  z-index: 10;
   display: flex;
   flex-direction: column;
   gap: 5px;
@@ -184,7 +214,7 @@ a,
 .type2 .zoom-controls button {
   width: 20px;
   height: 20px;
-  background-color: var(--backcore-color1);
+  background-color: var(--backcore-color2);
   color: var(--font-color);
   border: none;
   border-radius: 5px;
