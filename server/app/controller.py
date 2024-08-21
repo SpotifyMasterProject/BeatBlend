@@ -7,6 +7,7 @@ from models.session import Session
 from models.song import Song
 from starlette.middleware.cors import CORSMiddleware
 from typing import Annotated
+from recommender.songs_dataset import SongsDataset
 
 service = Service()
 songsDataset = SongsDataset("./recommender/dataset.csv")
