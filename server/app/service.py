@@ -70,6 +70,10 @@ class Service:
         )
         return Token(access_token=encoded_jwt, token_type="bearer")
 
+    def get_spotify_name(self) -> str:
+        user_profile = self.spotify_client.me()
+        return user_profile['id']
+
     async def create_user(self, user: User) -> User:
         user.id = str(uuid.uuid4())
         await self.repo.set_user(user)
