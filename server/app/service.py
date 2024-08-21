@@ -122,15 +122,14 @@ class Service:
 
         return session
 
+    # TODO: this will be adapted once we have the postgres database
     # async def add_song_to_session(self, user_id: str, session_id: str, song_id: str) -> Session:
     #     result = await self.repo.get_session_by_id(session_id)
     #     session = Session.model_validate_json(result)
-    #     # TODO: try -> search database with song_id
     #     try:
     #         result = await self.repo.get_song_by_id(song_id)
     #         song = Song.model_validate_json(result)
     #         session.playlist.append(song)
-    #     # TODO: catch -> Spotify API call to retrieve information
     #     except Exception:
     #         song_info = self.spotify_client.track(song_id)
     #         session.playlist.append(Song(**song_info))

@@ -63,6 +63,7 @@ async def add_guest(guest_id: Annotated[str, Depends(service.verify_token)], ses
     return await service.add_guest_to_session(guest, session_id)
 
 
+# TODO: this will be adapted once we have the postgres database
 # @app.patch("/sessions/{session_id}/songs", status_code=status.HTTP_200_OK)
 # async def add_song(user_id: Annotated[str, Depends(service.verify_token)], session_id: str, song_id: str) -> Session:
 #     await service.validate_user(user_id)
@@ -70,7 +71,7 @@ async def add_guest(guest_id: Annotated[str, Depends(service.verify_token)], ses
 #     return await service.add_song_to_session(user_id, session_id, song_id)
 
 
-# TODO: this will be adapted once we have the postgres databsae
+# TODO: this will be adapted once we have the postgres database
 @app.get("/songs/{pattern}", status_code=status.HTTP_200_OK, response_model=list[Song])
 async def get_songs(user_id: Annotated[str, Depends(service.verify_token)], pattern: str) -> list[Song]:
     await service.validate_user(user_id)
