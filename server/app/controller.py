@@ -4,10 +4,13 @@ from service import Service
 from models.token import Token
 from models.user import User, SpotifyUser
 from models.session import Session
+from models.song import Song
 from starlette.middleware.cors import CORSMiddleware
 from typing import Annotated
 
 service = Service()
+songsDataset = SongsDataset("./recommender/dataset.csv")
+
 app = FastAPI(lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
@@ -63,6 +66,12 @@ async def add_guest(guest_id: Annotated[str, Depends(service.verify_token)], ses
 #     await service.validate_user(user_id)
 #     await service.validate_session(session_id)
 #     return await service.add_song_to_session(user_id, session_id, song_id)
+
+
+@app.get("/songs/{pattern}", status_code=status.HTTP_200_OK, response_model=list[Song])
+async def get_songs(user_id: Annotated[str, Depends(service.verify_token)], pattern: str) -> list[Song]:
+    await service.validate_user(user_id)
+    return songsDataset.get_matching_songs(pattern)
 
 
 @app.delete("/sessions/{session_id}/guests/{guest_id}", status_code=status.HTTP_204_NO_CONTENT)
