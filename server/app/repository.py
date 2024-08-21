@@ -17,10 +17,6 @@ class Repository:
     def get_session_key(session_id) -> str:
         return f'session:{session_id}'
 
-    @staticmethod
-    def get_invite_key(invite_token) -> str:
-        return f'invite:{invite_token}'
-
     async def set_user(self, user: User) -> None:
         await self.redis.set(self.get_user_key(user.id), user.model_dump_json())
 
@@ -46,14 +42,4 @@ class Repository:
     async def validate_session_by_id(self, session_id: str) -> None:
         if await self.redis.exists(self.get_session_key(session_id)) == 0:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invalid session ID.")
-
-    async def set_session_by_invite(self, session: Session) -> None:
-        await self.redis.set(self.get_invite_key(session.invite_token), session.id)
-
-    async def get_session_by_invite(self, invite_token: str) -> Optional[str]:
-        return await self.redis.get(self.get_invite_key(invite_token))
-
-    async def validate_invite_by_token(self, invite_token: str) -> None:
-        if await self.redis.exists(self.get_invite_key(invite_token)) == 0:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invalid invite link.")
 

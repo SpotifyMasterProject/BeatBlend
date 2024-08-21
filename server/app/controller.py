@@ -18,63 +18,68 @@ app.add_middleware(
 )
 
 
-@app.post("/auth-codes", status_code=status.HTTP_201_CREATED)
-async def authorize_spotify(user: SpotifyUser) -> Token:
-    user = await service.create_user(user)
-    token_info = service.spotipy_oauth.get_access_token(user.auth_code)
+@app.post("/auth-codes", status_code=status.HTTP_201_CREATED, response_model=Token)
+async def authorize_spotify(host: SpotifyUser) -> Token:
+    host = await service.create_user(host)
+    token_info = service.spotify_oauth.get_access_token(host.auth_code)
     return Token(**token_info)
 
 
-@app.post("/token", status_code=status.HTTP_201_CREATED)
-async def authorize(user: User) -> Token:
-    user = await service.create_user(user)
-    return service.generate_token(user)
+@app.post("/token", status_code=status.HTTP_201_CREATED, response_model=Token)
+async def authorize(guest: User) -> Token:
+    guest = await service.create_user(guest)
+    return service.generate_token(guest)
 
 
-@app.get("/", status_code=status.HTTP_200_OK)
-async def read_root(user_id: Annotated[str, Depends(service.verify_token)]) -> dict:
+@app.get("/", status_code=status.HTTP_200_OK, response_model=User)
+async def read_root(user_id: Annotated[str, Depends(service.verify_token)]) -> User:
     await service.validate_user(user_id)
-    user = await service.get_user(user_id)
-    return {"Hello World": "User. Your details are:", "user_id": user.id, "username": user.username}
+    return await service.get_user(user_id)
 
 
 @app.post("/sessions", status_code=status.HTTP_201_CREATED, response_model=Session)
-async def create_new_session(user_id: Annotated[str, Depends(service.verify_token)], session: Session) -> Session:
-    await service.validate_user(user_id)
-    return await service.create_session(user_id, session)
+async def create_new_session(host_id: Annotated[str, Depends(service.verify_token)], session: Session) -> Session:
+    await service.validate_user(host_id)
+    host = await service.get_user(host_id)
+    return await service.create_session(host, session)
 
 
-@app.get("/sessions", status_code=status.HTTP_200_OK, response_model=list[Session])
-async def get_session() -> list[Session]:
-    return await service.get_all_sessions()
+@app.get("/sessions/{session_id}", status_code=status.HTTP_200_OK, response_model=Session)
+async def get_session(session_id: str) -> Session:
+    await service.validate_session(session_id)
+    return await service.get_session(session_id)
 
 
-# TODO: delete if onboarding using session_ids is not required
 @app.post("/sessions/{session_id}/guests", status_code=status.HTTP_200_OK, response_model=Session)
 async def add_guest(guest_id: Annotated[str, Depends(service.verify_token)], session_id: str) -> Session:
-    await service.validate_session(session_id)
-    return await service.add_guest_to_session(guest_id, session_id, "")
-
-
-@app.post("/sessions/join/{invite_token}", status_code=status.HTTP_200_OK, response_model=Session)
-async def join_session(guest_id: Annotated[str, Depends(service.verify_token)], invite_token: str) -> Session:
     await service.validate_user(guest_id)
-    await service.validate_invite(invite_token)
-    return await service.add_guest_to_session(guest_id, "", invite_token)
+    await service.validate_session(session_id)
+    guest = await service.get_user(guest_id)
+    return await service.add_guest_to_session(guest, session_id)
+
+
+# @app.patch("/sessions/{session_id}/songs", status_code=status.HTTP_200_OK)
+# async def add_song(user_id: Annotated[str, Depends(service.verify_token)], session_id: str, song_id: str) -> Session:
+#     await service.validate_user(user_id)
+#     await service.validate_session(session_id)
+#     return await service.add_song_to_session(user_id, session_id, song_id)
 
 
 @app.delete("/sessions/{session_id}/guests/{guest_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_guest(host_id: Annotated[str, Depends(service.verify_token)], session_id: str, guest_id: str) -> None:
     await service.validate_user(host_id)
     await service.validate_session(session_id)
-    await service.remove_guest_from_session(host_id, guest_id, session_id)
+    await service.validate_user(guest_id)
+    guest = await service.get_user(guest_id)
+    await service.remove_guest_from_session(host_id, guest, session_id)
 
 
-@app.delete("/sessions/{session_id}/leave", status_code=status.HTTP_204_NO_CONTENT)
+@app.delete("/sessions/{session_id}/guests", status_code=status.HTTP_204_NO_CONTENT)
 async def leave_session(guest_id: Annotated[str, Depends(service.verify_token)], session_id: str) -> None:
     await service.validate_user(guest_id)
     await service.validate_session(session_id)
-    await service.remove_guest_from_session("", guest_id, session_id)
+    guest = await service.get_user(guest_id)
+    await service.remove_guest_from_session("", guest, session_id)
 
 
 @app.websocket("/ws/{session_id}")
