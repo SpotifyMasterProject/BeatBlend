@@ -68,6 +68,7 @@ async def add_guest(guest_id: Annotated[str, Depends(service.verify_token)], ses
 #     return await service.add_song_to_session(user_id, session_id, song_id)
 
 
+# TODO: this will be adapted once we have the postgres databsae
 @app.get("/songs/{pattern}", status_code=status.HTTP_200_OK, response_model=list[Song])
 async def get_songs(user_id: Annotated[str, Depends(service.verify_token)], pattern: str) -> list[Song]:
     await service.validate_user(user_id)
