@@ -20,7 +20,7 @@ import {RouterLink} from "vue-router";
 }
 .nav-link{
   text-decoration: none;
-  color: var(--Font-color);
+  color: var(--font-color);
   padding: 0 1rem;
   border-left: 1px solid #6BA149;
   transition: color 0.3s, background-color 0.3s;

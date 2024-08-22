@@ -6,24 +6,19 @@ const props = defineProps({
   features: {
     type: Array,
     required: true,
-    default: () => [
-      { value: 0.4, color: '#144550' },
-      { value: 0.6, color: '#31431E' },
-      { value: 0.5, color: '#EEE8C4' },
-      { value: 0.7, color: '#E4832E' },
-      { value: 0.3, color: '#BB7DEC' },
-    ],
+    validator: (value) => Array.isArray(value) && value.length === 5,
   },
   size: {
     type: Number,
-    default: 200,
+    default: 80,
   },
   circleRadius: {
     type: Number,
-    default: 50,
+    default: 40,
   },
 });
 
+const maxPetalLength = computed(() => props.circleRadius + Math.max(...props.features.map(f => f.value * props.circleRadius)));
 const center = computed(() => props.size / 2);
 const rotation = computed(() => {
   const maxFeatureIndex = props.features.reduce(
@@ -36,19 +31,20 @@ const rotation = computed(() => {
 </script>
 
 <template>
-  <svg :width="size" :height="size" :viewBox="`0 0 ${size} ${size}`" :style="{ transform: `rotate(${rotation}deg)` }">
-    <circle :cx="center" :cy="center" :r="circleRadius" fill="none" stroke="#CCCCCC" stroke-width="1" />
+  <svg :width="maxPetalLength * 2" :height="maxPetalLength * 2" :viewBox="`0 0 ${maxPetalLength * 2} ${maxPetalLength * 2}`" :style="{ transform: `rotate(${rotation}deg)` }">
+    <circle :cx="maxPetalLength" :cy="maxPetalLength" :r="circleRadius" fill="none" stroke="#CCCCCC" stroke-width="1" />
     <Petal
         v-for="(feature, index) in features"
         :key="index"
         :index="index"
         :value="feature.value"
         :color="feature.color"
-        :center="center"
+        :center="maxPetalLength"
         :circleRadius="circleRadius"
     />
   </svg>
 </template>
+
 
 <style scoped>
   svg {
