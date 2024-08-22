@@ -68,7 +68,7 @@ const maxZoom = 2;
 
 const visualizationStyle = ref({
   transform: `scale(${zoomLevel.value})`,
-  transformOrigin: 'bottom left',
+  transformOrigin: 'center left',
 });
 
 const isScrollEnabled = ref(false);
@@ -266,7 +266,7 @@ onMounted(() => {
         <button @click="zoomIn">+</button>
         <button @click="zoomOut">-</button>
       </div>
-      <div :class="['visualization-container']" >
+      <div class="visualization-container" >
         <div class = "scroll-wrapper">
           <div class="visualization" :style="visualizationStyle">
             <!-- Loop through each flower and apply the styles -->
