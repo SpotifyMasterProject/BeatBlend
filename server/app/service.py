@@ -3,9 +3,11 @@ import jwt
 import uuid
 
 import requests
+from contextlib import asynccontextmanager
 from ws.websocket_manager import WebsocketManager
 from spotipy.oauth2 import SpotifyOAuth
 from repository import Repository
+from fastapi import FastAPI
 from fastapi.security import OAuth2PasswordBearer
 from jwt import InvalidTokenError
 from typing import Annotated, List
@@ -15,16 +17,25 @@ from models.token import Token
 from datetime import timedelta, datetime, timezone
 from models.session import Session
 
+
+manager = WebsocketManager()
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    await manager.connect()
+    yield
+    await manager.disconnect()
+
 class Service:
-    def __init__(self, manager: WebsocketManager):
+    def __init__(self):
         self.repo = Repository()
-        self.manager = manager
         self.spotipy_oauth = SpotifyOAuth(
             client_id=os.getenv("SPOTIFY_CLIENT_ID"),
             client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
             redirect_uri=os.getenv("SPOTIFY_REDIRECT_URI"),
             scope="user-library-read"  # scope defines functionalities
         )
+
 
     @staticmethod
     def verify_token(token: Annotated[str, Depends(OAuth2PasswordBearer(tokenUrl="token"))]) -> str:
@@ -100,7 +111,7 @@ class Service:
         user.sessions.append(session.id)
         await self.repo.set_user(user)
 
-        await self.manager.publish(channel=self.repo.get_session_key(session.id), message="New session created")
+        await manager.publish(channel=self.repo.get_session_key(session.id), message="New session created")
 
         return session
 
@@ -137,7 +148,7 @@ class Service:
         if guest_id not in session.guests:
             session.guests.append(guest_id)
             await self.repo.set_session(session)
-            await self.manager.publish(channel=self.repo.get_session_key(session.id), message=f"Guest {guest_id} has joined the session")
+            await manager.publish(channel=self.repo.get_session_key(session.id), message=f"Guest {guest_id} has joined the session")
 
         return session
 
@@ -151,7 +162,7 @@ class Service:
         if guest_id in session.guests:
             session.guests.remove(guest_id)
             await self.repo.set_session(session)
-            await self.manager.publish(channel=self.repo.get_session_key(session.id), message=f"Guest {guest_id} was removed from session")
+            await manager.publish(channel=self.repo.get_session_key(session.id), message=f"Guest {guest_id} was removed from session")
         else:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Guest not part of session.")
 
@@ -164,7 +175,7 @@ class Service:
     async def establish_ws_connection_to_session(self, websocket: WebSocket, session_id: str) -> None:
         channel = self.repo.get_session_key(session_id)
 
-        async with self.manager.subscribe(channel=channel) as subscriber:
+        async with manager.subscribe(channel=channel) as subscriber:
             try:
                 async for event in subscriber:
                     await websocket.send_text(event.message)

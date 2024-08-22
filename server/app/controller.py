@@ -1,24 +1,17 @@
-from contextlib import asynccontextmanager
-from ws.websocket_manager import WebsocketManager
 from fastapi import FastAPI, status, Depends, WebSocket
-from service import Service
+from service import Service, lifespan
 from models.token import Token
 from models.user import User, SpotifyUser
-from models.session import Session, AnonymousSession, GuestSession, anonymizeSession, guestSession
+from models.session import Session
 from models.song import Song
 from recommender.songs_dataset import SongsDataset
 from starlette.middleware.cors import CORSMiddleware
 from typing import Annotated
 
-manager = WebsocketManager()
-service = Service(manager)
+
+service = Service()
 songsDataset = SongsDataset("./recommender/dataset.csv")
 
-@asynccontextmanager
-async def lifespan(_: FastAPI):
-    await manager.connect()
-    yield
-    await manager.disconnect()
 
 app = FastAPI(lifespan=lifespan)
 app.add_middleware(
@@ -33,7 +26,6 @@ app.add_middleware(
 async def authorize_spotify(user: SpotifyUser) -> Token:
     token_info = service.spotipy_oauth.get_access_token(user.auth_code)
     token = Token(**token_info)
-    user.username = Service.get_spotify_name(token.access_token)
     user = await service.create_user(user)
     return token
 
@@ -69,26 +61,19 @@ async def add_guest(guest_id: Annotated[str, Depends(service.verify_token)], ses
     return await service.add_guest_to_session(guest_id, session_id, "")
 
 
-@app.post("/sessions/join/{invite_token}", status_code=status.HTTP_200_OK, response_model=GuestSession)
+@app.post("/sessions/join/{invite_token}", status_code=status.HTTP_200_OK, response_model=Session)
 async def join_session(guest_id: Annotated[str, Depends(service.verify_token)], invite_token: str) -> Session:
     await service.validate_user(guest_id)
     await service.validate_invite(invite_token)
     session = await service.add_guest_to_session(guest_id, "", invite_token)
-    return guestSession(session)
+    return session
 
-@app.get("/sessions/join/{invite_token}", status_code=status.HTTP_200_OK, response_model=AnonymousSession)
+@app.get("/sessions/join/{invite_token}", status_code=status.HTTP_200_OK, response_model=Session)
 async def get_session(invite_token: str) -> Session:
     await service.validate_invite(invite_token)
     session = await service.get_session_by_invite(invite_token)
-    hostUser = await service.get_user(session.host)
-    return anonymizeSession(session, hostUser)
+    return session
 
-
-@app.get("/sessions/{session_id}", status_code=status.HTTP_200_OK, response_model=GuestSession)
-async def get_session(session_id: str) -> Session:
-    await service.validate_session(session_id)
-    session = await service.get_session_by_id(session_id)
-    return guestSession(session)
 
 @app.get("/songs/{pattern}", status_code=status.HTTP_200_OK, response_model=list[Song])
 async def get_songs(user_id: Annotated[str, Depends(service.verify_token)], pattern: str) -> list[Song]:
