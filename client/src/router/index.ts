@@ -3,6 +3,8 @@ import HomeView from '../views/HomeView.vue'
 import LandingView from '@/views/LandingView.vue'
 import {useAuthStore} from '@/stores/auth'
 import WebsocketView from '@/views/WebsocketView.vue'
+import HostSessionView from '@/views/HostSessionView.vue'
+import AuthorizeSpotifyView from '@/views/AuthorizeSpotifyView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -10,6 +12,23 @@ const router = createRouter({
     {
       path: '/',
       name: 'landing',
+      component: LandingView,
+      beforeEnter: () => {
+        // Redirect authenticated users to sessions page.
+        const authStore = useAuthStore();
+        if (authStore.token) {
+          return {name: 'session'};
+        }
+      }
+    },
+    {
+      path: '/spotify-callback',
+      name: 'spotify-callback',
+      component: AuthorizeSpotifyView
+    },
+    {
+      path: '/sessions/join/:inviteToken',
+      name: 'landing-view-guest',
       component: LandingView
     },
     {
@@ -30,6 +49,12 @@ const router = createRouter({
       path: '/websockets',
       name: 'websockets',
       component: WebsocketView
+    },
+    {
+      path: '/session',
+      name: 'session',
+      component: () => HostSessionView,
+      /* meta: { requiresAuth: true } */
     },
   ]
 })
