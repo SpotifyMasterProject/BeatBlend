@@ -1,8 +1,10 @@
-import os
 import jwt
+import os
+import time
 import uuid
 
-from ws.websocket_manager import WebsocketManager
+from databases import Database
+from datetime import timedelta, datetime, timezone
 from spotipy.oauth2 import SpotifyOAuth
 from contextlib import asynccontextmanager
 from repository import Repository
@@ -12,21 +14,35 @@ from typing import Annotated, List
 from fastapi import FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect
 from models.user import User
 from models.token import Token
-from datetime import timedelta, datetime, timezone
 from models.session import Session
+from ws.websocket_manager import WebsocketManager
 
 SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 ALGORITHM = os.getenv("JWT_ALGORITHM")
 JWT_EXPIRES_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", 60))
 
-manager = WebsocketManager()
+#TODO: wahrschinlich machts sinn alles im bezug uf postgres is repo file ztue. weiss aber grad nid wie was wo gnau
+POSTGRES_USER = os.getenv("POSTGRES_USER")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+POSTGRES_DB = os.getenv("POSTGRES_DB")
 
+manager = WebsocketManager()
+postgres = Database(f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@postgres:5432/{POSTGRES_DB}")
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     await manager.connect()
+    for attempt in range(10):
+        try:
+            await postgres.connect()
+            break
+        except ConnectionRefusedError as e:
+            if attempt == 9:
+                raise e
+            time.sleep(6)
     yield
     await manager.disconnect()
+    await postgres.disconnect()
 
 
 class Service:

@@ -1,9 +1,39 @@
-from redis.asyncio import Redis
 from fastapi import HTTPException, status
 from models.session import Session
-from typing import Optional
 from models.user import User
+from redis.asyncio import Redis
+from sqlalchemy import Column, Table, MetaData, Integer, String, ARRAY, Boolean, Float, Date, insert, select, func
+from typing import Optional
 
+metadata = MetaData()
+songs = Table(
+    "songs",
+    metadata,
+    Column("id", String, primary_key=True),
+    Column("track_name", String),
+    Column("album", String),
+    Column("album_id", String),
+    Column("artists", ARRAY(String)),
+    Column("artist_ids", ARRAY(String)),
+    Column("track_number", Integer),
+    Column("disc_number", Integer),
+    Column("explicit", Boolean),
+    Column("danceability", Float),
+    Column("energy", Float),
+    Column("key", Integer),
+    Column("loudness", Float),
+    Column("mode", Integer),
+    Column("speechiness", Float),
+    Column("acousticness", Float),
+    Column("instrumentalness", Float),
+    Column("liveness", Float),
+    Column("valence", Float),
+    Column("tempo", Float),
+    Column("duration_ms", Integer),
+    Column("time_signature", Integer),
+    Column("release_date", Date),
+    Column("popularity", Integer, nullable=True)
+)
 
 class Repository:
     def __init__(self):
