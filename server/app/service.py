@@ -15,6 +15,10 @@ from models.token import Token
 from datetime import timedelta, datetime, timezone
 from models.session import Session
 
+SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+ALGORITHM = os.getenv("JWT_ALGORITHM")
+JWT_EXPIRES_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", 60))
+
 manager = WebsocketManager()
 
 
@@ -37,12 +41,11 @@ class Service:
 
     @staticmethod
     def verify_token(token: Annotated[str, Depends(OAuth2PasswordBearer(tokenUrl="token"))]) -> str:
-        secret_key = os.getenv("JWT_SECRET_KEY")
-        algorithm = os.getenv("JWT_ALGORITHM")
+
         auth_exception = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authorized!")
 
         try:
-            payload = jwt.decode(token, key=secret_key, algorithms=[algorithm])
+            payload = jwt.decode(token, key=SECRET_KEY, algorithms=[ALGORITHM])
             user_id = payload.get("sub")
             if user_id is None:
                 raise auth_exception
@@ -52,18 +55,14 @@ class Service:
 
     @staticmethod
     def generate_token(user: User) -> Token:
-        jwt_expire_minutes = int(os.getenv("JWT_EXPIRE_MINUTES", 60))
-        secret_key = os.getenv("JWT_SECRET_KEY")
-        algorithm = os.getenv("JWT_ALGORITHM")
-
         to_encode = {"sub": user.id, "username": user.username}
-        access_token_expires = timedelta(minutes=jwt_expire_minutes)
+        access_token_expires = timedelta(minutes=JWT_EXPIRES_MINUTES)
         expire = datetime.now(timezone.utc) + (access_token_expires or timedelta(minutes=30))
         to_encode.update({"exp": expire})
         encoded_jwt = jwt.encode(
             to_encode,
-            secret_key,
-            algorithm=algorithm
+            SECRET_KEY,
+            algorithm=ALGORITHM
         )
         return Token(access_token=encoded_jwt, token_type="bearer")
 
@@ -132,7 +131,8 @@ class Service:
         if guest_id not in session.guests:
             session.guests.append(guest_id)
             await self.repo.set_session(session)
-            await manager.publish(channel=self.repo.get_session_key(session.id), message=f"Guest {guest_id} has joined the session")
+            await manager.publish(channel=self.repo.get_session_key(session.id),
+                                  message=f"Guest {guest_id} has joined the session")
 
         return session
 
@@ -146,7 +146,8 @@ class Service:
         if guest_id in session.guests:
             session.guests.remove(guest_id)
             await self.repo.set_session(session)
-            await manager.publish(channel=self.repo.get_session_key(session.id), message=f"Guest {guest_id} was removed from session")
+            await manager.publish(channel=self.repo.get_session_key(session.id),
+                                  message=f"Guest {guest_id} was removed from session")
         else:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Guest not part of session.")
 
