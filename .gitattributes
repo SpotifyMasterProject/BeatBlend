@@ -1,2 +1,3 @@
 server/app/recommender/dataset.csv filter=lfs diff=lfs merge=lfs -text
+server/db/songs.dump filter=lfs diff=lfs merge=lfs -text
 *.dump filter=lfs diff=lfs merge=lfs -text
