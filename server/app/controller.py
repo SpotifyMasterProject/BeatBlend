@@ -37,20 +37,19 @@ async def authorize(guest: User) -> Token:
 
 @app.get("/", status_code=status.HTTP_200_OK, response_model=User)
 async def read_root(user_id: Annotated[str, Depends(service.verify_token)]) -> User:
-    await service.validate_user(user_id)
+    await service.verify_instances(user_ids=user_id)
     return await service.get_user(user_id)
 
 
 @app.post("/sessions", status_code=status.HTTP_201_CREATED, response_model=Session)
 async def create_new_session(host_id: Annotated[str, Depends(service.verify_token)], session: Session) -> Session:
-    await service.validate_user(host_id)
-    host = await service.get_user(host_id)
-    return await service.create_session(host, session)
+    await service.verify_instances(user_ids=host_id)
+    return await service.create_session(host_id, session)
 
 
 @app.get("/sessions/{session_id}", status_code=status.HTTP_200_OK, response_model=Session)
 async def get_specific_session(session_id: str) -> Session:
-    await service.validate_session(session_id)
+    await service.verify_instances(session_id=session_id)
     return await service.get_session(session_id)
 
 
@@ -64,10 +63,8 @@ async def get_specific_session(session_id: str) -> Session:
 
 @app.post("/sessions/{session_id}/guests", status_code=status.HTTP_200_OK, response_model=Session)
 async def add_guest(guest_id: Annotated[str, Depends(service.verify_token)], session_id: str) -> Session:
-    await service.validate_user(guest_id)
-    await service.validate_session(session_id)
-    guest = await service.get_user(guest_id)
-    return await service.add_guest_to_session(guest, session_id)
+    await service.verify_instances(user_ids=guest_id, session_id=session_id)
+    return await service.add_guest_to_session(guest_id, session_id)
 
 
 # TODO: this will be adapted once we have the postgres database
@@ -81,25 +78,20 @@ async def add_guest(guest_id: Annotated[str, Depends(service.verify_token)], ses
 # TODO: this will be adapted once we have the postgres database
 @app.get("/songs/{pattern}", status_code=status.HTTP_200_OK, response_model=list[Song])
 async def get_songs(user_id: Annotated[str, Depends(service.verify_token)], pattern: str) -> list[Song]:
-    await service.validate_user(user_id)
+    await service.verify_instances(user_ids=user_id)
     return songsDataset.get_matching_songs(pattern)
 
 
 @app.delete("/sessions/{session_id}/guests/{guest_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_guest(host_id: Annotated[str, Depends(service.verify_token)], session_id: str, guest_id: str) -> None:
-    await service.validate_user(host_id)
-    await service.validate_session(session_id)
-    await service.validate_user(guest_id)
-    guest = await service.get_user(guest_id)
-    await service.remove_guest_from_session(host_id, guest, session_id)
+    await service.verify_instances(user_ids=[host_id, guest_id], session_id=session_id)
+    await service.remove_guest_from_session(host_id, guest_id, session_id)
 
 
 @app.delete("/sessions/{session_id}/guests", status_code=status.HTTP_204_NO_CONTENT)
 async def leave_session(guest_id: Annotated[str, Depends(service.verify_token)], session_id: str) -> None:
-    await service.validate_user(guest_id)
-    await service.validate_session(session_id)
-    guest = await service.get_user(guest_id)
-    await service.remove_guest_from_session("", guest, session_id)
+    await service.verify_instances(user_ids=guest_id, session_id=session_id)
+    await service.remove_guest_from_session("", guest_id, session_id)
 
 
 @app.websocket("/ws/{session_id}")

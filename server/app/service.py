@@ -74,6 +74,15 @@ class Service:
         user_profile = self.spotify_client.me()
         return user_profile['id']
 
+    async def verify_instances(self, user_ids: str | list[str] = "", session_id: str = ""):
+        if isinstance(user_ids, str) and user_ids:
+            await self.verify_user(user_ids)
+        elif isinstance(user_ids, list):
+            for user_id in user_ids:
+                await self.verify_user(user_id)
+        if session_id:
+            await self.verify_session(session_id)
+
     async def create_user(self, user: User) -> User:
         user.id = str(uuid.uuid4())
         await self.repo.set_user(user)
@@ -84,10 +93,11 @@ class Service:
         result = await self.repo.get_user_by_id(user_id)
         return User.model_validate_json(result)
 
-    async def validate_user(self, user_id: str) -> None:
-        await self.repo.validate_user_by_id(user_id)
+    async def verify_user(self, user_id: str) -> None:
+        await self.repo.verify_user_by_id(user_id)
 
-    async def create_session(self, host: User, session: Session) -> Session:
+    async def create_session(self, host_id: str, session: Session) -> Session:
+        host = await self.get_user(host_id)
         session.id = str(uuid.uuid4())
         session.host_id = str(host.id)
         session.host_name = host.username
@@ -117,9 +127,9 @@ class Service:
         result = await self.repo.get_session_by_id(session_id)
         return Session.model_validate_json(result)
 
-    async def add_guest_to_session(self, guest: User, session_id: str) -> Session:
-        result = await self.repo.get_session_by_id(session_id)
-        session = Session.model_validate_json(result)
+    async def add_guest_to_session(self, guest_id: str, session_id: str) -> Session:
+        guest = await self.get_user(guest_id)
+        session = await self.get_session(session_id)
 
         if guest.id not in session.guests:
             session.guests.append(guest.id)
@@ -133,8 +143,7 @@ class Service:
 
     # TODO: this will be adapted once we have the postgres database
     # async def add_song_to_session(self, user_id: str, session_id: str, song_id: str) -> Session:
-    #     result = await self.repo.get_session_by_id(session_id)
-    #     session = Session.model_validate_json(result)
+    #     session = await self.get_session(session_id)
     #     try:
     #         result = await self.repo.get_song_by_id(song_id)
     #         song = Song.model_validate_json(result)
@@ -148,9 +157,9 @@ class Service:
     #
     #     return session
 
-    async def remove_guest_from_session(self, host_id: str, guest: User, session_id: str) -> None:
-        result = await self.repo.get_session_by_id(session_id)
-        session = Session.model_validate_json(result)
+    async def remove_guest_from_session(self, host_id: str, guest_id: str, session_id: str) -> None:
+        guest = await self.get_user(guest_id)
+        session = await self.get_session(session_id)
 
         if host_id and session.host_id != str(host_id):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not host of session.")
@@ -165,8 +174,8 @@ class Service:
         else:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Guest not part of session.")
 
-    async def validate_session(self, session_id: str) -> None:
-        await self.repo.validate_session_by_id(session_id)
+    async def verify_session(self, session_id: str) -> None:
+        await self.repo.verify_session_by_id(session_id)
 
     async def establish_ws_connection_to_session(self, websocket: WebSocket, session_id: str) -> None:
         channel = self.repo.get_session_key(session_id)
