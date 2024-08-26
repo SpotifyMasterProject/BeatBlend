@@ -88,7 +88,7 @@ async def delete_song(song_id: str) -> None:
 
 @app.patch("/sessions/{session_id}/songs", status_code=status.HTTP_200_OK)
 async def add_song(user_id: Annotated[str, Depends(service.verify_token)], session_id: str, song_id: str) -> Session:
-    await service.verify_instances(user_id=user_id, session_id=session_id)
+    await service.verify_instances(user_ids=user_id, session_id=session_id)
     return await service.add_song_to_session(user_id, session_id, song_id)
 
 

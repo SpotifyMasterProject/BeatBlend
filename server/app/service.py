@@ -184,10 +184,10 @@ class Service:
 
         try:
             song = await self.get_song_from_database(song_id)
-            session.playlist.append(song)
         except HTTPException:
             song = await self.add_song_to_database(song_id)
-            session.playlist.append(song)
+
+        session.playlist.append(song)
 
         await self.repo.set_session(session)
         await manager.publish(channel=self.repo.get_session_key(session.id), message=f"User {user_id} has added a song")
