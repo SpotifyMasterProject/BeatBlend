@@ -3,6 +3,7 @@ import jwt
 import uuid
 
 from ws.websocket_manager import WebsocketManager
+from spotipy.oauth2 import SpotifyOAuth
 from contextlib import asynccontextmanager
 from repository import Repository
 from fastapi.security import OAuth2PasswordBearer
@@ -28,6 +29,12 @@ async def lifespan(_: FastAPI):
 class Service:
     def __init__(self):
         self.repo = Repository()
+        self.spotipy_oauth = SpotifyOAuth(
+            client_id=os.getenv("SPOTIFY_CLIENT_ID"),
+            client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
+            redirect_uri=os.getenv("SPOTIFY_REDIRECT_URI"),
+            scope="user-library-read"  # scope defines functionalities
+        )
 
     @staticmethod
     def verify_token(token: Annotated[str, Depends(OAuth2PasswordBearer(tokenUrl="token"))]) -> str:
