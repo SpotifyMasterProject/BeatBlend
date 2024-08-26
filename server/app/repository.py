@@ -1,6 +1,7 @@
 from redis.asyncio import Redis
 from fastapi import HTTPException, status
 from models.session import Session
+from models.song import Song
 from typing import Optional
 from models.user import User
 
@@ -56,6 +57,10 @@ class Repository:
     async def validate_invite_by_token(self, invite_token: str) -> None:
         if await self.redis.exists(self.get_invite_key(invite_token)) == 0:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invalid invite link.")
+
+    async def add_song_by_info(self, song_info: dict) -> None:
+        query = insert(songs).values(song_info)
+        await self.postgres.execute(query)
 
     async def get_song_by_id(self, song_id: str) -> Optional[bytes]:
         query = select(songs).where(songs.c.id == song_id)

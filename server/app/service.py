@@ -167,6 +167,11 @@ class Service:
             except WebSocketDisconnect:
                 pass
 
+    async def add_song_to_database(self, song_id: str) -> Song:
+        song_info = self.spotify_manager.track(song_id)
+        await self.repo.add_song_by_info(song_info)
+        return Song(**song_info)
+
     async def get_song_from_database(self, song_id: str) -> Song:
         result = await self.repo.get_song_by_id(song_id)
         return Song.model_validate_json(result)
@@ -175,14 +180,14 @@ class Service:
         await self.repo.delete_song_by_id(song_id)
 
     async def add_song_to_session(self, user_id: str, session_id: str, song_id: str) -> Session:
-        session = self.get_session(session_id)
+        session = await self.get_session(session_id)
 
         try:
-            song = self.get_song_from_database(song_id)
+            song = await self.get_song_from_database(song_id)
             session.playlist.append(song)
         except HTTPException:
-            song_info = self.spotify_manager.track(song_id)
-            session.playlist.append(Song(**song_info))
+            song = await self.add_song_to_database(song_id)
+            session.playlist.append(song)
 
         await self.repo.set_session(session)
         await manager.publish(channel=self.repo.get_session_key(session.id), message=f"User {user_id} has added a song")
