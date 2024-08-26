@@ -52,6 +52,11 @@ class Service:
         return user_id
 
     @staticmethod
+    def verify_host_of_session(host_id: str, session: Session) -> None:
+        if session.host != host_id:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not host of session.")
+
+    @staticmethod
     def generate_token(user: User) -> Token:
         jwt_expire_minutes = int(os.getenv("JWT_EXPIRE_MINUTES", 60))
         secret_key = os.getenv("JWT_SECRET_KEY")
@@ -141,8 +146,8 @@ class Service:
         result = await self.repo.get_session_by_id(session_id)
         session = Session.model_validate_json(result)
 
-        if host_id and session.host != str(host_id):
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not host of session.")
+        if host_id:
+            self.verify_host_of_session(host_id, session)
 
         if guest_id in session.guests:
             session.guests.remove(guest_id)
@@ -196,3 +201,15 @@ class Service:
         await manager.publish(channel=self.repo.get_session_key(session.id), message=f"User {user_id} has added a song")
 
         return session
+
+    async def delete_song_from_session(self, host_id: str, session_id: str, song_id: str) -> None:
+        session = await self.get_session(session_id)
+
+        self.verify_host_of_session(host_id, session)
+
+        for idx, song in enumerate(session.playlist):
+            if song.id == song_id:
+                del session.playlist[idx]
+                return
+
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song not part of playlist")
