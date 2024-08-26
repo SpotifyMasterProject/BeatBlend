@@ -1,6 +1,5 @@
-from service import lifespan
 from fastapi import FastAPI, status, Depends, WebSocket
-from service import Service
+from service import Service, lifespan
 from models.token import Token
 from models.user import User, SpotifyUser
 from models.session import Session
@@ -53,6 +52,11 @@ async def create_new_session(host_id: Annotated[str, Depends(service.verify_toke
 async def get_session(session_id: str) -> Session:
     await service.validate_session(session_id)
     return await service.get_session(session_id)
+
+
+@app.get("/sessions", status_code=status.HTTP_200_OK, response_model=list[Session])
+async def get_sessions(user_id: Annotated[str, Depends(service.verify_token)]) -> list[Session]:
+    return await service.get_sessions(user_id)
 
 
 @app.post("/sessions/{session_id}/guests", status_code=status.HTTP_200_OK, response_model=Session)

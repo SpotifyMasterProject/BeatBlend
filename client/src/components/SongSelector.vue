@@ -2,7 +2,7 @@
     <div class="songs">
         <h2 class="songs-header">{{ headerText }}</h2>
         <AutoComplete
-            class="search" v-model="localSelectedSong"
+            class="search" v-model="selectedSong"
             @option-select="selectSong"
             :suggestions="filteredSongs"
             @complete="search"
@@ -21,7 +21,7 @@
             </template>
         </AutoComplete>
         <div class="selected-songs">
-            <div class="selected-song" v-for="song in localSelectedSongs" :key="song.id">
+            <div class="selected-song" v-for="song in selectedSongs" :key="song.id">
                 <SongItem :song="song">
                     <i class="pi pi-trash delete-icon" @click="removeSong(song)"></i>
                 </SongItem>
@@ -30,58 +30,57 @@
     </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, watch, nextTick } from 'vue';
 import AutoComplete from 'primevue/autocomplete';
-import { useSongs } from '@/composables/useSongs.ts';
 import SongItem from '@/components/SongItem.vue';
+import { sessionService } from '@/services/sessionService';
 
 const props = defineProps({
-    initialSongs: {
-        type: Array,
-        required: true,
-    },
     headerText: {
         type: String,
         required: true,
     },
-    selectedSongs: {
-        type: Array,
-        default: () => [],
-    }
 });
 
 const emit = defineEmits(['update:selectedSongs']);
 
-const { filteredSongs, selectedSong: localSelectedSong, selectedSongs: localSelectedSongs, combineArtists, search, selectSong, removeSong } = useSongs(props.initialSongs);
+const filteredSongs = ref([]);
+const selectedSong = ref(null);
+const selectedSongs = ref([]);
 
-// Prevent recursive updates by using a flag
-let isInternalUpdate = false;
+// Combines the artists into a single string.
+const combineArtists = (artists: string[]) => {
+    return artists.join(', ');
+};
 
-// Watch for changes in the selectedSongs prop (modelValue) and update localSelectedSongs accordingly
-watch(
-  () => props.selectedSongs,
-  (newVal) => {
-    if (isInternalUpdate) {
-            isInternalUpdate = false; // Reset the flag
-            return; // Prevent this watch from triggering an update loop
-        }
+// Function which is executed by the autocomplete component,
+// which filters the songs, based on the user query.
+const search = async (event) => {
+    if (!event.query.trim().length) {
+        return;
+    } else {
+        const songs = await sessionService.getSongs(event.query.toLowerCase());
+        const selectedSongsIds = selectedSongs.value.map((song: Song) => song.id);
+        filteredSongs.value = songs.filter((song: Song) => !selectedSongsIds.includes(song.id));
+    }
+};
 
-    console.log("parent selected update:", newVal)
-    // If the parent clears selectedSongs, clear the localSelectedSongs as well
-    if (newVal.length === 0 && localSelectedSongs.value.length > 0) {
-            nextTick(() => {
-                localSelectedSongs.value = [];
-                localSelectedSong.value = null;
-                filteredSongs.value = [...props.initialSongs]; // Reset filteredSongs
-            });
-        }
-  }
-);
+// Selects a song from the autocomplete options and adds it to the
+// selected song list.
+const selectSong = () => {
+    selectedSongs.value = [...selectedSongs.value, selectedSong.value];
+    selectedSong.value = null;
+}
 
-// Watch for changes in localSelectedSongs and emit the update to the parent
-watch(localSelectedSongs, (newVal) => {
-    isInternalUpdate = true;
+// Removes a song from the selected list.
+const removeSong = (songToRemove: Song) => {
+    selectedSongs.value = selectedSongs.value.filter((song: Song) => song.id !== songToRemove.id);
+};
+
+
+// Watch for changes in selectedSongs and emit the update to the parent
+watch(selectedSongs, (newVal) => {
     emit('update:selectedSongs', newVal);
 });
 </script>

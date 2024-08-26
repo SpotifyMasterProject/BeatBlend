@@ -20,12 +20,12 @@ export const useAuthStore = defineStore('auth', () => {
         token.value = JSON.parse(storedToken)
     }
 
-    const authorize = async function (access_token: string) {
+    const authorize = async function (access_token: string, isHost = false) {
         sessionStorage.setItem('token', JSON.stringify(access_token))
         token.value = access_token
 
         const decodedToken = jwtDecode<{sub: string, username: string}>(access_token)
-        const authenticatedUser = new User({id: decodedToken.sub, username: decodedToken.username})
+        const authenticatedUser = new User({id: decodedToken.sub, username: decodedToken.username, isHost})
         localStorage.setItem('user', JSON.stringify(authenticatedUser))
         user.value = authenticatedUser
     }

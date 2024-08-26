@@ -61,14 +61,13 @@ class SongsDataset:
             self.df[column] = self.df[column].apply(literal_eval)
 
     def get_matching_songs(self, pattern: str, num_songs=10) -> list[Song]:
-        """Returns a list of containing just the songs which match the pattern.
+        """Returns a list of songs which match the pattern.
         
         The pattern match either the name of the song or the name of one of the
         artists.
         """
         pattern = pattern.lower()
-        artist_mask = np.array(
-            [any([artist.lower().startswith(pattern) for artist in artists]) for artists in self.df["artists"]])
+        artist_mask = np.array([any([artist.lower().startswith(pattern) for artist in artists]) for artists in self.df["artists"]])
         name_mask = np.array([name.lower().startswith(pattern) for name in self.df["name"]])
         songs_df = self.df[name_mask | artist_mask][:num_songs]
         songs_dict = songs_df.to_dict('index')

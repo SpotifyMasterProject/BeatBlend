@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from repository import Repository
 from fastapi.security import OAuth2PasswordBearer
 from jwt import InvalidTokenError
-from typing import Annotated
+from typing import Annotated, List
 from fastapi import FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect
 from models.user import User
 from models.token import Token
@@ -92,9 +92,10 @@ class Service:
         session.host = str(host.id)
         session.host_name = host.username
         session.creation_date = datetime.now()
+        # session.is_running = True
 
         # TODO: adjust URL
-        session.invite_link = f'{os.getenv("LOCAL_IP_ADDRESS")}:8080/{session.id}/join'
+        session.invite_link = f'http://{os.getenv("LOCAL_IP_ADDRESS")}:8080/{session.id}/join'
 
         await self.repo.set_session(session)
         await manager.publish(channel=self.repo.get_session_key(session.id), message="New session created")
@@ -103,6 +104,13 @@ class Service:
         await self.repo.set_user(host)
 
         return session
+
+    async def get_sessions(self, user_id: str) -> List[Session]:
+        user = User.model_validate_json(await self.repo.get_user_by_id(user_id))
+        sessions = []
+        for session in user.sessions:
+            sessions.append(Session.model_validate_json(await self.repo.get_session_by_id(session)))
+        return sessions
 
     async def get_session(self, session_id: str) -> Session:
         result = await self.repo.get_session_by_id(session_id)

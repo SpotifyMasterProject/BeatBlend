@@ -12,4 +12,5 @@ class Session(BaseModel):
     guests: List[str] = []
     invite_link: Optional[str] = None
     playlist: List[Song] = []
-    creation_date = Optional[datetime] = None
+    creation_date: Optional[datetime] = None
+    # is_running: bool = False

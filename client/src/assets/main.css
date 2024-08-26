@@ -110,7 +110,7 @@ a,
   width: calc(100% - 40px);
   transition: flex-grow 0.5s ease;
 }
-.type2 .middle. expanded{
+.type2 .middle. .expanded{
   flex-grow: 2;
 }
 
