@@ -7,7 +7,7 @@ from song import Song
 class Session(BaseModel):
     id: Optional[str] = None
     name: str
-    host: Optional[str] = None
+    host_id: Optional[str] = None
     host_name: Optional[str] = None
     guests: List[str] = []
     invite_link: Optional[str] = None

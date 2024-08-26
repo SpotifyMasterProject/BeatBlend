@@ -89,7 +89,7 @@ class Service:
 
     async def create_session(self, host: User, session: Session) -> Session:
         session.id = str(uuid.uuid4())
-        session.host = str(host.id)
+        session.host_id = str(host.id)
         session.host_name = host.username
         session.creation_date = datetime.now()
         # session.is_running = True
@@ -105,11 +105,11 @@ class Service:
 
         return session
 
-    async def get_sessions(self, user_id: str) -> List[Session]:
-        user = User.model_validate_json(await self.repo.get_user_by_id(user_id))
+    async def get_user_sessions(self, user: User) -> List[Session]:
         sessions = []
-        for session in user.sessions:
-            sessions.append(Session.model_validate_json(await self.repo.get_session_by_id(session)))
+        for session_id in user.sessions:
+            session = await self.get_session(session_id)
+            sessions.append(session)
         return sessions
 
     async def get_session(self, session_id: str) -> Session:
@@ -151,7 +151,7 @@ class Service:
         result = await self.repo.get_session_by_id(session_id)
         session = Session.model_validate_json(result)
 
-        if host_id and session.host != str(host_id):
+        if host_id and session.host_id != str(host_id):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not host of session.")
 
         if guest.id in session.guests:

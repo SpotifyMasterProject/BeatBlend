@@ -49,14 +49,16 @@ async def create_new_session(host_id: Annotated[str, Depends(service.verify_toke
 
 
 @app.get("/sessions/{session_id}", status_code=status.HTTP_200_OK, response_model=Session)
-async def get_session(session_id: str) -> Session:
+async def get_specific_session(session_id: str) -> Session:
     await service.validate_session(session_id)
     return await service.get_session(session_id)
 
 
 @app.get("/sessions", status_code=status.HTTP_200_OK, response_model=list[Session])
-async def get_sessions(user_id: Annotated[str, Depends(service.verify_token)]) -> list[Session]:
-    return await service.get_sessions(user_id)
+async def get_all_user_sessions(user_id: Annotated[str, Depends(service.verify_token)]) -> list[Session]:
+    await service.validate_user(user_id)
+    user = await service.get_user(user_id)
+    return await service.get_user_sessions(user)
 
 
 @app.post("/sessions/{session_id}/guests", status_code=status.HTTP_200_OK, response_model=Session)
