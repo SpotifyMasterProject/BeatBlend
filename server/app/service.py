@@ -167,16 +167,20 @@ class Service:
             except WebSocketDisconnect:
                 pass
 
+    async def get_song_from_database(self, song_id: str) -> Song:
+        result = await self.repo.get_song_by_id(song_id)
+        return Song.model_validate_json(result)
+
+    async def delete_song_from_database(self, song_id: str) -> None:
+        await self.repo.delete_song_by_id(song_id)
+
     async def add_song_to_session(self, user_id: str, session_id: str, song_id: str) -> Session:
-        result = await self.repo.get_session_by_id(session_id)
-        session = Session.model_validate_json(result)
-        # TODO: try -> search database with song_id
+        session = self.get_session(session_id)
+
         try:
-            result = await self.repo.get_song_by_id(song_id)
-            song = Song.model_validate_json(result)
+            song = self.get_song_from_database(song_id)
             session.playlist.append(song)
-        # TODO: catch -> Spotify API call to retrieve information
-        except Exception:
+        except HTTPException:
             song_info = self.spotify_manager.track(song_id)
             session.playlist.append(Song(**song_info))
 

@@ -57,3 +57,15 @@ class Repository:
         if await self.redis.exists(self.get_invite_key(invite_token)) == 0:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invalid invite link.")
 
+    async def get_song_by_id(self, song_id: str) -> Optional[bytes]:
+        query = select(songs).where(songs.c.id == song_id)
+        result = await self.postgres.fetch_one(query)
+        if result is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song not found")
+        return result
+
+    async def delete_song_by_id(self, song_id: str) -> None:
+        query = delete(songs).where(songs.c.id == song_id)
+        await self.postgres.execute(query)
+
+

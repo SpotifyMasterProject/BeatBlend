@@ -4,6 +4,7 @@ from service import Service
 from models.token import Token
 from models.user import User, SpotifyUser
 from models.session import Session
+from models.song import Song
 from starlette.middleware.cors import CORSMiddleware
 from typing import Annotated
 
@@ -70,10 +71,19 @@ async def remove_guest(host_id: Annotated[str, Depends(service.verify_token)], s
     await service.remove_guest_from_session(host_id, guest_id, session_id)
 
 
+@app.get("/songs/{song_id}", status_code=status.HTTP_200_OK, response_model=Song)
+async def get_song(song_id: str) -> Song:
+    return await service.get_song_from_database(song_id)
+
+
+@app.delete("/songs/{song_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_song(song_id: str) -> None:
+    await service.delete_song_from_database(song_id)
+
+
 @app.patch("/sessions/{session_id}/songs", status_code=status.HTTP_200_OK)
 async def add_song(user_id: Annotated[str, Depends(service.verify_token)], session_id: str, song_id: str) -> Session:
-    await service.validate_user(user_id)
-    await service.validate_session(session_id)
+    await service.verify_instances(user_id=user_id, session_id=session_id)
     return await service.add_song_to_session(user_id, session_id, song_id)
 
 
