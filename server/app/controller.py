@@ -64,13 +64,6 @@ async def join_session(guest_id: Annotated[str, Depends(service.verify_token)], 
     return await service.add_guest_to_session(guest_id, "", invite_token)
 
 
-@app.delete("/sessions/{session_id}/guests/{guest_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def remove_guest(host_id: Annotated[str, Depends(service.verify_token)], session_id: str, guest_id: str) -> None:
-    await service.validate_user(host_id)
-    await service.validate_session(session_id)
-    await service.remove_guest_from_session(host_id, guest_id, session_id)
-
-
 @app.post("/songs/{song_id}", status_code=status.HTTP_200_OK, response_model=Song)
 async def add_song(song_id: str) -> Song:
     return await service.add_song_to_database(song_id)
@@ -90,6 +83,13 @@ async def delete_song(song_id: str) -> None:
 async def add_song(user_id: Annotated[str, Depends(service.verify_token)], session_id: str, song_id: str) -> Session:
     await service.verify_instances(user_ids=user_id, session_id=session_id)
     return await service.add_song_to_session(user_id, session_id, song_id)
+
+
+@app.delete("/sessions/{session_id}/guests/{guest_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_guest(host_id: Annotated[str, Depends(service.verify_token)], session_id: str, guest_id: str) -> None:
+    await service.validate_user(host_id)
+    await service.validate_session(session_id)
+    await service.remove_guest_from_session(host_id, guest_id, session_id)
 
 
 @app.delete("/sessions/{session_id}/leave", status_code=status.HTTP_204_NO_CONTENT)
