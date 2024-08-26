@@ -105,12 +105,13 @@ class Service:
 
         return session
 
-    async def get_user_sessions(self, user: User) -> List[Session]:
-        sessions = []
-        for session_id in user.sessions:
-            session = await self.get_session(session_id)
-            sessions.append(session)
-        return sessions
+    # TODO: used for getting all artifacts
+    # async def get_user_sessions(self, user: User) -> List[Session]:
+    #     sessions = []
+    #     for session_id in user.sessions:
+    #         session = await self.get_session(session_id)
+    #         sessions.append(session)
+    #     return sessions
 
     async def get_session(self, session_id: str) -> Session:
         result = await self.repo.get_session_by_id(session_id)
