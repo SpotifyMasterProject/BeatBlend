@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
-import functools
 from ast import literal_eval
+from models.song import Song
 
 class SongsDataset:
     """Dataset of songs.
@@ -52,20 +52,29 @@ class SongsDataset:
     # Columns to be used for matching.
     ACOUSTIC_FEATURES = ["danceability", "energy", "loudness", "acousticness", "speechiness", "valence"]
 
-    def __init__(self, dataset_path: str):
+    def __init__(self, dataset_path: str, num_songs=10000):
         self.df = pd.read_csv(dataset_path)
-        
+        self.df = self.df.head(num_songs)
         for column in ["artists", "artist_ids"]:
             self.df[column] = self.df[column].apply(literal_eval)
 
-    def get_matching_songs(self, pattern: str, num_songs=10) -> pd.DataFrame:
-        """Returns a DataFrame containing just the songs which match the pattern.
+    def get_matching_songs(self, pattern: str, num_songs=10) -> list[Song]:
+        """Returns a list of songs which match the pattern.
         
         The pattern match either the name of the song or the name of one of the
         artists.
         """
-        return self.df[self.df["name"].str.contains(pattern) |
-                       self.df["artists"].str.join(',').str.contains(pattern)][:num_songs]
+        pattern = pattern.lower()
+        artist_mask = np.array([any([artist.lower().startswith(pattern) for artist in artists]) for artists in self.df["artists"]])
+        name_mask = np.array([name.lower().startswith(pattern) for name in self.df["name"]])
+        songs_df = self.df[name_mask | artist_mask][:num_songs]
+        songs_dict = songs_df.to_dict('index')
+        songs_list = []
+        for _, song in songs_dict.items():
+            songs_list.append(Song.parse_obj(song))
+
+        return songs_list
+
     
     def get_songs(self, including: list[str] = None, excluding: list[str] = []) -> pd.DataFrame:
         """Returns a DataFrame containing the included songs and not containing
