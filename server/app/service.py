@@ -182,6 +182,9 @@ class Service:
     async def add_song_to_session(self, user_id: str, session_id: str, song_id: str) -> Session:
         session = await self.get_session(session_id)
 
+        if user_id not in session.guests and user_id != session.host_id:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User is not part of session")
+
         try:
             song = await self.get_song_from_database(song_id)
         except HTTPException:
