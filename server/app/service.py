@@ -3,11 +3,10 @@ import os
 import time
 import uuid
 
-from databases import Database
 from datetime import timedelta, datetime, timezone
 from spotipy.oauth2 import SpotifyOAuth
 from contextlib import asynccontextmanager
-from repository import Repository
+from repository import Repository, postgres
 from fastapi.security import OAuth2PasswordBearer
 from jwt import InvalidTokenError
 from typing import Annotated, List
@@ -21,13 +20,7 @@ SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 ALGORITHM = os.getenv("JWT_ALGORITHM")
 JWT_EXPIRES_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", 60))
 
-#TODO: wahrschinlich machts sinn alles im bezug uf postgres is repo file ztue. weiss aber grad nid wie was wo gnau
-POSTGRES_USER = os.getenv("POSTGRES_USER")
-POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
-POSTGRES_DB = os.getenv("POSTGRES_DB")
-
 manager = WebsocketManager()
-postgres = Database(f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@postgres:5432/{POSTGRES_DB}")
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):

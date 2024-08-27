@@ -1,9 +1,18 @@
+import os
+
+from databases import Database
 from fastapi import HTTPException, status
 from models.session import Session
 from models.user import User
 from redis.asyncio import Redis
-from sqlalchemy import Column, Table, MetaData, Integer, String, ARRAY, Boolean, Float, Date, insert, select, func
+from sqlalchemy import Column, Table, MetaData, Integer, String, ARRAY, Float, Date, insert, select, func
 from typing import Optional
+
+POSTGRES_USER = os.getenv("POSTGRES_USER")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+POSTGRES_DB = os.getenv("POSTGRES_DB")
+
+postgres = Database(f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@postgres:5432/{POSTGRES_DB}")
 
 metadata = MetaData()
 songs = Table(
@@ -15,24 +24,14 @@ songs = Table(
     Column("album_id", String),
     Column("artists", ARRAY(String)),
     Column("artist_ids", ARRAY(String)),
-    Column("track_number", Integer),
-    Column("disc_number", Integer),
-    Column("explicit", Boolean),
     Column("danceability", Float),
     Column("energy", Float),
-    Column("key", Integer),
-    Column("loudness", Float),
-    Column("mode", Integer),
     Column("speechiness", Float),
-    Column("acousticness", Float),
-    Column("instrumentalness", Float),
-    Column("liveness", Float),
     Column("valence", Float),
     Column("tempo", Float),
     Column("duration_ms", Integer),
-    Column("time_signature", Integer),
     Column("release_date", Date),
-    Column("popularity", Integer, nullable=True)
+    Column("popularity", Float, nullable=True)
 )
 
 class Repository:
