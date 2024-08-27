@@ -52,3 +52,6 @@ services:
       interval: 11s
       timeout: 1s
       retries: 5
+
+volumes:
+  song-database:
