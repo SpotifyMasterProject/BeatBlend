@@ -21,39 +21,39 @@ const flowerData = ref([
     { value: 0.5},
   ],
   [
-    { value: 0.5,},
-    { value: 0.4,},
-    { value: 0.6,},
-    { value: 0.6,},
-    { value: 0.4,},
+    { value: 0.5},
+    { value: 0.4},
+    { value: 0.6},
+    { value: 0.6},
+    { value: 0.4},
   ],
   [
-    { value: 0.4,},
-    { value: 0.8,},
-    { value: 0.6,},
-    { value: 0.5,},
-    { value: 0.8,},
+    { value: 0.4},
+    { value: 0.8},
+    { value: 0.6},
+    { value: 0.5},
+    { value: 0.8},
   ],
   [
-    { value: 0.5,},
-    { value: 0.7,},
-    { value: 0.4,},
-    { value: 0.6,},
-    { value: 0.5,},
+    { value: 0.5},
+    { value: 0.7},
+    { value: 0.4},
+    { value: 0.6},
+    { value: 0.5},
   ],
   [
-    { value: 0.5,},
-    { value: 0.4,},
-    { value: 0.6,},
-    { value: 0.6,},
-    { value: 0.5,},
+    { value: 0.5},
+    { value: 0.4},
+    { value: 0.6},
+    { value: 0.6},
+    { value: 0.5},
   ],
   [
-    { value: 0.4,},
-    { value: 0.8,},
-    { value: 0.6,},
-    { value: 0.65,},
-    { value: 0.8,},
+    { value: 0.4},
+    { value: 0.8},
+    { value: 0.6},
+    { value: 0.65},
+    { value: 0.8},
   ],
 
   // Add more flowers as needed
@@ -61,8 +61,8 @@ const flowerData = ref([
 
 //Zoom Function for the main visualization --> will be adapted at a later point
 const zoomLevel = ref(1);
-const minZoom = 0.5;
-const maxZoom = 2;
+const minZoom = 0.3;
+const maxZoom = 3;
 
 const visualizationStyle = ref({
   transform: `scale(${zoomLevel.value})`,
@@ -98,7 +98,7 @@ function adjustZoomToFitContainer() {
     const containerWidth = container.clientWidth;
     const containerHeight = container.clientHeight;
 
-    const maxFlowerSize = 200; // Adjust based on the largest flower size
+    const maxFlowerSize = 240;
     const numFlowers = flowerData.value.length;
 
     // Assuming a simple grid layout for calculating total size
@@ -130,11 +130,6 @@ watch(flowerData, () => {
   }
 }, { immediate: true });
 
-//Information Button to read more about how the visualization can be read
-const infoVisible = ref(true);
-function toggleInfo(){
-  infoVisible.value = !infoVisible.value;
-}
 
 // Define a grid size and positions for flowers
 const gridSize = 80;
@@ -239,6 +234,18 @@ const getFlowerStyles = (index: number): CSSProperties => {
 onMounted(() => {
   adjustZoomToFitContainer(); // Fit visualization to container size on mount
   updateZoom();
+
+  const scrollWrapper = document.querySelector('.scroll-wrapper') as HTMLElement;
+  const visualization = document.querySelector('.visualization') as HTMLElement;
+
+  // Scroll to the bottom left
+  if (scrollWrapper && visualization) {
+    // Set the scroll position to the bottom
+    scrollWrapper.scrollTop = scrollWrapper.scrollHeight - scrollWrapper.clientHeight;
+
+    // Set the scroll position to the left
+    scrollWrapper.scrollLeft = 0;
+  }
 });
 
 </script>
@@ -288,7 +295,7 @@ onMounted(() => {
   overflow: hidden;
 }
 
-visualization {
+.visualization {
   display: grid;
   grid-template-columns: repeat(auto-fill, 80px);
   grid-template-rows: repeat(auto-fill, 80px);
@@ -298,15 +305,14 @@ visualization {
   overflow: visible;
 }
 
-.type2 .scroll-wrapper {
+.scroll-wrapper {
   position: absolute;
   top: 0;
   left: 0;
-  right: 35px;
-  bottom: 10px;
-  overflow: auto;
-  margin-right: 0px;
-  margin-bottom: 0px;
+  right: 30px;
+  bottom: 0;
+  overflow-x: auto;
+  overflow-y: auto;
   padding-left: 10px;
   padding-bottom: 10px;
 }
