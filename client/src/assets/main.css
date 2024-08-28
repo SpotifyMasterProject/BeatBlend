@@ -131,78 +131,6 @@ a,
   color: var(--font-color)
 }
 
-.type2 .visualization-container{
-  position: relative;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-}
-
-.type2 .visualization {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, 80px);
-  grid-template-rows: repeat(auto-fill, 80px);
-  width: 100%;
-  height: 100%;
-  position: relative;
-  overflow: visible;
-}
-
-.type2 .scroll-wrapper {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 35px;
-  bottom: 10px;
-  overflow: auto;
-  margin-right: 0px;
-  margin-bottom: 0px;
-  padding-left: 10px;
-  padding-bottom: 10px;
-}
-
-.type2 .scroll-wrapper::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
-  background-color: var(--backcore-color2);
-  border-radius: 12px;
-}
-
-.type2 .scroll-wrapper::-webkit-scrollbar-thumb {
-  background-color: var(--backcore-color3);
-  border-radius: 12px;
-}
-
-.type2 .scroll-wrapper::-webkit-scrollbar-thumb:hover {
-  background-color: var(--backcore-color1);
-}
-
-.type2 .scroll-wrapper::-webkit-scrollbar-corner {
-  background-color: var(--backcore-color1);
-}
-
-.type2 .zoom-controls {
-  position: absolute;
-  top: 40px;
-  right: 10px;
-  z-index: 10;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-.type2 .zoom-controls button {
-  width: 20px;
-  height: 20px;
-  background-color: var(--backcore-color2);
-  color: var(--font-color);
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-.flower {
-  transition: all 0.3s ease;
-}
-
 .type2 .previously-played{
   background-color: var(--backcore-color1);
   height: 20vh;
@@ -226,16 +154,6 @@ a,
 .type2 .middle. expanded{
   flex-grow: 2;
 }
-
-.flower-wrapper {
-  position: absolute;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 160px;
-  height: 160px;
-}
-
 .input-default {
   display: block;
   background-color: var(--backcore-color2);

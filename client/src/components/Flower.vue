@@ -1,25 +1,17 @@
-<script setup>
+<script setup lang ="ts">
 import { computed, defineProps} from 'vue';
 import Petal from './Petal.vue';
 
-const props = defineProps({
-  features: {
-    type: Array,
-    required: true,
-    validator: (value) => Array.isArray(value) && value.length === 5,
-  },
-  size: {
-    type: Number,
-    default: 80,
-  },
-  circleRadius: {
-    type: Number,
-    default: 40,
-  },
-});
+const props = defineProps<{
+  features: { value: number; color: string }[];
+  size?: number;
+  circleRadius?: number;
+}>();
+const size = props.size ?? 80;
+const circleRadius = props.circleRadius ?? 40;
 
-const maxPetalLength = computed(() => props.circleRadius + Math.max(...props.features.map(f => f.value * props.circleRadius)));
-const center = computed(() => props.size / 2);
+const maxPetalLength = computed(() => circleRadius + Math.max(...props.features.map(f => f.value * circleRadius)));
+const center = computed(() => size / 2);
 const rotation = computed(() => {
   const maxFeatureIndex = props.features.reduce(
       (maxIndex, feature, index, features) =>
