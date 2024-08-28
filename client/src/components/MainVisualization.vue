@@ -138,14 +138,6 @@ const maxVerticalMoves = 3;
 let containerWidth = 0;
 let containerHeight = 0;
 
-onMounted(() => {
-  const container = document.querySelector('.visualization-container');
-  if (container) {
-    containerWidth = container.clientWidth;
-    containerHeight = container.clientHeight;
-  }
-});
-
 // Assign positions randomly
 const generateRandomGridPositions = (flowerCount: number) => {
   const positions = [];
@@ -232,6 +224,14 @@ const getFlowerStyles = (index: number): CSSProperties => {
 };
 
 onMounted(() => {
+  //Container Dimensions
+  const container = document.querySelector('.visualization-container');
+  if (container) {
+    containerWidth = container.clientWidth;
+    containerHeight = container.clientHeight;
+  }
+
+  //Zoom to fit container
   adjustZoomToFitContainer(); // Fit visualization to container size on mount
   updateZoom();
 
