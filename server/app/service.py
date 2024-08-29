@@ -15,6 +15,7 @@ from models.user import User
 from models.token import Token
 from models.session import Session
 from models.song import Song
+from models.song_list import SongList
 from ws.websocket_manager import WebsocketManager
 
 SECRET_KEY = os.getenv("JWT_SECRET_KEY")
@@ -193,6 +194,11 @@ class Service:
 
     # async def delete_song_from_database(self, song_id: str) -> None:
     #     await self.repo.delete_song_by_id(song_id)
+
+    async def get_matching_songs_from_database(self, pattern: str, limit: int) -> SongList:
+        result = await self.repo.get_songs_by_pattern(pattern, limit)
+        songs = [Song.model_validate_json(row) for row in result]
+        return SongList(songs=songs)
 
     async def add_song_to_session(self, user_id: str, session_id: str, song_id: str) -> Session:
         session = await self.get_session(session_id)

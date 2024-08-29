@@ -6,7 +6,7 @@ from models.session import Session
 from models.user import User
 from redis.asyncio import Redis
 from sqlalchemy import Column, Table, MetaData, Integer, String, ARRAY, Float, Date, insert, select, delete
-from typing import Optional
+from typing import Optional, List
 
 POSTGRES_USER = os.getenv("POSTGRES_USER")
 POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
@@ -106,5 +106,12 @@ class Repository:
     # async def delete_song_by_id(self, song_id: str) -> None:
     #     query = delete(songs).where(songs.c.id == song_id)
     #     await self.postgres.execute(query)
+
+    async def get_songs_by_pattern(self, pattern: str, limit: int) -> List[Optional[bytes]]:
+        query = select(songs).where(songs.c.track_name.ilike(f'%{pattern}%') | songs.c.artists.any(pattern)).limit(limit)
+        result = await self.postgres.fetch_all(query)
+        if result is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No matching songs found")
+        return result
 
 
