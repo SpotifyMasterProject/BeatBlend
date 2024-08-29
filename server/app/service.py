@@ -2,23 +2,22 @@ import os
 import jwt
 import uuid
 
-import requests
-from contextlib import asynccontextmanager
 from ws.websocket_manager import WebsocketManager
-from spotipy.oauth2 import SpotifyOAuth
+from spotipy.oauth2 import SpotifyOAuth, Spotify
+from contextlib import asynccontextmanager
 from repository import Repository
-from fastapi import FastAPI
 from fastapi.security import OAuth2PasswordBearer
 from jwt import InvalidTokenError
 from typing import Annotated, List
-from fastapi import Depends, HTTPException, status, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect
 from models.user import User
 from models.token import Token
 from datetime import timedelta, datetime, timezone
 from models.session import Session
-
+from models.song import Song
 
 manager = WebsocketManager()
+
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
@@ -26,16 +25,18 @@ async def lifespan(_: FastAPI):
     yield
     await manager.disconnect()
 
+
 class Service:
     def __init__(self):
         self.repo = Repository()
-        self.spotipy_oauth = SpotifyOAuth(
+        self.spotify_oauth = SpotifyOAuth(
             client_id=os.getenv("SPOTIFY_CLIENT_ID"),
             client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
             redirect_uri=os.getenv("SPOTIFY_REDIRECT_URI"),
             scope="user-library-read"  # scope defines functionalities
         )
 
+        self.spotify_client = Spotify(auth_manager=self.spotify_oauth)
 
     @staticmethod
     def verify_token(token: Annotated[str, Depends(OAuth2PasswordBearer(tokenUrl="token"))]) -> str:
@@ -69,17 +70,18 @@ class Service:
         )
         return Token(access_token=encoded_jwt, token_type="bearer")
 
-    @staticmethod
-    def get_spotify_name(access_token: str) -> str:
-    
-         response = requests.get(
-             "https://api.spotify.com/v1/me",
-             headers={
-                 "content-type": "application/x-www-form-urlencoded",
-                 "Authorization": "Bearer " + access_token,
-             }
-         )
-         return response.json()["display_name"]
+    def get_spotify_name(self) -> str:
+        user_profile = self.spotify_client.me()
+        return user_profile['id']
+
+    async def verify_instances(self, user_ids: str | list[str] = "", session_id: str = ""):
+        if isinstance(user_ids, str) and user_ids:
+            await self.verify_user(user_ids)
+        elif isinstance(user_ids, list):
+            for user_id in user_ids:
+                await self.verify_user(user_id)
+        if session_id:
+            await self.verify_session(session_id)
 
     async def create_user(self, user: User) -> User:
         user.id = str(uuid.uuid4())
@@ -91,86 +93,89 @@ class Service:
         result = await self.repo.get_user_by_id(user_id)
         return User.model_validate_json(result)
 
-    async def validate_user(self, user_id: str) -> None:
-        await self.repo.validate_user_by_id(user_id)
+    async def verify_user(self, user_id: str) -> None:
+        await self.repo.verify_user_by_id(user_id)
 
     async def create_session(self, host_id: str, session: Session) -> Session:
+        host = await self.get_user(host_id)
         session.id = str(uuid.uuid4())
-        session.host = str(host_id)
-        session.is_running = True
-        session.creation_date = datetime.now(timezone.utc)
+        session.host_id = str(host.id)
+        session.host_name = host.username
+        session.creation_date = datetime.now()
+        # session.is_running = True
 
-        session.invite_token = str(uuid.uuid4())
         # TODO: adjust URL
-        session.invite_link = f'http://{os.getenv("LOCAL_IP_ADDRESS")}:8080/sessions/join/{session.invite_token}'
+        session.invite_link = f'http://{os.getenv("LOCAL_IP_ADDRESS")}:8080/{session.id}/join'
 
         await self.repo.set_session(session)
-        await self.repo.set_session_by_invite(session)
-
-        user = User.model_validate_json(await self.repo.get_user_by_id(host_id))
-        user.sessions.append(session.id)
-        await self.repo.set_user(user)
-
         await manager.publish(channel=self.repo.get_session_key(session.id), message="New session created")
+
+        host.sessions.append(session.id)
+        await self.repo.set_user(host)
 
         return session
 
-    async def get_all_sessions(self) -> List[Session]:
-        session_keys = [session_id async for session_id in self.repo.get_all_sessions_by_pattern()]
-        sessions = []
-        for session_key in session_keys:
-            result = await self.repo.get_session_by_key(session_key)
-            sessions.append(Session.model_validate_json(result))
+    # TODO: used for getting all artifacts
+    # async def get_user_sessions(self, user: User) -> List[Session]:
+    #     sessions = []
+    #     for session_id in user.sessions:
+    #         session = await self.get_session(session_id)
+    #         sessions.append(session)
+    #     return sessions
 
-        return sessions
-
-    async def get_sessions(self, user_id: str) -> List[Session]:
-        user = User.model_validate_json(await self.repo.get_user_by_id(user_id))
-        sessions = []
-        for session in user.sessions:
-            sessions.append(Session.model_validate_json(await self.repo.get_session_by_id(session)))
-        return sessions
-
-    async def get_session_by_invite(self, invite_token: str) -> Session:
-        session_id = await self.repo.get_session_by_invite(invite_token)
-        return await self.get_session_by_id(session_id)
-
-    async def get_session_by_id(self, session_id: str) -> Session:
+    async def get_session(self, session_id: str) -> Session:
         result = await self.repo.get_session_by_id(session_id)
         return Session.model_validate_json(result)
 
-    async def add_guest_to_session(self, guest_id: str, session_id: str, invite_token: str) -> Session:
-        if invite_token:
-            session_id = await self.repo.get_session_by_invite(invite_token)
-        result = await self.repo.get_session_by_id(session_id)
-        session = Session.model_validate_json(result)
+    async def add_guest_to_session(self, guest_id: str, session_id: str) -> Session:
+        guest = await self.get_user(guest_id)
+        session = await self.get_session(session_id)
 
-        if guest_id not in session.guests:
-            session.guests.append(guest_id)
+        if guest.id not in session.guests:
+            session.guests.append(guest.id)
             await self.repo.set_session(session)
-            await manager.publish(channel=self.repo.get_session_key(session.id), message=f"Guest {guest_id} has joined the session")
+            await manager.publish(channel=self.repo.get_session_key(session.id), message=f"Guest {guest.id} has joined the session")
+
+            guest.sessions.append(session.id)
+            await self.repo.set_user(guest)
 
         return session
 
-    async def remove_guest_from_session(self, host_id: str, guest_id: str, session_id: str) -> None:
-        result = await self.repo.get_session_by_id(session_id)
-        session = Session.model_validate_json(result)
+    # TODO: this will be adapted once we have the postgres database
+    # async def add_song_to_session(self, user_id: str, session_id: str, song_id: str) -> Session:
+    #     session = await self.get_session(session_id)
+    #     try:
+    #         result = await self.repo.get_song_by_id(song_id)
+    #         song = Song.model_validate_json(result)
+    #         session.playlist.append(song)
+    #     except Exception:
+    #         song_info = self.spotify_client.track(song_id)
+    #         session.playlist.append(Song(**song_info))
+    #
+    #     await self.repo.set_session(session)
+    #     await manager.publish(channel=self.repo.get_session_key(session.id), message=f"User {user_id} has added a song")
+    #
+    #     return session
 
-        if host_id and session.host != str(host_id):
+    async def remove_guest_from_session(self, host_id: str, guest_id: str, session_id: str) -> None:
+        guest = await self.get_user(guest_id)
+        session = await self.get_session(session_id)
+
+        if host_id and session.host_id != str(host_id):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not host of session.")
 
-        if guest_id in session.guests:
-            session.guests.remove(guest_id)
+        if guest.id in session.guests:
+            session.guests.remove(guest.id)
             await self.repo.set_session(session)
-            await manager.publish(channel=self.repo.get_session_key(session.id), message=f"Guest {guest_id} was removed from session")
+            await manager.publish(channel=self.repo.get_session_key(session.id), message=f"Guest {guest.id} was removed from session")
+
+            guest.sessions.remove(session.id)
+            await self.repo.set_user(guest)
         else:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Guest not part of session.")
 
-    async def validate_session(self, session_id: str) -> None:
-        await self.repo.validate_session_by_id(session_id)
-
-    async def validate_invite(self, invite_token: str) -> None:
-        await self.repo.validate_invite_by_token(invite_token)
+    async def verify_session(self, session_id: str) -> None:
+        await self.repo.verify_session_by_id(session_id)
 
     async def establish_ws_connection_to_session(self, websocket: WebSocket, session_id: str) -> None:
         channel = self.repo.get_session_key(session_id)

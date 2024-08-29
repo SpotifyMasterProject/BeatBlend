@@ -3,6 +3,7 @@ import numpy as np
 from ast import literal_eval
 from models.song import Song
 
+
 class SongsDataset:
     """Dataset of songs.
     
@@ -50,11 +51,12 @@ class SongsDataset:
     """
 
     # Columns to be used for matching.
-    ACOUSTIC_FEATURES = ["danceability", "energy", "loudness", "acousticness", "speechiness", "valence"]
+    ACOUSTIC_FEATURES = ["danceability", "energy", "speechiness", "valence", "tempo"]
 
-    def __init__(self, dataset_path: str, num_songs=10000):
+    def __init__(self, dataset_path: str, num_songs: int = 10000):
         self.df = pd.read_csv(dataset_path)
         self.df = self.df.head(num_songs)
+
         for column in ["artists", "artist_ids"]:
             self.df[column] = self.df[column].apply(literal_eval)
 
@@ -75,7 +77,6 @@ class SongsDataset:
 
         return songs_list
 
-    
     def get_songs(self, including: list[str] = None, excluding: list[str] = []) -> pd.DataFrame:
         """Returns a DataFrame containing the included songs and not containing
         the excluding songs.
@@ -84,4 +85,3 @@ class SongsDataset:
         excluding - list of ids to exclude
         """
         return self.df[self.df["id"].apply(lambda id: (including is None or id in including) and id not in excluding)]
-    

@@ -4,8 +4,7 @@ from pydantic import BaseModel
 
 class User(BaseModel):
     id: Optional[str] = None
-    username: str = ''
-    # List of sessions this user hosted
+    username: str
     sessions: List[str] = []
 
 

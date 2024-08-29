@@ -3,6 +3,7 @@ import pandas as pd
 from songs_dataset import SongsDataset
 import tempfile
 
+
 class TestSongsDataset(unittest.TestCase):
     def setUp(self):
         self.dataframe =  pd.DataFrame([{
@@ -44,7 +45,6 @@ class TestSongsDataset(unittest.TestCase):
             ])
         self.fp = tempfile.NamedTemporaryFile()
         self.dataframe.to_csv(self.fp.name)
-
 
     def test_matching_songs(self):
         dataset = SongsDataset(self.fp.name)
