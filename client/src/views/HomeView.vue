@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import {ref} from 'vue';
+import { ref, onMounted, computed } from "vue";
+import { Session } from "@/types/Session";
+import { useAuthStore } from "@/stores/auth";
+import { useRouter, useRoute } from 'vue-router';
 import Navigation from "@/components/Navigation.vue";
 import MainVisualization from "@/components/MainVisualization.vue";
 import Button from 'primevue/button';
@@ -7,16 +10,11 @@ import LogoIntroScreen from "@/components/LogoIntroScreen.vue";
 import PreviouslyPlayed from "@/components/PreviouslyPlayed.vue";
 import QrcodeVue from 'qrcode.vue'
 import AddMoreSong from "@/components/AddMoreSong.vue";
-import { sessionService } from "@/services/sessionService";
-import { ref, onMounted, computed } from "vue";
-import { Session } from "@/types/Session";
-import { useAuthStore } from "@/stores/auth";
-import { useRouter, useRoute } from 'vue-router';
 import Sidebar from "primevue/sidebar";
-import SessionHistoryItem from "@/components/SessionHistoryItem.vue";
 import StartBlendButton from "@/components/StartBlendButton.vue";
 import PlaylistCreator from "@/components/PlaylistCreator.vue";
 import { HostSession } from "@/types/Session";
+import { sessionService } from "@/services/sessionService";
 
 const showPreviouslyPlayed = ref(false);
 const showAddMoreSongPopup = ref(false);
@@ -35,18 +33,23 @@ const sessions = ref<Session[]>([]);
 const authStore = useAuthStore();
 const isHost = authStore.user?.isHost ?? false;
 const errorMessage = ref();
+const loading = ref(true);
 
 onMounted(async () => {
   await router.isReady();
 
-  try {
-    if (isHost) {
-      sessions.value = await sessionService.getSessions();
-    } else if (route.params.sessionId) {
-      sessions.value = [await sessionService.getSessionById(route.params.sessionId)];
-    } else {
+  const sessionId = isHost ? authStore.user?.sessions?.[0] : route.params.sessionId;
+  if (!sessionId) {
+    if (!isHost) {
       errorMessage.value = "Could not find session. Please try to join again."
     }
+    loading.value = false;
+    return;
+  }
+
+  try {
+    sessions.value = [await sessionService.getSessionById(sessionId)];
+    loading.value = false;
   } catch (error) {
     // We redirect users to landing page, if we have any errors.
     router.push({name: 'landing'});
@@ -66,7 +69,6 @@ const toggleAddMoreSongPopup = () => {
   showAddMoreSongPopup.value = !showAddMoreSongPopup.value;
 };
 
-const sessionHistoryVisible = ref(false);
 const createNewSessionFlow = ref(false);
 const runningSession = ref();
 
@@ -86,7 +88,7 @@ function toggleInfo(){
 <template>
   <div class="type2">
     <header>
-      <div v-if="currentSession?.isRunning" class="function-icon-container">
+      <div class="function-icon-container">
         <Button icon="pi pi-search" severity="success" text raised rounded aria-label="Search" @click="toggleAddMoreSongPopup" />
       </div>
       <div class="logo-nav-container">
@@ -95,36 +97,22 @@ function toggleInfo(){
           <Navigation/>
         </nav>
       </div>
-      <i v-if="isHost" class="settings-icon pi pi-cog" @click="sessionHistoryVisible = true"></i>
+      <i v-if="isHost" class="settings-icon pi pi-cog"></i>
     </header>
-    <div>
-      <Sidebar
-          v-model:visible="sessionHistoryVisible"
-          :showCloseIcon="false">
-          <div class="session-history-container">
-              <session-history-item
-                  class="session-history"
-                  v-for="(session, index) in sessions"
-                  :session="session"
-                  @click="() => selectedSessionIndex = index"
-              />
-          </div>
-      </Sidebar>
-    </header>
-    <div class="middle">
+    <div class="middle" v-if="!loading">
       <div v-if="errorMessage" class="error">
           {{errorMessage}}
-        </div>
-      <div v-else-if="!currentSession?.isRunning && isHost">
-        <start-blend-button v-else-if="!createNewSessionFlow" @click="createNewSessionFlow = true" />
+      </div>
+      <div v-else-if="!sessions.length && isHost">
+        <start-blend-button v-if="!createNewSessionFlow" @click="createNewSessionFlow = true" />
         <playlist-creator v-else @startSession="startSession"></playlist-creator>
       </div>
-      <div v-else>
+      <template v-else>
         <div class="info-box" :class="{ active: infoVisible }" @click="toggleInfo">
           <div> i </div>
         </div>
         <MainVisualization />
-      </div>
+      </template>
     </div>
     <div v-if="currentSession" class="footer-section">
       <div
@@ -279,14 +267,6 @@ function toggleInfo(){
 
 .visualization {
   display: contents;
-}
-
-.session-history-container {
-  background-color: var(--backcore-color2);
-  padding-top: 20px;
-  height: 100vh;
-  width: 30vw;
-  position: relative;
 }
 
 .error {

@@ -16,7 +16,7 @@ const showStartScreen = ref(true);
 const username = ref<string>('');
 const invitedSession = ref();
 const hostUsername = computed(() => {
-  return invitedSession.value ? invitedSession.value.hostUsername : "";
+  return invitedSession.value ? invitedSession.value.hostName : "";
 });
 
 const router = useRouter();
@@ -24,9 +24,9 @@ const route = useRoute();
 
 onMounted(async () => {
   await router.isReady();
-  const inviteToken = route.params.inviteToken;
-  if (inviteToken) {
-    invitedSession.value = await sessionService.getSessionByInviteToken(inviteToken);
+  const sessionId = route.params.sessionId;
+  if (sessionId) {
+    invitedSession.value = await sessionService.getSessionById(sessionId);
   }
 });
 
@@ -43,7 +43,7 @@ const handleComplete = () => {
   showStartScreen.value = false;
 }
 
-const joinSession = async (inviteToken) => {
+const joinSession = async (sessionId) => {
   if (!username.value) {
     return;
   }
@@ -52,7 +52,7 @@ const joinSession = async (inviteToken) => {
 
   try {
     await authService.authorize(username.value);
-    const guestSession = await sessionService.joinSession(inviteToken);
+    const guestSession = await sessionService.joinSession(sessionId);
     router.push({path: `/session/${guestSession.id}`});
   } catch (error) {
     console.log(error);
@@ -75,10 +75,10 @@ const joinSession = async (inviteToken) => {
         </header>
         <div class="login-container">
           <Button v-if="
-            !$route.params.inviteToken && !isMobile" class="button spotify-button" @click="redirectToSpotify">
+            !$route.params.sessionId && !isMobile" class="button spotify-button" @click="redirectToSpotify">
             Login via Spotify
           </Button>
-          <div v-else-if="!$route.params.inviteToken">
+          <div v-else-if="!$route.params.sessionId">
             Please use computer to login as host
           </div>
           <div v-else class="guest-login">
@@ -91,7 +91,7 @@ const joinSession = async (inviteToken) => {
               invited you to the blend. Enter username to join.</p>
             <InputText id="username" v-model="username" placeholder="Username" class="input-default" />
             <Button
-              @click="() => joinSession($route.params.inviteToken)"
+              @click="() => joinSession($route.params.sessionId)"
               class="join-button"
               :disabled="!username.length">Join</Button>
           </div>

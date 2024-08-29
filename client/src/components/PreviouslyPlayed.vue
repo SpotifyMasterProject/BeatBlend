@@ -22,7 +22,7 @@
             <td class="icon-cell">
               <img src="../assets/table-play-icon.png" alt="play-icon" class="song-icon">
             </td>
-            <td class="track-name">{{ song.name }}</td>
+            <td class="track-name">{{ song.track_name }}</td>
             <td>{{ song.album }}</td>
             <td>{{ song.artists.join(', ') }}</td>
             <td>{{ song.danceability }}</td>

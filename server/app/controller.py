@@ -26,7 +26,7 @@ async def authorize_spotify(host: SpotifyUser) -> Token:
     host.username = service.get_spotify_name()
     host = await service.create_user(host)
     token_info = service.spotify_oauth.get_access_token(host.auth_code)
-    return Token(**token_info)
+    return service.generate_token(host, Token(**token_info))
 
 
 @app.post("/token", status_code=status.HTTP_201_CREATED, response_model=Token)

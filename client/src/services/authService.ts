@@ -1,21 +1,24 @@
 import apiClient from '@/services/axios'
-import {useAuthStore} from '@/stores/auth'
+import { userService } from '@/services/userService'
+import { useAuthStore } from '@/stores/auth'
 
 export const authService = {
     async authorize(username: string) {
         await apiClient.post('/token', {
             username: username
         }).then(async (response) => {
-            await storeAuthorization(response.data?.['accessToken'])
+            await storeAuthorization(response.data?.['accessToken']);
             console.log('Logged in as guest with username: ' + username)
         })
     },
 
     async authorizeSpotify(authCode: string) {
         await apiClient.post('/auth-codes', {
+            // Username will be populated by the BE.
+            username: '',
             authCode
         }).then(async (response) => {
-            await storeAuthorization(response.data?.['accessToken'], /* isHost= */true)
+            await storeAuthorization(response.data?.['accessToken'], /* isHost= */true);
             console.log('Logged in via spotify with username')
         })
     }

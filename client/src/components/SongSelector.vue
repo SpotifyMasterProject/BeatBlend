@@ -14,7 +14,7 @@
                 <div class="song">
                     <i class="pi pi-play"></i>
                     <div class="song-details">
-                        <span class="song-title">{{ slotProps.option.name }}</span>
+                        <span class="song-title">{{ slotProps.option.trackName }}</span>
                         <span class="song-artists">{{ combineArtists(slotProps.option.artists) }}</span>
                     </div>
                 </div>

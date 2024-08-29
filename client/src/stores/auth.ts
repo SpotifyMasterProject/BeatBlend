@@ -17,6 +17,7 @@ export const useAuthStore = defineStore('auth', () => {
     const storedToken = sessionStorage.getItem('token')
     if (storedUserData && storedToken) {
         user.value = new User(JSON.parse(storedUserData))
+        console.log("USER", user.value);
         token.value = JSON.parse(storedToken)
     }
 

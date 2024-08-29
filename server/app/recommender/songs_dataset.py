@@ -73,7 +73,10 @@ class SongsDataset:
         songs_dict = songs_df.to_dict('index')
         songs_list = []
         for _, song in songs_dict.items():
-            songs_list.append(Song.parse_obj(song))
+            song_model = Song.parse_obj(song)
+            # name -> track_name
+            song_model.track_name = song["name"]
+            songs_list.append(song_model)
 
         return songs_list
 

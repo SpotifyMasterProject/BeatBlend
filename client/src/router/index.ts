@@ -1,7 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import LandingView from '@/views/LandingView.vue'
-import {useAuthStore} from '@/stores/auth'
+import { useAuthStore } from '@/stores/auth'
+import { userService } from '@/services/userService'
 import WebsocketView from '@/views/WebsocketView.vue'
 import AuthorizeSpotifyView from '@/views/AuthorizeSpotifyView.vue'
 
@@ -26,7 +27,7 @@ const router = createRouter({
       component: AuthorizeSpotifyView
     },
     {
-      path: '/sessions/join/:inviteToken',
+      path: '/:sessionId/join',
       name: 'landing-view-guest',
       component: LandingView
     },
@@ -60,8 +61,12 @@ const router = createRouter({
 
 router.beforeEach(async (to) => {
   const authStore = useAuthStore()
+  
+
   if (to.meta.requiresAuth && !authStore.token) {
     return {name: 'landing'}
+  } else if (authStore.token) {
+    await userService.fetchUser();
   }
 })
 

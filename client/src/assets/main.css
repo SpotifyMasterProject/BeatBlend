@@ -109,6 +109,8 @@ a,
   border-radius: 18px;
   position: relative;
   overflow: hidden;
+  justify-content: center;
+  align-items: center;
 }
 .type2 .info-box {
   background-color: #D9D9D9;

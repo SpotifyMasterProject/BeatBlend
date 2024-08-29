@@ -4,12 +4,13 @@ import time
 import uuid
 
 from datetime import timedelta, datetime, timezone
+from spotipy import Spotify
 from spotipy.oauth2 import SpotifyOAuth
 from contextlib import asynccontextmanager
 from repository import Repository, postgres
 from fastapi.security import OAuth2PasswordBearer
 from jwt import InvalidTokenError
-from typing import Annotated, List
+from typing import Annotated, Optional
 from fastapi import FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect
 from models.user import User
 from models.token import Token
@@ -62,11 +63,17 @@ class Service:
                 raise auth_exception
         except InvalidTokenError:
             raise auth_exception
+        
+        # TODO: Consider also returing the spotify token.
         return user_id
 
     @staticmethod
-    def generate_token(user: User) -> Token:
+    def generate_token(user: User, spotify_token: Optional[Token] = None) -> Token:
         to_encode = {"sub": user.id, "username": user.username}
+        # Also encode the spotify token for this session.
+        if spotify_token is not None:
+            to_encode["spotify_token"] = spotify_token.dict()
+    
         access_token_expires = timedelta(minutes=JWT_EXPIRES_MINUTES)
         expire = datetime.now(timezone.utc) + (access_token_expires or timedelta(minutes=30))
         to_encode.update({"exp": expire})

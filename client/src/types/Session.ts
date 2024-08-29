@@ -4,6 +4,7 @@ import { Song } from './Song';
 export class Session {
     id: string
     name: string
+    hostName: string
     inviteLink: string
     guests: User[]
     playlist: Song[]
@@ -13,6 +14,7 @@ export class Session {
     constructor(data: {
         id: string
         name: string
+        hostName: string
         inviteLink: string
         guests: User[]
         playlistName: string
@@ -22,6 +24,7 @@ export class Session {
     }) {
         this.id = data.id
         this.name = data.name
+        this.hostName = data.hostName
         this.inviteLink = data.inviteLink
         this.guests = data.guests
         this.playlist = data.playlist
@@ -30,20 +33,3 @@ export class Session {
     }
 }
 
-export class AnonymousSession {
-    name: string
-    hostUsername: string
-
-    constructor(data: {
-        name: string
-        hostUsername: string
-        guests: User[]
-        playlistName: string
-        playlist: Song[]
-        creationDate: Date
-        isRunning: boolean
-    }) {
-        this.name = data.name
-        this.hostUsername = data.hostUsername
-    }
-}

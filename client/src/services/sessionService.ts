@@ -1,16 +1,11 @@
 import apiClient from '@/services/axios';
-import { AnonymousSession, Session } from '@/types/Session';
+import { Session } from '@/types/Session';
 import { Song } from '@/types/Song';
 
 export const sessionService = {
 
-    async getSessionByInviteToken(inviteToken: string): Promise<AnonymousSession> {
-        return apiClient.get(`/sessions/join/${inviteToken}`).then((response) => {
-            return response.data;
-        })
-    },
-    async joinSession(inviteToken: string): Promise<Session> {
-        return apiClient.post(`/sessions/join/${inviteToken}`).then((response) => {
+    async joinSession(sessionId: string): Promise<Session> {
+        return apiClient.post(`/sessions/${sessionId}/guests`).then((response) => {
             return response.data;
         })
     },
@@ -19,7 +14,7 @@ export const sessionService = {
             return response.data;
         })
     },
-    async getSessionById(sessionId: string): Promise<AnonymousSession> {
+    async getSessionById(sessionId: string): Promise<Session> {
         return apiClient.get(`/sessions/${sessionId}`).then((response) => {
             return response.data;
         })
