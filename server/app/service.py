@@ -6,7 +6,7 @@ import uuid
 from datetime import timedelta, datetime, timezone
 from spotipy.oauth2 import SpotifyOAuth
 from contextlib import asynccontextmanager
-from repository import Repository, postgres
+from repository import Repository
 from fastapi.security import OAuth2PasswordBearer
 from jwt import InvalidTokenError
 from typing import Annotated, List
@@ -22,6 +22,7 @@ ALGORITHM = os.getenv("JWT_ALGORITHM")
 JWT_EXPIRES_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", 60))
 
 manager = WebsocketManager()
+repo = Repository()
 
 
 @asynccontextmanager
@@ -29,7 +30,7 @@ async def lifespan(_: FastAPI):
     await manager.connect()
     for attempt in range(10):
         try:
-            await postgres.connect()
+            await repo.postgres_connect()
             break
         except ConnectionRefusedError as e:
             if attempt == 9:
@@ -37,12 +38,12 @@ async def lifespan(_: FastAPI):
             time.sleep(6)
     yield
     await manager.disconnect()
-    await postgres.disconnect()
+    await repo.postgres_disconnect()
 
 
 class Service:
     def __init__(self):
-        self.repo = Repository()
+        self.repo = repo
         self.spotipy_oauth = SpotifyOAuth(
             client_id=os.getenv("SPOTIFY_CLIENT_ID"),
             client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
@@ -52,9 +53,7 @@ class Service:
 
     @staticmethod
     def verify_token(token: Annotated[str, Depends(OAuth2PasswordBearer(tokenUrl="token"))]) -> str:
-
         auth_exception = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authorized!")
-
         try:
             payload = jwt.decode(token, key=SECRET_KEY, algorithms=[ALGORITHM])
             user_id = payload.get("sub")
@@ -192,15 +191,13 @@ class Service:
         result = await self.repo.get_song_by_id(song_id)
         return Song.model_validate_json(result)
 
-    async def delete_song_from_database(self, song_id: str) -> None:
-        await self.repo.delete_song_by_id(song_id)
+    # async def delete_song_from_database(self, song_id: str) -> None:
+    #     await self.repo.delete_song_by_id(song_id)
 
     async def add_song_to_session(self, user_id: str, session_id: str, song_id: str) -> Session:
         session = await self.get_session(session_id)
-
         if user_id not in session.guests and user_id != session.host_id:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User is not part of session")
-
         try:
             song = await self.get_song_from_database(song_id)
         except HTTPException:
@@ -209,18 +206,17 @@ class Service:
         session.playlist.append(song)
 
         await self.repo.set_session(session)
-        await manager.publish(channel=self.repo.get_session_key(session.id), message=f"User {user_id} has added a song")
+        await manager.publish(channel=self.repo.get_session_key(session.id), message=f"User {user_id} has added song {song.name}")
 
         return session
 
     async def delete_song_from_session(self, host_id: str, session_id: str, song_id: str) -> None:
         session = await self.get_session(session_id)
-
         self.verify_host_of_session(host_id, session)
-
         for idx, song in enumerate(session.playlist):
             if song.id == song_id:
                 del session.playlist[idx]
+                await manager.publish(channel=self.repo.get_session_key(session.id), message=f"User {host_id} has removed song {song.name}")
                 return
 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song not part of playlist")

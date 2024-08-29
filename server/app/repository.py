@@ -3,18 +3,14 @@ import os
 from databases import Database
 from fastapi import HTTPException, status
 from models.session import Session
-from models.song import Song
-from typing import Optional
 from models.user import User
 from redis.asyncio import Redis
-from sqlalchemy import Column, Table, MetaData, Integer, String, ARRAY, Float, Date, insert, select, func
+from sqlalchemy import Column, Table, MetaData, Integer, String, ARRAY, Float, Date, insert, select, delete
 from typing import Optional
 
 POSTGRES_USER = os.getenv("POSTGRES_USER")
 POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
 POSTGRES_DB = os.getenv("POSTGRES_DB")
-
-postgres = Database(f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@postgres:5432/{POSTGRES_DB}")
 
 metadata = MetaData()
 songs = Table(
@@ -36,9 +32,17 @@ songs = Table(
     Column("popularity", Float, nullable=True)
 )
 
+
 class Repository:
     def __init__(self):
         self.redis = Redis(host="redis", port=6379, decode_responses=True)
+        self.postgres = Database(f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@postgres:5432/{POSTGRES_DB}")
+
+    async def postgres_connect(self):
+        await self.postgres.connect()
+
+    async def postgres_disconnect(self):
+        await self.postgres.disconnect()
 
     @staticmethod
     def get_user_key(user_id) -> str:
@@ -99,8 +103,8 @@ class Repository:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song not found")
         return result
 
-    async def delete_song_by_id(self, song_id: str) -> None:
-        query = delete(songs).where(songs.c.id == song_id)
-        await self.postgres.execute(query)
+    # async def delete_song_by_id(self, song_id: str) -> None:
+    #     query = delete(songs).where(songs.c.id == song_id)
+    #     await self.postgres.execute(query)
 
 

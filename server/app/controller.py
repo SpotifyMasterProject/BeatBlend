@@ -4,7 +4,6 @@ from service import Service
 from models.token import Token
 from models.user import User, SpotifyUser
 from models.session import Session
-from models.song import Song
 from starlette.middleware.cors import CORSMiddleware
 from typing import Annotated
 
@@ -64,19 +63,19 @@ async def join_session(guest_id: Annotated[str, Depends(service.verify_token)], 
     return await service.add_guest_to_session(guest_id, "", invite_token)
 
 
-@app.post("/songs/{song_id}", status_code=status.HTTP_200_OK, response_model=Song)
-async def add_song(song_id: str) -> Song:
-    return await service.add_song_to_database(song_id)
-
-
-@app.get("/songs/{song_id}", status_code=status.HTTP_200_OK, response_model=Song)
-async def get_song(song_id: str) -> Song:
-    return await service.get_song_from_database(song_id)
-
-
-@app.delete("/songs/{song_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_song(song_id: str) -> None:
-    await service.delete_song_from_database(song_id)
+# @app.post("/songs/{song_id}", status_code=status.HTTP_200_OK, response_model=Song)
+# async def add_song(song_id: str) -> Song:
+#     return await service.add_song_to_database(song_id)
+#
+#
+# @app.get("/songs/{song_id}", status_code=status.HTTP_200_OK, response_model=Song)
+# async def get_song(song_id: str) -> Song:
+#     return await service.get_song_from_database(song_id)
+#
+#
+# @app.delete("/songs/{song_id}", status_code=status.HTTP_204_NO_CONTENT)
+# async def delete_song(song_id: str) -> None:
+#     await service.delete_song_from_database(song_id)
 
 
 @app.patch("/sessions/{session_id}/songs", status_code=status.HTTP_200_OK)
