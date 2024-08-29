@@ -40,8 +40,8 @@ const closeModal = () => {
 <style scoped>
 .song-detail-modal {
   position: fixed;
-  top: 60%;
-  left: 50%;
+  top: 65%;
+  left: 20%;
   transform: translate(-50%, -50%);
   background-color: #272525;
   border-radius: 15px;
