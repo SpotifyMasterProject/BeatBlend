@@ -7,16 +7,28 @@ import LogoIntroScreen from "@/components/LogoIntroScreen.vue";
 import PreviouslyPlayed from "@/components/PreviouslyPlayed.vue";
 import QrcodeVue from 'qrcode.vue'
 import AddMoreSong from "@/components/AddMoreSong.vue";
+import SongDetailsPopUp from "@/components/SongDetailsPopUp.vue";
 import { HostSession } from "@/types/Session";
 
 const showPreviouslyPlayed = ref(false);
 const showAddMoreSongPopup = ref(false);
+const showSongDetailPopup = ref(false);
+const selectedSong = ref(null);
 
 const LOCAL_IP_ADDRESS = import.meta.env.VITE_LOCAL_IP_ADDRESS;
 
 const toggleVisibility = () => {
   showPreviouslyPlayed.value = !showPreviouslyPlayed.value;
 };
+
+function handleShowSongDetails(song) {
+  selectedSong.value = song;
+  showSongDetailPopup.value = true;
+}
+
+function closeSongDetailPopup() {
+  showSongDetailPopup.value = false;
+}
 
 // TODO: Get sessions from BE.
 const sessions = [
@@ -85,7 +97,13 @@ function toggleInfo(){
           </button>
         </div>
         <div v-show="showPreviouslyPlayed" class="table-scroll">
-          <PreviouslyPlayed></PreviouslyPlayed>
+          <PreviouslyPlayed @show-song-details="handleShowSongDetails"></PreviouslyPlayed>
+          <SongDetailsPopUp
+            v-if="showSongDetailPopup"
+            :song="selectedSong"
+            :isVisible="showSongDetailPopup"
+            @close="closeSongDetailPopup"
+          />
         </div>
       </div>
       <qrcode-vue :value="sessions[selectedSessionIndex].invitationLink" />
@@ -162,12 +180,10 @@ function toggleInfo(){
 .previously-played.minimized .table-header-container {
   padding-bottom: 0; /* No padding when minimized */
 }
-.previously-played:not(.minimized) .table-header-container {
-  padding-bottom: 10px; /* Adds space between the header/button and the table when shown */
-}
+
 .previously-played h3 {
   margin: 0;
-  font-size:16px;
+  font-size:18px;
   width: 100%;
 }
 .previously-played button {
