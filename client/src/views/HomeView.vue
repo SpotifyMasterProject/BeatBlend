@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import {ref} from 'vue';
+import Navigation from "@/components/Navigation.vue";
+import MainVisualization from "@/components/MainVisualization.vue";
 import Button from 'primevue/button';
 import LogoIntroScreen from "@/components/LogoIntroScreen.vue";
-import Navigation from "@/components/Navigation.vue";
-import Flower from "@/components/Flower.vue";
 import PreviouslyPlayed from "@/components/PreviouslyPlayed.vue";
 import QrcodeVue from 'qrcode.vue'
 import AddMoreSong from "@/components/AddMoreSong.vue";
@@ -15,6 +16,7 @@ import Sidebar from "primevue/sidebar";
 import SessionHistoryItem from "@/components/SessionHistoryItem.vue";
 import StartBlendButton from "@/components/StartBlendButton.vue";
 import PlaylistCreator from "@/components/PlaylistCreator.vue";
+import { HostSession } from "@/types/Session";
 
 const showPreviouslyPlayed = ref(false);
 const showAddMoreSongPopup = ref(false);
@@ -38,7 +40,6 @@ onMounted(async () => {
   await router.isReady();
 
   try {
-    // This path is accesable only by guests.
     if (isHost) {
       sessions.value = await sessionService.getSessions();
     } else if (route.params.sessionId) {
@@ -65,14 +66,6 @@ const toggleAddMoreSongPopup = () => {
   showAddMoreSongPopup.value = !showAddMoreSongPopup.value;
 };
 
-const flowerData = [
-  { value: 0.4, color: '#144550' },
-  { value: 0.6, color: '#31431E' },
-  { value: 0.5, color: '#EEE8C4' },
-  { value: 0.7, color: '#E4832E' },
-  { value: 0.3, color: '#BB7DEC' },
-];
-
 const sessionHistoryVisible = ref(false);
 const createNewSessionFlow = ref(false);
 const runningSession = ref();
@@ -83,6 +76,11 @@ const startSession = async (session) => {
   selectedSessionIndex.value = 0;
 };
 
+//Information Button to read more about how the visualization can be read
+const infoVisible = ref(true);
+function toggleInfo(){
+  infoVisible.value = !infoVisible.value;
+}
 </script>
 
 <template>
@@ -93,6 +91,9 @@ const startSession = async (session) => {
       </div>
       <div class="logo-nav-container">
         <logo-intro-screen/>
+        <nav>
+          <Navigation/>
+        </nav>
       </div>
       <i v-if="isHost" class="settings-icon pi pi-cog" @click="sessionHistoryVisible = true"></i>
     </header>
@@ -109,32 +110,21 @@ const startSession = async (session) => {
               />
           </div>
       </Sidebar>
-    </div>
+    </header>
     <div class="middle">
-        <div v-if="errorMessage" class="error">
+      <div v-if="errorMessage" class="error">
           {{errorMessage}}
         </div>
-        <start-blend-button v-else-if="!createNewSessionFlow && !currentSession?.isRunning && isHost" @click="createNewSessionFlow = true" />
-        <div class="visualization" v-else-if="!createNewSessionFlow" :class="{ expanded: !showPreviouslyPlayed }">
-          <Flower :features="flowerData" :size="300" :circleRadius="100" />
-          <Flower :features="flowerData" :size="300" :circleRadius="100" />
-          <Flower :features="flowerData" :size="300" :circleRadius="100" />
-          <Flower :features="flowerData" :size="300" :circleRadius="100" />
-          <Flower :features="flowerData" :size="300" :circleRadius="100" />
-          <Flower :features="flowerData" :size="300" :circleRadius="100" />
-          <Flower :features="flowerData" :size="300" :circleRadius="100" />
-          <Flower :features="flowerData" :size="300" :circleRadius="100" />
-          <Flower :features="flowerData" :size="300" :circleRadius="100" />
-          <Flower :features="flowerData" :size="300" :circleRadius="100" />
-          <Flower :features="flowerData" :size="300" :circleRadius="100" />
-          <Flower :features="flowerData" :size="300" :circleRadius="100" />
-          <Flower :features="flowerData" :size="300" :circleRadius="100" />
-          <Flower :features="flowerData" :size="300" :circleRadius="100" />
-          <Flower :features="flowerData" :size="300" :circleRadius="100" />
-          <Flower :features="flowerData" :size="300" :circleRadius="100" />
-          <Flower :features="flowerData" :size="300" :circleRadius="100" />
-        </div>
+      <div v-else-if="!currentSession?.isRunning && isHost">
+        <start-blend-button v-else-if="!createNewSessionFlow" @click="createNewSessionFlow = true" />
         <playlist-creator v-else @startSession="startSession"></playlist-creator>
+      </div>
+      <div v-else>
+        <div class="info-box" :class="{ active: infoVisible }" @click="toggleInfo">
+          <div> i </div>
+        </div>
+        <MainVisualization />
+      </div>
     </div>
     <div v-if="currentSession" class="footer-section">
       <div
