@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref,computed, watch } from 'vue';
 import Button from 'primevue/button';
 import SongSelector from "@/components/SongSelector.vue";
 import { Song } from '@/types/Song';
@@ -107,6 +107,7 @@ const initialSongs = [
 ]
 
 const selectedSongs = ref([]);
+const successMessageVisible = ref(false);
 
 const canConfirm = computed(() => {
     return selectedSongs.value.length >= 1;
@@ -116,9 +117,15 @@ const canConfirm = computed(() => {
 const addNewSongs = () => {
     console.log("add new songs!")
 
+    successMessageVisible.value = true;
 
     // clear the previous selected songs\
     selectedSongs.value = [];
+
+    // message disappear after 3 sec
+    setTimeout(() => {
+        successMessageVisible.value = false;
+    }, 3000);
 }
 
 </script>
@@ -135,6 +142,9 @@ const addNewSongs = () => {
         <Button class="start-session" :disabled="!canConfirm" @click="addNewSongs">
             Confirm
         </Button>
+        <div v-if="successMessageVisible" class="success-message">
+            Songs added successfully!
+        </div>
     </div>
 </template>
 
@@ -191,5 +201,21 @@ const addNewSongs = () => {
 }
 .start-session:disabled {
     color: #c4c4c4;
+}
+
+.success-message {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    color: #FFFFFF;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 16px;
+    transition: opacity 0.3s ease;
+}
+
+.success-message.hidden {
+    opacity: 0;
+    visibility: hidden;
 }
 </style>
