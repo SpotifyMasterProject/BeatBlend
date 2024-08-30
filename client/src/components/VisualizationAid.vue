@@ -59,32 +59,32 @@ function closePopup(){
           <!-- Right Column: Flower and Audio Features Below -->
           <div class="flower-container">
             <Flower :features="[
-              { value: 0.5, color: '#0F3740' },
-              { value: 0.5, color: '#283618' },
+              { value: 0.5, color: '#144550' },
+              { value: 0.5, color: '#597738' },
               { value: 0.5, color: '#F38E36' },
               { value: 0.5, color: '#A65FDD' },
-              { value: 0.5, color: '#EEE8C4' }
+              { value: 0.5, color: '#FEFAE1' }
             ]"/>
           </div>
           <div class="petal-descriptions-horizontal">
             <div class="petal-description">
-              <div class="petal-color" style="background-color: #0F3740;"></div>
+              <div class="petal-color" style="background-color: #25606C;"></div>
               <p>Energy</p>
             </div>
             <div class="petal-description">
-              <div class="petal-color" style="background-color: #283618;"></div>
+              <div class="petal-color" style="background-color: #597738;"></div>
               <p>Danceability</p>
             </div>
             <div class="petal-description">
-              <div class="petal-color" style="background-color: #F38E36;"></div>
+              <div class="petal-color" style="background-color: #F99945;"></div>
               <p>Speechiness</p>
             </div>
             <div class="petal-description">
-              <div class="petal-color" style="background-color: #A65FDD;"></div>
+              <div class="petal-color" style="background-color: #CCA9E9;"></div>
               <p>Valence</p>
             </div>
             <div class="petal-description">
-              <div class="petal-color" style="background-color: #EEE8C4;"></div>
+              <div class="petal-color" style="background-color: #FEFAE1;"></div>
               <p>Tempo</p>
             </div>
           </div>
@@ -103,13 +103,21 @@ function closePopup(){
   width: 60%;
   max-width: 800px;
   color: white;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .popup-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 40px;
+  margin-bottom: 20px;
+  position: sticky;
+  top: 0;
+  background-color: var(--backcore-color1);
+  z-index: 1;
 }
 
 .popup-header h1 {
@@ -129,19 +137,27 @@ function closePopup(){
   display: flex;
   flex-direction: row;
   gap: 20px;
-  aligns-items: center;
+  overflow-y: auto;
+  flex-grow: 1;
+  align-items: flex-start;
+  position: relative;
+
 }
 
 .popup-column {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
 }
 
 .column-1 {
   flex: 1;
   display: flex;
   justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
 }
 
 .column-2 {
@@ -150,19 +166,24 @@ function closePopup(){
   padding-right: 10px;
   flex-direction: column;
   align-items: center;
+
 }
 
-.vertical-line {
-  margin-left: 30px;
+.column-1::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -50px; /* Position 10px to the right of the column's content */
   width: 1px;
-  background-color: white;
-  height: auto; /* Make sure it stretches to the full height of the container */
+  height: 100%;
+  background-color: white; /* The color of the vertical line */
 }
 
 .flower-ruler-container {
   position: relative;
   display: flex;
   align-items: center;
+  margin-top: 8px;
 }
 
 .ruler {
@@ -233,5 +254,40 @@ function closePopup(){
   width: 20px;
   height: 20px;
   border-radius: 50%;
+}
+
+@media (max-width: 840px) {
+  .popup-body {
+    flex-direction: column;
+    align-items: flex-start;
+    overflow-y: auto;
+    position: relative;
+  }
+  .petal-explanation {
+    margin-left: 40px;
+    margin-right: 40px;
+    text-align: center;
+    font-size: 12px;
+  }
+  .column-2 {
+    display: flex;
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+    width: 100%;
+  }
+
+  .vertical-line {
+    width: 100%;
+    height: 1px;
+    margin: 20px 0;
+    background-color: white;
+    position: relative;
+    z-index: 1 ;
+    flex-shrink: 0;
+  }
+  .column-1::after {
+    display: none; /* Hides the line */
+  }
 }
 </style>
