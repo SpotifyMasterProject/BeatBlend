@@ -150,7 +150,8 @@ class Service:
             await self.repo.set_session(session)
             await manager.publish(channel=self.repo.get_session_key(session.id),
                                   message=f"Guest {guest_id} has joined the session")
-
+            guest.sessions.append(session.id)
+            await self.repo.set_user(guest)
         return session
 
     # TODO: this will be adapted once we have the postgres database
@@ -181,6 +182,8 @@ class Service:
             await self.repo.set_session(session)
             await manager.publish(channel=self.repo.get_session_key(session.id),
                                   message=f"Guest {guest_id} was removed from session")
+            guest.sessions.remove(session.id)
+            await self.repo.set_user(guest)
         else:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Guest not part of session.")
 
