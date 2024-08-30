@@ -1,6 +1,6 @@
 export class Song {
     id: string
-    name: string
+    trackName: string
     artists: string[]
     album: string
     danceability: number
@@ -13,7 +13,7 @@ export class Song {
 
     constructor(data: {
         id: string
-        name: string
+        trackName: string
         artists: string[]
         album: string
         danceability: number
@@ -25,7 +25,7 @@ export class Song {
         popularity: number
     }) {
         this.id = data.id
-        this.name = data.name
+        this.trackName = data.trackName
         this.artists = data.artists
         this.album = data.album
         this.danceability = data.danceability

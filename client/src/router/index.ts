@@ -1,9 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import LandingView from '@/views/LandingView.vue'
-import {useAuthStore} from '@/stores/auth'
+import { useAuthStore } from '@/stores/auth'
+import { userService } from '@/services/userService'
 import WebsocketView from '@/views/WebsocketView.vue'
-import HostSessionView from '@/views/HostSessionView.vue'
 import AuthorizeSpotifyView from '@/views/AuthorizeSpotifyView.vue'
 
 const router = createRouter({
@@ -17,7 +17,7 @@ const router = createRouter({
         // Redirect authenticated users to sessions page.
         const authStore = useAuthStore();
         if (authStore.token) {
-          return {name: 'session'};
+          return {name: 'home'};
         }
       }
     },
@@ -27,7 +27,7 @@ const router = createRouter({
       component: AuthorizeSpotifyView
     },
     {
-      path: '/sessions/join/:inviteToken',
+      path: '/:sessionId/join',
       name: 'landing-view-guest',
       component: LandingView
     },
@@ -36,6 +36,12 @@ const router = createRouter({
       name: 'home',
       component: HomeView,
       /* meta: { requiresAuth: true } */
+    },
+    {
+      path: '/session/:sessionId',
+      name: 'guest-view',
+      component: HomeView,
+      meta: { requiresAuth: true }
     },
     {
       path: '/about',
@@ -50,19 +56,17 @@ const router = createRouter({
       name: 'websockets',
       component: WebsocketView
     },
-    {
-      path: '/session',
-      name: 'session',
-      component: () => HostSessionView,
-      /* meta: { requiresAuth: true } */
-    },
   ]
 })
 
 router.beforeEach(async (to) => {
   const authStore = useAuthStore()
+  
+
   if (to.meta.requiresAuth && !authStore.token) {
     return {name: 'landing'}
+  } else if (authStore.token) {
+    await userService.fetchUser();
   }
 })
 
