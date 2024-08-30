@@ -3,6 +3,7 @@ import pandas as pd
 from songs_dataset import SongsDataset
 import tempfile
 
+
 class TestSongsDataset(unittest.TestCase):
     def setUp(self):
         self.dataframe =  pd.DataFrame([{
@@ -45,19 +46,18 @@ class TestSongsDataset(unittest.TestCase):
         self.fp = tempfile.NamedTemporaryFile()
         self.dataframe.to_csv(self.fp.name)
 
-
     def test_matching_songs(self):
         dataset = SongsDataset(self.fp.name)
-        self.assertEqual(dataset.get_matching_songs("First").index.size, 1)
-        self.assertEqual(dataset.get_matching_songs("First")["id"].iloc[0], "a123")
+        self.assertEqual(len(dataset.get_matching_songs("First")), 1)
+        self.assertEqual(dataset.get_matching_songs("First")[0].id, "a123")
 
-        self.assertEqual(dataset.get_matching_songs("Second").index.size, 2)
-        self.assertEqual(dataset.get_matching_songs("Second")["id"].iloc[0], "a123")
-        self.assertEqual(dataset.get_matching_songs("Second")["id"].iloc[1], "b234")
+        self.assertEqual(len(dataset.get_matching_songs("Second")), 2)
+        self.assertEqual(dataset.get_matching_songs("Second")[0].id, "a123")
+        self.assertEqual(dataset.get_matching_songs("Second")[1].id, "b234")
 
     def test_matching_songs_with_limit(self):
         dataset = SongsDataset(self.fp.name)
-        self.assertEqual(dataset.get_matching_songs("Second", num_songs=1).index.size, 1)
+        self.assertEqual(len(dataset.get_matching_songs("Second", num_songs=1)), 1)
 
     def test_get_songs(self):
         dataset = SongsDataset(self.fp.name)

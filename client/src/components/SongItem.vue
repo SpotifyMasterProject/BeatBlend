@@ -2,7 +2,7 @@
   <div class="song-item">
     <i class="pi pi-play"></i>
     <div class="song-details">
-      <span class="song-title">{{ song.name }}</span>
+      <span class="song-title">{{ song.trackName }}</span>
       <span class="song-artists">{{ combineArtists(song.artists) }}</span>
     </div>
     <div class="delete-container">

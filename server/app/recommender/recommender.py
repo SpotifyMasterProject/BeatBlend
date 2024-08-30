@@ -37,5 +37,3 @@ class CosineSimilarityRecommender(Recommender):
         descending_indices = similarity.mean(axis=1).argsort()[::-1][:num_songs]
         return all_songs.iloc[descending_indices]
 
-
-
