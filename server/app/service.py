@@ -205,13 +205,7 @@ class Service:
                 async for event in subscriber:
                     await websocket.send_text(event.message)
             except WebSocketDisconnect:
-                print(f'WebSocket for session {session_id} disconnected. Awaiting reconnection...')
-                await self.handle_reconnection(session_id)
-            except Exception as e:
-                print(f'Error occurred during WebSocket session {session_id}: {e}')
-            finally:
-                manager.active_connections.pop(session_id, None)
-                await manager.unsubscribe(channel)
+                pass
 
     async def handle_reconnection(self, session_id: str) -> None:
         while session_id in manager.active_connections:
