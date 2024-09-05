@@ -1,4 +1,4 @@
-from fastapi import FastAPI, status, Depends, WebSocket
+from fastapi import FastAPI, status, Depends, WebSocket, WebSocketDisconnect
 from service import Service, lifespan
 from models.token import Token
 from models.user import User, SpotifyUser
@@ -103,7 +103,12 @@ async def leave_session(guest_id: Annotated[str, Depends(service.verify_token)],
 @app.websocket("/ws/{session_id}")
 async def websocket_session(websocket: WebSocket, session_id: str):
     await websocket.accept()
-    await service.establish_ws_connection_to_session(websocket, session_id)
+    try:
+        await service.establish_ws_connection_to_session(websocket, session_id)
+    except WebSocketDisconnect:
+        print(f'WebSocket for session {session_id} disconnected')
+    finally:
+        await service.end_ws_connection_to_session(session_id)
 
 
 # This WS code is inspired by the encode/broadcaster package.

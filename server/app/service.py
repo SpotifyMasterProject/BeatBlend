@@ -192,6 +192,7 @@ class Service:
         await self.repo.verify_session_by_id(session_id)
 
     async def establish_ws_connection_to_session(self, websocket: WebSocket, session_id: str) -> None:
+        manager.active_connections[session_id] = websocket
         channel = self.repo.get_session_key(session_id)
 
         async with manager.subscribe(channel=channel) as subscriber:
@@ -199,7 +200,31 @@ class Service:
                 async for event in subscriber:
                     await websocket.send_text(event.message)
             except WebSocketDisconnect:
-                pass
+                print(f'WebSocket for session {session_id} disconnected. Awaiting reconnection...')
+                await self.handle_reconnection(session_id)
+            except Exception as e:
+                print(f'Error occurred during WebSocket session {session_id}: {e}')
+            finally:
+                manager.active_connections.pop(session_id, None)
+                await manager.unsubscribe(channel)
+
+    async def handle_reconnection(self, session_id: str) -> None:
+        while session_id in manager.active_connections:
+            try:
+                websocket = manager.active_connections[session_id]
+                await websocket.accept()
+                await self.establish_ws_connection_to_session(websocket, session_id)
+                break
+            except Exception as e:
+                print(f'Waiting for client reconnection for session {session_id}: {e}')
+                time.sleep(2)
+
+    @staticmethod
+    async def end_ws_connection_to_session(session_id: str) -> None:
+        websocket = manager.active_connections.get(session_id)
+        if websocket:
+            await websocket.close(code=1000, reason='Session ended')
+            manager.active_connections.pop(session_id, None)
 
     async def end_session(self, host_id: str, session_id: str):
         host = await self.get_user(host_id)
@@ -209,6 +234,7 @@ class Service:
         for guest_id in session.guests:
             guest = await self.get_user(guest_id)
             guest.sessions.remove(session.id)
+        await self.end_ws_connection_to_session(session_id)
         await self.repo.delete_session_by_id(session_id)
         # TODO: create and return session artifact
         return
