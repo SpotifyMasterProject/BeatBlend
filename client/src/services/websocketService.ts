@@ -55,7 +55,6 @@ export default class WebsocketService {
         }
     }
 
-    // Not implemented yet. Only supporting simplex operations currently (receiving messages).
     sendMessage(message: string) {
         if (this.socket.readyState === WebSocket.OPEN) {
             this.socket.send(message);
