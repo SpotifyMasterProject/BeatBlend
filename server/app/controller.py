@@ -85,7 +85,7 @@ async def add_song(user_id: Annotated[str, Depends(service.verify_token)], sessi
 
 
 @app.delete("/sessions/{session_id}/songs/{song_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_song(host_id: Annotated[str, Depends(service.verify_token)], session_id: str, song_id: str) -> None:
+async def remove_song(host_id: Annotated[str, Depends(service.verify_token)], session_id: str, song_id: str) -> None:
     await service.verify_instances(user_ids=host_id, session_id=session_id)
     await service.remove_song_from_session(host_id, session_id, song_id)
 
