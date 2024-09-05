@@ -4,6 +4,7 @@ from models.token import Token
 from models.user import User, SpotifyUser
 from models.session import Session
 from models.song import Song
+from models.song_list import SongList
 from starlette.middleware.cors import CORSMiddleware
 from typing import Annotated
 from recommender.songs_dataset import SongsDataset
@@ -67,19 +68,37 @@ async def add_guest(guest_id: Annotated[str, Depends(service.verify_token)], ses
     return await service.add_guest_to_session(guest_id, session_id)
 
 
-# TODO: this will be adapted once we have the postgres database
-# @app.patch("/sessions/{session_id}/songs", status_code=status.HTTP_200_OK)
-# async def add_song(user_id: Annotated[str, Depends(service.verify_token)], session_id: str, song_id: str) -> Session:
-#     await service.validate_user(user_id)
-#     await service.validate_session(session_id)
-#     return await service.add_song_to_session(user_id, session_id, song_id)
+@app.patch("/sessions/{session_id}/songs", status_code=status.HTTP_200_OK)
+async def add_song(user_id: Annotated[str, Depends(service.verify_token)], session_id: str, song_id: str) -> Session:
+    await service.verify_instances(user_ids=user_id, session_id=session_id)
+    return await service.add_song_to_session(user_id, session_id, song_id)
 
 
-# TODO: this will be adapted once we have the postgres database
-@app.get("/songs/{pattern}", status_code=status.HTTP_200_OK, response_model=list[Song])
-async def get_songs(user_id: Annotated[str, Depends(service.verify_token)], pattern: str) -> list[Song]:
+@app.get("/songs/{song_id}", status_code=status.HTTP_200_OK, response_model=Song)
+async def get_specific_song(song_id: str) -> Song:
+    return await service.get_song(song_id)
+
+
+# @app.post("/songs/{song_id}", status_code=status.HTTP_200_OK, response_model=Song)
+# async def add_song(song_id: str) -> Song:
+#     return await service.add_song_to_database(song_id)
+#
+#
+# @app.delete("/songs/{song_id}", status_code=status.HTTP_204_NO_CONTENT)
+# async def delete_song(song_id: str) -> None:
+#     await service.delete_song_from_database(song_id)
+
+
+@app.delete("/sessions/{session_id}/songs/{song_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_song(host_id: Annotated[str, Depends(service.verify_token)], session_id: str, song_id: str) -> None:
+    await service.verify_instances(user_ids=host_id, session_id=session_id)
+    await service.remove_song_from_session(host_id, session_id, song_id)
+
+
+@app.get("/songs", status_code=status.HTTP_200_OK, response_model=SongList)
+async def get_matching_songs(user_id: Annotated[str, Depends(service.verify_token)], pattern: str, limit: int = 10) -> SongList:
     await service.verify_instances(user_ids=user_id)
-    return songsDataset.get_matching_songs(pattern)
+    return await service.get_matching_songs_from_database(pattern, limit)
 
 
 @app.delete("/sessions/{session_id}/guests/{guest_id}", status_code=status.HTTP_204_NO_CONTENT)
