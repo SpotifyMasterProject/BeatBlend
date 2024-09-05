@@ -82,16 +82,10 @@ async def get_songs(user_id: Annotated[str, Depends(service.verify_token)], patt
     return songsDataset.get_matching_songs(pattern)
 
 
-@app.post("/sessions/{session_id}/end", status_code=status.HTTP_200_OK)
-async def end_session(user_id: Annotated[str, Depends(verify_token)], session_id: str):
-    await validate_user_id(user_id)
-    await validate_session_id(session_id)
-    result = await redis.get(get_session_key(session_id))
-    session = Session.model_validate_json(result)
-    await validate_host(session, user_id)
-    redis.delete(get_invite_key(session.invite_token))
-    redis.delete(get_session_key(session.id))
-    # TODO: create and return session artifact
+@app.delete("/sessions/{session_id}", status_code=status.HTTP_200_OK)
+async def end_existing_session(host_id: Annotated[str, Depends(service.verify_token)], session_id: str):
+    await service.verify_instances(user_ids=host_id, session_id=session_id)
+    return await service.end_session(host_id, session_id)
 
 
 @app.delete("/sessions/{session_id}/guests/{guest_id}", status_code=status.HTTP_204_NO_CONTENT)

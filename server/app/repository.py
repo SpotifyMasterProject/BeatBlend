@@ -72,3 +72,5 @@ class Repository:
         if await self.redis.exists(self.get_session_key(session_id)) == 0:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invalid session ID.")
 
+    async def delete_session_by_id(self, session_id: str) -> None:
+        await self.redis.delete(self.get_session_key(session_id))

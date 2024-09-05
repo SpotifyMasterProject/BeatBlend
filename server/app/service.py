@@ -23,6 +23,7 @@ JWT_EXPIRES_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", 60))
 
 manager = WebsocketManager()
 
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     await manager.connect()
@@ -199,3 +200,15 @@ class Service:
                     await websocket.send_text(event.message)
             except WebSocketDisconnect:
                 pass
+
+    async def end_session(self, host_id: str, session_id: str):
+        host = await self.get_user(host_id)
+        session = await self.get_session(session_id)
+        self.verify_host_of_session(host_id, session)
+        host.sessions.remove(session.id)
+        for guest_id in session.guests:
+            guest = await self.get_user(guest_id)
+            guest.sessions.remove(session.id)
+        await self.repo.delete_session_by_id(session_id)
+        # TODO: create and return session artifact
+        return
