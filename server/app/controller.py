@@ -74,6 +74,11 @@ async def add_song(user_id: Annotated[str, Depends(service.verify_token)], sessi
     return await service.add_song_to_session(user_id, session_id, song_id)
 
 
+@app.get("/songs/{song_id}", status_code=status.HTTP_200_OK, response_model=Song)
+async def get_specific_song(song_id: str) -> Song:
+    return await service.get_song(song_id)
+
+
 # @app.post("/songs/{song_id}", status_code=status.HTTP_200_OK, response_model=Song)
 # async def add_song(song_id: str) -> Song:
 #     return await service.add_song_to_database(song_id)
