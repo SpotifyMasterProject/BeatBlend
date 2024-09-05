@@ -234,7 +234,7 @@ class Service:
 
     async def get_matching_songs_from_database(self, pattern: str, limit: int) -> SongList:
         result = await self.repo.get_songs_by_pattern(pattern, limit)
-        songs = [Song.model_validate_json(row) for row in result]
+        songs = [Song.parse_obj(dict(row)) for row in result]
         return SongList(songs=songs)
 
     # async def delete_song_from_database(self, song_id: str) -> None:

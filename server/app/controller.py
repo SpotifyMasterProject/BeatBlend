@@ -97,6 +97,7 @@ async def remove_song(host_id: Annotated[str, Depends(service.verify_token)], se
 
 @app.get("/songs", status_code=status.HTTP_200_OK, response_model=SongList)
 async def get_matching_songs(user_id: Annotated[str, Depends(service.verify_token)], pattern: str, limit: int = 10) -> SongList:
+    print(pattern)
     await service.verify_instances(user_ids=user_id)
     return await service.get_matching_songs_from_database(pattern, limit)
 

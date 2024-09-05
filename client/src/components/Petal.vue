@@ -1,30 +1,22 @@
 <script setup lang="ts">
 import { computed, defineProps } from 'vue';
+import { SongFeature, SongFeatureCategory } from '@/types/SongFeature';
 
 const props = defineProps<{
-  index: number;
-  value: number;
+  feature: SongFeature;
   center: number;
   circleRadius: number;
 }>();
 
-const rotation = computed(() => (props.index * 360) / 5);
+const rotation = computed(() => (props.feature.category * 360) / 5);
 
 const colorPalettes = {
-  blue: ['#0F3740', '#144550', '#194E59', '#1D5864', '#25606C'],
-  green: ['#283618', '#31431E', '#3C5125', '#4D6730', '#597738'],
-  beige: ['#DED9BA', '#EEE8C4', '#F4EEC8', '#F8F2CD', '#FEFAE1'],
-  orange: ['#BC6C26', '#CD762A', '#E4832E', '#F38E36', '#F99945'],
-  pink: ['#A65FDD', '#B36DEA', '#BB7DEC', '#C093E4', '#CCA9E9'],
+  [SongFeatureCategory.DANCEABILITY]: ['#0F3740', '#144550', '#194E59', '#1D5864', '#25606C'],
+  [SongFeatureCategory.ENERGY]: ['#283618', '#31431E', '#3C5125', '#4D6730', '#597738'],
+  [SongFeatureCategory.SPEECHINESS]: ['#DED9BA', '#EEE8C4', '#F4EEC8', '#F8F2CD', '#FEFAE1'],
+  [SongFeatureCategory.TEMPO]: ['#BC6C26', '#CD762A', '#E4832E', '#F38E36', '#F99945'],
+  [SongFeatureCategory.VALENCE]: ['#A65FDD', '#B36DEA', '#BB7DEC', '#C093E4', '#CCA9E9'],
 } as const; // This makes the object keys and values readonly
-
-type ColorPaletteKey = keyof typeof colorPalettes;
-
-const getColorPaletteForIndex = (index: number) => {
-  const paletteKeys = Object.keys(colorPalettes) as ColorPaletteKey[];
-  const selectedPaletteKey = paletteKeys[index % paletteKeys.length];
-  return colorPalettes[selectedPaletteKey];
-};
 
 const calculateEllipseArea = (width: number, height: number) => {
   return Math.PI * (width / 2) * (height / 2);
@@ -67,13 +59,13 @@ const generatePetalPath = (totalLength: number, totalWidth: number) => {
 
 const petalPaths = computed(() => {
   const baseRadius = props.circleRadius; // Base radius is 40px
-  const petalLength = baseRadius * props.value * 2; // Petal length based on value
+  const petalLength = baseRadius * props.feature.value * 2; // Petal length based on value
   const maxMidWidth = petalLength / 2; // Make the middle the broadest part
 
   return generatePetalPath(petalLength, maxMidWidth);
 });
 
-const petalColors = computed(() => getColorPaletteForIndex(props.index));
+const petalColors = computed(() => colorPalettes[props.feature.category]);
 
 
 </script>
