@@ -8,6 +8,7 @@ from spotipy import Spotify
 from spotipy.oauth2 import SpotifyOAuth
 from contextlib import asynccontextmanager
 from repository import Repository
+from databases import Database
 from fastapi.security import OAuth2PasswordBearer
 from jwt import InvalidTokenError
 from typing import Annotated
@@ -26,9 +27,12 @@ SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 SPOTIFY_REDIRECT_URI = os.getenv("SPOTIFY_REDIRECT_URI")
 LOCAL_IP_ADDRESS = os.getenv("LOCAL_IP_ADDRESS")
+POSTGRES_USER = os.getenv("POSTGRES_USER")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+POSTGRES_DB = os.getenv("POSTGRES_DB")
 
 manager = WebsocketManager()
-repo = Repository()
+postgres = Database(f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@postgres:5432/{POSTGRES_DB}")
 
 
 @asynccontextmanager
@@ -36,7 +40,7 @@ async def lifespan(_: FastAPI):
     await manager.connect()
     for attempt in range(10):
         try:
-            await repo.postgres_connect()
+            await postgres.connect()
             break
         except ConnectionRefusedError as e:
             if attempt == 9:
@@ -44,12 +48,12 @@ async def lifespan(_: FastAPI):
             time.sleep(6)
     yield
     await manager.disconnect()
-    await repo.postgres_disconnect()
+    await postgres.disconnect()
 
 
 class Service:
     def __init__(self):
-        self.repo = repo
+        self.repo = Repository(postgres)
         self.spotify_oauth = SpotifyOAuth(
             client_id=SPOTIFY_CLIENT_ID,
             client_secret=SPOTIFY_CLIENT_SECRET,

@@ -1,16 +1,10 @@
-import os
-
 from databases import Database
 from fastapi import HTTPException, status
 from models.session import Session
 from models.user import User
 from redis.asyncio import Redis
-from sqlalchemy import Column, Table, MetaData, Integer, String, ARRAY, Float, Date, insert, select, delete
+from sqlalchemy import Column, Table, MetaData, Integer, String, ARRAY, Float, Date, insert, select
 from typing import Optional, List
-
-POSTGRES_USER = os.getenv("POSTGRES_USER")
-POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
-POSTGRES_DB = os.getenv("POSTGRES_DB")
 
 metadata = MetaData()
 songs = Table(
@@ -34,15 +28,9 @@ songs = Table(
 
 
 class Repository:
-    def __init__(self):
+    def __init__(self, postgres: Database):
         self.redis = Redis(host="redis", port=6379, decode_responses=True)
-        self.postgres = Database(f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@postgres:5432/{POSTGRES_DB}")
-
-    async def postgres_connect(self):
-        await self.postgres.connect()
-
-    async def postgres_disconnect(self):
-        await self.postgres.disconnect()
+        self.postgres = postgres
 
     @staticmethod
     def get_user_key(user_id) -> str:
