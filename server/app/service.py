@@ -196,7 +196,10 @@ class Service:
             await self.repo.set_session(session)
             guest.sessions.remove(session.id)
             await self.repo.set_user(guest)
-            await manager.publish(channel=self.repo.get_session_key(session.id), message=f"Guest {guest_id} was removed from session")
+            if host_id:
+                await manager.publish(channel=self.repo.get_session_key(session.id), message=f"Guest {guest_id} was removed from session by host")
+            else:
+                await manager.publish(channel=self.repo.get_session_key(session.id), message=f"Guest {guest_id} left session")
         else:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Guest not part of session.")
 
