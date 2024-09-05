@@ -12,6 +12,8 @@
   --audio-color3: #EEE8C4;
   --audio-color4: #E4832E;
   --audio-color5: #BB7DEC;
+
+  --button-disabled-font-color: #c4c4c4;
 }
 
 /* semantic color variables for this project */
@@ -30,7 +32,7 @@ body, html {
     height: 100%;
     box-sizing: border-box;
     overflow-x:hidden;
-    color: var(--Font-color);
+    color: var(--font-color);
     transition:
           color 0.5s,
           background-color 0.5s;

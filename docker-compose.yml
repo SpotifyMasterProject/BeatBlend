@@ -12,8 +12,15 @@ services:
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - JWT_ALGORITHM=${JWT_ALGORITHM}
       - JWT_EXPIRE_MINUTES=${JWT_EXPIRE_MINUTES}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - LOCAL_IP_ADDRESS=${LOCAL_IP_ADDRESS}
     depends_on:
-      - redis
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_healthy
   client:
     build: client
     ports:
@@ -24,7 +31,27 @@ services:
       - CHOKIDAR_USEPOLLING=true
       - VITE_SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
       - VITE_SPOTIFY_REDIRECT_URI=${SPOTIFY_REDIRECT_URI}
+      - VITE_LOCAL_IP_ADDRESS=${LOCAL_IP_ADDRESS}
   redis:
     image: redis:alpine
     ports:
       - "6379:6379"
+  postgres:
+    image: postgres:alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - song-database:/var/lib/postgresql/data
+      - ./server/db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 11s
+      timeout: 1s
+      retries: 5
+
+volumes:
+  song-database:
