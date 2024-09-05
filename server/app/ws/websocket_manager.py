@@ -58,11 +58,19 @@ class WebsocketManager:
 
             yield Subscriber(queue)
         finally:
-            self._subscribers[channel].remove(queue)
+            await self.unsubscribe(channel)
+
+    async def unsubscribe(self, channel: str) -> None:
+        if channel in self._subscribers:
+            queues = self._subscribers[channel]
+            for queue in queues:
+                await queue.put(None)
+
+            self._subscribers[channel].clear()
+
             if not self._subscribers.get(channel):
                 del self._subscribers[channel]
                 await self._broadcaster.unsubscribe(channel)
-            await queue.put(None)
 
 
 class Subscriber:
