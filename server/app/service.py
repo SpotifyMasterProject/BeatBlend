@@ -85,9 +85,10 @@ class Service:
         )
         return Token(access_token=encoded_jwt, token_type="bearer")
 
-    def get_spotify_name(self) -> str:
-        user_profile = self.spotify_client.me()
-        return user_profile['id']
+    @staticmethod
+    def verify_host_of_session(host_id: str, session: Session) -> None:
+        if session.host != host_id:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not host of session.")
 
     async def verify_instances(self, user_ids: str | list[str] = "", session_id: str = ""):
         if isinstance(user_ids, str) and user_ids:
@@ -97,6 +98,10 @@ class Service:
                 await self.verify_user(user_id)
         if session_id:
             await self.verify_session(session_id)
+
+    def get_spotify_name(self) -> str:
+        user_profile = self.spotify_client.me()
+        return user_profile['id']
 
     async def create_user(self, user: User) -> User:
         user.id = str(uuid.uuid4())
