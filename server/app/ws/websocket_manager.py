@@ -16,7 +16,7 @@ class WebsocketManager:
         self._broadcaster = DatabaseBroadcaster()
         self._subscribers: dict[str, set[asyncio.Queue[Event | None]]] = {}
         self._listener_task: asyncio.Task[None] | None = None
-        self.active_connections: dict[str, WebSocket] = {}
+        self.active_connections: dict[str, set[WebSocket]] = {}
 
     async def __aenter__(self) -> WebsocketManager:
         await self.connect()

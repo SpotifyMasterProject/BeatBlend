@@ -122,12 +122,7 @@ async def leave_session(guest_id: Annotated[str, Depends(service.verify_token)],
 @app.websocket("/ws/{session_id}")
 async def websocket_session(websocket: WebSocket, session_id: str):
     await websocket.accept()
-    try:
-        await service.establish_ws_connection_to_session(websocket, session_id)
-    except WebSocketDisconnect:
-        print(f'WebSocket for session {session_id} disconnected')
-    finally:
-        await service.end_ws_connection_to_session(session_id)
+    await service.establish_ws_connection_to_channel_by_session_id(websocket, session_id)
 
 
 # This WS code is inspired by the encode/broadcaster package.
