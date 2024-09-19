@@ -1,7 +1,7 @@
 from typing import Optional, List
 from datetime import datetime
 from pydantic import BaseModel
-from song import Song
+from .song import Song
 
 
 class Session(BaseModel):
