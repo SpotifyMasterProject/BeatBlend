@@ -5,6 +5,7 @@ import { useAuthStore } from "@/stores/auth";
 import { useRouter, useRoute } from 'vue-router';
 import Navigation from "@/components/Navigation.vue";
 import MainVisualization from "@/components/MainVisualization.vue";
+import VisualizationAid from '@/components/VisualizationAid.vue';
 import Button from 'primevue/button';
 import LogoIntroScreen from "@/components/LogoIntroScreen.vue";
 import PreviouslyPlayed from "@/components/PreviouslyPlayed.vue";
@@ -18,6 +19,7 @@ import { sessionService } from "@/services/sessionService";
 
 const showPreviouslyPlayed = ref(false);
 const showAddMoreSongPopup = ref(false);
+const showVisualizationAid = ref(false);
 
 const LOCAL_IP_ADDRESS = import.meta.env.VITE_LOCAL_IP_ADDRESS;
 
@@ -81,8 +83,11 @@ const startSession = async (session) => {
 //Information Button to read more about how the visualization can be read
 const infoVisible = ref(true);
 function toggleInfo(){
-  infoVisible.value = !infoVisible.value;
+  showVisualizationAid.value = !showVisualizationAid.value;
 }
+const closeVisualizationAid = () => {
+  showVisualizationAid.value = false;
+};
 </script>
 
 <template>
@@ -108,7 +113,7 @@ function toggleInfo(){
         <playlist-creator v-else @startSession="startSession"></playlist-creator>
       </div>
       <template v-else>
-        <div class="info-box" :class="{ active: infoVisible }" @click="toggleInfo">
+        <div class="info-box" :class="{ active: showVisualizationAid }" @click="toggleInfo">
           <div> i </div>
         </div>
         <MainVisualization />
@@ -136,7 +141,8 @@ function toggleInfo(){
       </div>
       <qrcode-vue v-if="isHost" :value="currentSession.inviteLink" />
     </div>
-
+    <!-- Conditionally render VisualizationAid component -->
+    <VisualizationAid v-if="showVisualizationAid" @close-popup="closeVisualizationAid" />/>
     <!-- Popup Overlay -->
     <div v-if="showAddMoreSongPopup" class="popup-overlay" @click="toggleAddMoreSongPopup">
       <div class="popup-content" @click.stop>
