@@ -13,6 +13,12 @@
   --audio-color4: #E4832E;
   --audio-color5: #BB7DEC;
 
+  --tempo-color: #BC6C26;
+  --valence-color: #A65FDD;
+  --speechiness-color: #DED9BA;
+  --energy-color: #4D6730;
+  --danceability-color: #25606C;
+
   --button-disabled-font-color: #c4c4c4;
 
   --overlay-background: #000000;

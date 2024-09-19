@@ -35,11 +35,19 @@ const chartOptions = {
   }
 };
 
+const colorPalettes = {
+  [SongFeatureCategory.DANCEABILITY]: ['#25606C'],
+  [SongFeatureCategory.ENERGY]: ['#4D6730'],
+  [SongFeatureCategory.SPEECHINESS]: ['#DED9BA'],
+  [SongFeatureCategory.TEMPO]: ['#BC6C26'],
+  [SongFeatureCategory.VALENCE]: ['#A65FDD'],
+};
+
 const chartData = (songFeatureCategory: SongFeatureCategory) => {
   // Adjust the color of the selected feature point.
   const pointColors = new Array(props.flowerData.length);
   pointColors.fill('grey');
-  pointColors[props.currentSelectedFeature.index] = '#DDA15F';
+  pointColors[props.currentSelectedFeature.index] = colorPalettes[songFeatureCategory][0];
 
   // Adjust the size of the selected feature point.
   const pointRadius = new Array(props.flowerData.length);
@@ -81,11 +89,11 @@ const chartData = (songFeatureCategory: SongFeatureCategory) => {
       :unstyled="false">
     <Tabs :value="currentSelectedFeature.featureCategory ?? SongFeatureCategory.TEMPO" :unstyled="false">
       <TabList :unstyled="false" class="tabs">
-          <Tab :value="SongFeatureCategory.TEMPO" :unstyled="false">Tempo (BPM)</Tab>
-          <Tab :value="SongFeatureCategory.ENERGY" :unstyled="false">Energy</Tab>
-          <Tab :value="SongFeatureCategory.VALENCE" :unstyled="false">Valence</Tab>
-          <Tab :value="SongFeatureCategory.DANCEABILITY" :unstyled="false">Danceability</Tab>
-          <Tab :value="SongFeatureCategory.SPEECHINESS" :unstyled="false">Speechiness</Tab>
+          <Tab :value="SongFeatureCategory.TEMPO" :unstyled="false" class="tempo">Tempo (BPM)</Tab>
+          <Tab :value="SongFeatureCategory.ENERGY" :unstyled="false" class="energy">Energy</Tab>
+          <Tab :value="SongFeatureCategory.VALENCE" :unstyled="false" class="valence">Valence</Tab>
+          <Tab :value="SongFeatureCategory.DANCEABILITY" :unstyled="false" class="danceability">Danceability</Tab>
+          <Tab :value="SongFeatureCategory.SPEECHINESS" :unstyled="false" class="speechiness">Speechiness</Tab>
       </TabList>
       <TabPanels>
           <TabPanel :value="SongFeatureCategory.TEMPO">
@@ -160,8 +168,24 @@ const chartData = (songFeatureCategory: SongFeatureCategory) => {
 }
 
 /* Specify class 2 times to override default values set by primevue theme. */
-.p-tab.p-tab-active {
-  color: #DDA15F;
+.p-tab.tempo.p-tab-active {
+  color: var(--tempo-color);
+}
+
+.p-tab.valence.p-tab-active {
+  color: var(--valence-color);
+}
+
+.p-tab.speechiness.p-tab-active {
+  color: var(--speechiness-color);
+}
+
+.p-tab.danceability.p-tab-active {
+  color: var(--danceability-color);
+}
+
+.p-tab.energy.p-tab-active {
+  color: var(--energy-color);
 }
 
 /* Specify class 2 times to override default values set by primevue theme. */
