@@ -11,14 +11,17 @@ const router = useRouter();
 
 onMounted(async () => {
   if (code != null) {
-    await authService.authorizeSpotify('username_placeholder', code)
+    await authService.authorizeSpotify(code)
         .then((response) => {
-          router.push('session');
+          router.push({name: 'home'});
         })
         .catch((error) => {
-          router.push('landing');
+          console.log(error);
+          router.push({name: 'landing'});
         })
   }
 })
 
-</script> 
+</script>
+<template>
+</template>

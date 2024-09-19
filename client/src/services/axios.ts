@@ -1,9 +1,10 @@
 import axios from 'axios'
 import {useAuthStore} from '@/stores/auth'
+import applyCaseMiddleware from 'axios-case-converter';
 
-const apiClient = axios.create({
-    baseURL: 'http://localhost:8000'
-})
+const apiClient = applyCaseMiddleware(axios.create({
+    baseURL: `http://${import.meta.env.VITE_LOCAL_IP_ADDRESS}:8000`
+}));
 
 apiClient.interceptors.request.use(
     (config) => {

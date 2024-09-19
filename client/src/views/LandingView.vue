@@ -1,18 +1,34 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router';
-import Button from 'primevue/button'
-import InputText from 'primevue/inputtext'
-import {authService} from '@/services/authService'
+import { onMounted, ref, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router';
+import Button from 'primevue/button';
+import InputText from 'primevue/inputtext';
+import { authService } from '@/services/authService';
+import { useAuthStore } from '@/stores/auth';
+import { sessionService } from '@/services/sessionService';
 import LogoIntroScreen from "@/components/LogoIntroScreen.vue";
 import StartBlendButton from "@/components/StartBlendButton.vue";
 import Navigation from "@/components/Navigation.vue";
 import StartScreen from '@/components/StartScreen.vue';
+import { isMobile } from "@/services/layoutService";
 
 const showStartScreen = ref(true);
 const username = ref<string>('');
-// TODO: get this from BE, if inviteToken is present.
-const hostUsername = ref<string>('Ibra');
+const invitedSession = ref();
+const hostUsername = computed(() => {
+  return invitedSession.value ? invitedSession.value.hostName : "";
+});
+
+const router = useRouter();
+const route = useRoute();
+
+onMounted(async () => {
+  await router.isReady();
+  const sessionId = route.params.sessionId;
+  if (sessionId) {
+    invitedSession.value = await sessionService.getSessionById(sessionId);
+  }
+});
 
 const redirectToSpotify = async () => {
   window.location.href = 'https://accounts.spotify.com/authorize?' +
@@ -27,8 +43,21 @@ const handleComplete = () => {
   showStartScreen.value = false;
 }
 
-const joinSession = (inviteToken) => {
-  console.log(`Joining session ${inviteToken}`);
+const joinSession = async (sessionId) => {
+  if (!username.value) {
+    return;
+  }
+
+  const authStore = useAuthStore();
+
+  try {
+    await authService.authorize(username.value);
+    const guestSession = await sessionService.joinSession(sessionId);
+    router.push({path: `/session/${guestSession.id}`});
+  } catch (error) {
+    console.log(error);
+    await authStore.deauthorize();
+  }
 }
 
 </script>
@@ -45,9 +74,13 @@ const joinSession = (inviteToken) => {
           </nav>
         </header>
         <div class="login-container">
-          <Button v-if="!$route.params.inviteToken" class="button spotify-button" @click="redirectToSpotify">
+          <Button v-if="
+            !$route.params.sessionId && !isMobile" class="button spotify-button" @click="redirectToSpotify">
             Login via Spotify
           </Button>
+          <div v-else-if="!$route.params.sessionId">
+            Please use computer to login as host
+          </div>
           <div v-else class="guest-login">
             <p class="invite-text">
               You have been invited to
@@ -58,7 +91,7 @@ const joinSession = (inviteToken) => {
               invited you to the blend. Enter username to join.</p>
             <InputText id="username" v-model="username" placeholder="Username" class="input-default" />
             <Button
-              @click="() => joinSession($route.params.inviteToken)"
+              @click="() => joinSession($route.params.sessionId)"
               class="join-button"
               :disabled="!username.length">Join</Button>
           </div>

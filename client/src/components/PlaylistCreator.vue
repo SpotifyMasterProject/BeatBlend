@@ -1,51 +1,14 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, } from 'vue';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import SongSelector from "@/components/SongSelector.vue";
 import { Song } from '@/types/Song';
+import { Session } from "@/types/Session";
 
 const title = ref('');
 const selectedSongs = ref([]);
-
-// TODO: Get from BE.
-const initialSongs = [
-    new Song({
-        id: "123",
-        name: "Cruel Summer",
-        artists: ["Taylor Swift"]
-    }),
-     new Song({
-        id: "234",
-        name: "Cruel Summer1",
-        artists: ["Taylor Swift"]
-    }),
-    new Song({
-        id: "345",
-        name: "Cruel Summer2",
-        artists: ["Taylor Swift"]
-    }),
-     new Song({
-        id: "456",
-        name: "Cruel Summer3",
-        artists: ["Taylor Swift"]
-    }),
-    new Song({
-        id: "567",
-        name: "Not Like Us",
-        artists: ["Kendrick Lamar"]
-    }),
-    new Song({
-        id: "678",
-        name: "Too Sweet",
-        artists: ["Hozier"]
-    }),
-     new Song({
-        id: "789",
-        name: "Guess",
-        artists: ["Charli xcx", "Billie Eilish"]
-    }),
-];
+const emit = defineEmits(['startSession']);
 
 // True, if the session can be started.
 // Currently, if the user selected at least 3 songs and a title.
@@ -53,9 +16,11 @@ const canStartSession = computed(() => {
     return selectedSongs.value.length >= 3 && title.value;
 });
 
-const startSession = () => {
-    // TODO: Call BE with the selected songs.
-    console.log("Start Session");
+const startSession = async () => {
+    emit('startSession', new Session({
+        name: title.value,
+        playlist: selectedSongs.value,
+    }));
 };
 
 </script>
@@ -63,9 +28,8 @@ const startSession = () => {
     <div class="playlist-creator">
         <InputText class="title" type="text" v-model="title" placeholder="Playlist Title..." />
         <SongSelector
-            :selectedSongs="selectedSongs"
             @update:selectedSongs="val => selectedSongs = val"
-            :initialSongs="initialSongs" headerText="Add 3 songs to start the blend" />
+            headerText="Add 3 songs to start the blend" />
         <Button class="start-session" :disabled="!canStartSession" @click="startSession">
             Start
         </Button>
