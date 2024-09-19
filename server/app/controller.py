@@ -10,7 +10,7 @@ from typing import Annotated
 from recommender.songs_dataset import SongsDataset
 
 service = Service()
-songsDataset = SongsDataset("./recommender/dataset.csv")
+#songsDataset = SongsDataset("./recommender/dataset.csv")
 
 app = FastAPI(lifespan=lifespan)
 app.add_middleware(
