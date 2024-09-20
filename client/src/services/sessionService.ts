@@ -20,8 +20,8 @@ export const sessionService = {
         })
     },
     async getSongs(pattern: string): Promise<Song[]> {
-        return apiClient.get(`/songs/${pattern}`).then((response) => {
-            return response.data;
+        return apiClient.get(`/songs`, {params: {pattern}}).then((response) => {
+            return response.data['songs'];
         })
     },
     async createNewSession(session: Session): Promise<Session> {

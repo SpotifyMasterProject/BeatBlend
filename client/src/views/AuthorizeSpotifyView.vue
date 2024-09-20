@@ -5,7 +5,6 @@ import { useRouter } from 'vue-router'
 
 const urlParams = new URLSearchParams(window.location.search)
 const code = urlParams.get('code')
-const state = urlParams.get('state')
 
 const router = useRouter();
 
