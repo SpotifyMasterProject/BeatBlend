@@ -5,7 +5,7 @@ import uuid
 
 from datetime import timedelta, datetime, timezone
 from spotipy import Spotify
-from spotipy.oauth2 import SpotifyOAuth
+from spotipy.oauth2 import SpotifyOAuth, SpotifyOauthError
 from contextlib import asynccontextmanager
 from repository import Repository
 from databases import Database
@@ -13,8 +13,8 @@ from fastapi.security import OAuth2PasswordBearer
 from jwt import InvalidTokenError
 from typing import Annotated
 from fastapi import FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect
-from models.user import User
-from models.token import Token
+from models.user import User, SpotifyUser
+from models.token import Token, SpotifyToken
 from models.session import Session
 from models.song import Song
 from models.song_list import SongList
@@ -64,7 +64,7 @@ class Service:
         self.spotify_api_client = Spotify(auth_manager=self.spotify_oauth)
 
     @staticmethod
-    def generate_token(user: User, spotify_token: Token = None) -> Token:
+    def generate_token(user: User, spotify_token: SpotifyToken = None) -> Token:
         to_encode = {"sub": user.id, "username": user.username}
         if spotify_token:  # additionally encode the spotify token for hosts
             to_encode["spotify_token"] = spotify_token.dict()
@@ -105,12 +105,16 @@ class Service:
         if session_id:
             await self.verify_session(session_id)
 
-    def get_spotify_token(self, host: User) -> Token:
-        spotify_token_info = self.spotify_oauth.get_access_token(host.auth_code)
-        return Token(**spotify_token_info)
+    def get_spotify_token(self, host: SpotifyUser) -> SpotifyToken:
+        try:
+            # TODO: whenever host is verified, cached token is used even if auth_code is invalid
+            spotify_token_info = self.spotify_oauth.get_access_token(host.auth_code)
+            return SpotifyToken(**spotify_token_info)
+        except SpotifyOauthError:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authorization code")
 
     @staticmethod
-    def get_display_name(token: Token) -> str:
+    def get_display_name(token: SpotifyToken) -> str:
         spotify_host_client = Spotify(auth=token.access_token)
         user_info = spotify_host_client.current_user()
         return user_info['display_name']
