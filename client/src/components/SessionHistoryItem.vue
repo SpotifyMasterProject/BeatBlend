@@ -1,11 +1,11 @@
 <script setup>
 import { computed } from 'vue';
-import { HostSession } from "@/types/Session";
+import { Session } from "@/types/Session";
 import moment from 'moment';
 
 const props = defineProps({
     session: {
-        type: HostSession,
+        type: Object,
         required: true
     }
 });
@@ -20,7 +20,7 @@ const formattedDate = computed(() => {
     <div class="session-item">
         <i class="pi pi-lock" v-if="!session.isRunning"></i>
         <i class="pi pi-circle" v-else></i>
-        <span>{{props.session.playlistName}}, {{formattedDate}}</span>
+        <span>{{props.session.name}}, {{formattedDate}}</span>
     </div>
 </template>
 

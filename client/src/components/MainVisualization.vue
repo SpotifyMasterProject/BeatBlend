@@ -1,59 +1,166 @@
 <script setup lang="ts">
 import {ref, watch, onMounted} from 'vue';
 import Flower from "@/components/Flower.vue";
+import SongFeatureDialog from "@/components/SongFeatureDialog.vue";
 import type { CSSProperties } from 'vue';
 import Button from "primevue/button";
+import { SongFeatureCategory } from '@/types/SongFeature';
 
 // Petal and their color & value -- Adapt length not correct yet
 const flowerData = ref([
   [
-    { value: 0.4},
-    { value: 0.6},
-    { value: 0.5},
-    { value: 0.6},
-    { value: 0.5},
+    {
+      category: SongFeatureCategory.ENERGY,
+      value: 0.4
+    },
+    { 
+      category: SongFeatureCategory.DANCEABILITY,
+      value: 0.6
+    },
+    { 
+      category: SongFeatureCategory.SPEECHINESS,
+      value: 0.5
+    },
+    {
+      category: SongFeatureCategory.VALENCE,
+      value: 0.6
+    },
+    { 
+      category: SongFeatureCategory.TEMPO,
+      value: 0.5
+    },
   ],
   [
-    { value: 0.5},
-    { value: 0.7},
-    { value: 0.4},
-    { value: 0.6},
-    { value: 0.5},
+    {
+      category: SongFeatureCategory.ENERGY,
+      value: 0.5
+    },
+    { 
+      category: SongFeatureCategory.DANCEABILITY,
+      value: 0.7
+    },
+    { 
+      category: SongFeatureCategory.SPEECHINESS,
+      value: 0.4
+    },
+    {
+      category: SongFeatureCategory.VALENCE,
+      value: 0.6
+    },
+    { 
+      category: SongFeatureCategory.TEMPO,
+      value: 0.5
+    },
+  ],
+    [
+    {
+      category: SongFeatureCategory.ENERGY,
+      value: 0.5
+    },
+    { 
+      category: SongFeatureCategory.DANCEABILITY,
+      value: 0.4
+    },
+    { 
+      category: SongFeatureCategory.SPEECHINESS,
+      value: 0.6
+    },
+    {
+      category: SongFeatureCategory.VALENCE,
+      value: 0.6
+    },
+    { 
+      category: SongFeatureCategory.TEMPO,
+      value: 0.4
+    },
   ],
   [
-    { value: 0.5},
-    { value: 0.4},
-    { value: 0.6},
-    { value: 0.6},
-    { value: 0.4},
+    {
+      category: SongFeatureCategory.ENERGY,
+      value: 0.4
+    },
+    { 
+      category: SongFeatureCategory.DANCEABILITY,
+      value: 0.8
+    },
+    { 
+      category: SongFeatureCategory.SPEECHINESS,
+      value: 0.6
+    },
+    {
+      category: SongFeatureCategory.VALENCE,
+      value: 0.5
+    },
+    { 
+      category: SongFeatureCategory.TEMPO,
+      value: 0.8
+    },
   ],
   [
-    { value: 0.4},
-    { value: 0.8},
-    { value: 0.6},
-    { value: 0.5},
-    { value: 0.8},
+    {
+      category: SongFeatureCategory.ENERGY,
+      value: 0.5
+    },
+    { 
+      category: SongFeatureCategory.DANCEABILITY,
+      value: 0.7
+    },
+    { 
+      category: SongFeatureCategory.SPEECHINESS,
+      value: 0.4
+    },
+    {
+      category: SongFeatureCategory.VALENCE,
+      value: 0.6
+    },
+    { 
+      category: SongFeatureCategory.TEMPO,
+      value: 0.5
+    },
   ],
   [
-    { value: 0.5},
-    { value: 0.7},
-    { value: 0.4},
-    { value: 0.6},
-    { value: 0.5},
+    {
+      category: SongFeatureCategory.ENERGY,
+      value: 0.5
+    },
+    { 
+      category: SongFeatureCategory.DANCEABILITY,
+      value: 0.7
+    },
+    { 
+      category: SongFeatureCategory.SPEECHINESS,
+      value: 0.6
+    },
+    {
+      category: SongFeatureCategory.VALENCE,
+      value: 0.6
+    },
+    { 
+      category: SongFeatureCategory.TEMPO,
+      value: 0.5
+    },
   ],
   [
-    { value: 0.5},
-    { value: 0.4},
-    { value: 0.6},
-    { value: 0.6},
-    { value: 0.5},
-  ],
-  [
-    { value: 0.4},
-    { value: 0.8},
-    { value: 0.6},
-    { value: 0.65},
-    { value: 0.8},
+    {
+      category: SongFeatureCategory.ENERGY,
+      value: 0.4
+    },
+    { 
+      category: SongFeatureCategory.DANCEABILITY,
+      value: 0.8
+    },
+    { 
+      category: SongFeatureCategory.SPEECHINESS,
+      value: 0.6
+    },
+    {
+      category: SongFeatureCategory.VALENCE,
+      value: 0.65
+    },
+    { 
+      category: SongFeatureCategory.TEMPO,
+      value: 0.8
+    },
   ],
 
   // Add more flowers as needed
@@ -248,6 +355,15 @@ onMounted(() => {
   }
 });
 
+const currentSelectedFeature = ref(null);
+const showFeaturesInformation = ref(false);
+const onPetalClick = (index: number, featureCategory: SongFeatureCategory) => {
+  currentSelectedFeature.value = {
+    index,
+    featureCategory
+  };
+  showFeaturesInformation.value = true;
+};
 </script>
 
 <template>
@@ -270,15 +386,21 @@ onMounted(() => {
                 :features="flower"
                 :size="80"
                 :circleRadius="40"
+                @onPetalClick="(featureCategory) => onPetalClick(index, featureCategory)"
             />
           </div>
         </div>
       </div>
     </div>
+    <SongFeatureDialog
+      v-model:visible="showFeaturesInformation"
+      :flowerData="flowerData"
+      :currentSelectedFeature="currentSelectedFeature"
+    />
   </div>
 </template>
 
-<style scoped>
+<style>
 .main-visualization {
   width: 100%;
   height: 100%;
@@ -367,5 +489,4 @@ onMounted(() => {
   width: 160px;
   height: 160px;
 }
-
 </style>

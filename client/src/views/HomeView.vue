@@ -1,19 +1,30 @@
 <script setup lang="ts">
-import {ref} from 'vue';
+import { ref, onMounted, computed } from "vue";
+import { Session } from "@/types/Session";
+import { useAuthStore } from "@/stores/auth";
+import { useRouter, useRoute } from 'vue-router';
 import Navigation from "@/components/Navigation.vue";
 import MainVisualization from "@/components/MainVisualization.vue";
+import VisualizationAid from '@/components/VisualizationAid.vue';
 import Button from 'primevue/button';
 import LogoIntroScreen from "@/components/LogoIntroScreen.vue";
 import PreviouslyPlayed from "@/components/PreviouslyPlayed.vue";
 import QrcodeVue from 'qrcode.vue'
 import AddMoreSong from "@/components/AddMoreSong.vue";
 import SongDetailsPopUp from "@/components/SongDetailsPopUp.vue";
+import Sidebar from "primevue/sidebar";
+import StartBlendButton from "@/components/StartBlendButton.vue";
+import PlaylistCreator from "@/components/PlaylistCreator.vue";
 import { HostSession } from "@/types/Session";
+import { sessionService } from "@/services/sessionService";
 
 const showPreviouslyPlayed = ref(false);
 const showAddMoreSongPopup = ref(false);
+
 const showSongDetailPopup = ref(false);
 const selectedSong = ref(null);
+
+const showVisualizationAid = ref(false);
 
 const LOCAL_IP_ADDRESS = import.meta.env.VITE_LOCAL_IP_ADDRESS;
 
@@ -30,37 +41,68 @@ function closeSongDetailPopup() {
   showSongDetailPopup.value = false;
 }
 
-// TODO: Get sessions from BE.
-const sessions = [
-  new HostSession({
-    id: "123",
-    invitationLink: `http://${LOCAL_IP_ADDRESS}/sessions/join/123`,
-    guests: [],
-    playlistName: "Playlist 1",
-    playlist: [],
-    creationDate: Date.parse("2024-03-12 12:00:20"),
-    isRunning: false
-  }),
-  new HostSession({
-    id: "234",
-    invitationLink: `http://${LOCAL_IP_ADDRESS}/sessions/join/123`,
-    guests: [],
-    playlistName: "Playlist 2",
-    playlist: [],
-    creationDate: Date.parse("2024-02-12 12:00:20")
-  })
-];
 
+const router = useRouter();
+const route = useRoute();
+
+const sessions = ref<Session[]>([]);
+
+const authStore = useAuthStore();
+const isHost = authStore.user?.isHost ?? false;
+const errorMessage = ref();
+const loading = ref(true);
+
+onMounted(async () => {
+  await router.isReady();
+
+  const sessionId = isHost ? authStore.user?.sessions?.[0] : route.params.sessionId;
+  if (!sessionId) {
+    if (!isHost) {
+      errorMessage.value = "Could not find session. Please try to join again."
+    }
+    loading.value = false;
+    return;
+  }
+
+  try {
+    sessions.value = [await sessionService.getSessionById(sessionId)];
+    loading.value = false;
+  } catch (error) {
+    // We redirect users to landing page, if we have any errors.
+    router.push({name: 'landing'});
+  }
+});
 const selectedSessionIndex = ref(0);
+
+const currentSession = computed(() => {
+  if (sessions.value && sessions.value.length) {
+    return sessions.value[selectedSessionIndex.value];
+  }
+
+  return null;
+});
+
 const toggleAddMoreSongPopup = () => {
   showAddMoreSongPopup.value = !showAddMoreSongPopup.value;
+};
+
+const createNewSessionFlow = ref(false);
+const runningSession = ref();
+
+const startSession = async (session) => {
+  sessions.value = [await sessionService.createNewSession(session), ...sessions.value];
+  createNewSessionFlow.value = false;
+  selectedSessionIndex.value = 0;
 };
 
 //Information Button to read more about how the visualization can be read
 const infoVisible = ref(true);
 function toggleInfo(){
-  infoVisible.value = !infoVisible.value;
+  showVisualizationAid.value = !showVisualizationAid.value;
 }
+const closeVisualizationAid = () => {
+  showVisualizationAid.value = false;
+};
 </script>
 
 <template>
@@ -75,14 +117,24 @@ function toggleInfo(){
           <Navigation/>
         </nav>
       </div>
+      <i v-if="isHost" class="settings-icon pi pi-cog"></i>
     </header>
-    <div class="middle">
-      <div class="info-box" :class="{ active: infoVisible }" @click="toggleInfo">
-        <div> i </div>
+    <div class="middle" v-if="!loading">
+      <div v-if="errorMessage" class="error">
+          {{errorMessage}}
       </div>
-      <MainVisualization />
+      <div v-else-if="!sessions.length && isHost">
+        <start-blend-button v-if="!createNewSessionFlow" @click="createNewSessionFlow = true" />
+        <playlist-creator v-else @startSession="startSession"></playlist-creator>
+      </div>
+      <template v-else>
+        <div class="info-box" :class="{ active: showVisualizationAid }" @click="toggleInfo">
+          <div> i </div>
+        </div>
+        <MainVisualization />
+      </template>
     </div>
-    <div class="footer-section">
+    <div v-if="currentSession" class="footer-section">
       <div
         class="previously-played"
         :class="{ minimized: !showPreviouslyPlayed }"
@@ -97,18 +149,21 @@ function toggleInfo(){
           </button>
         </div>
         <div v-show="showPreviouslyPlayed" class="table-scroll">
-          <PreviouslyPlayed @show-song-details="handleShowSongDetails"></PreviouslyPlayed>
+          <PreviouslyPlayed
+            @show-song-details="handleShowSongDetails"
+            :songs="currentSession.playlist"
+            ></PreviouslyPlayed>
           <SongDetailsPopUp
             v-if="showSongDetailPopup"
             :song="selectedSong"
             :isVisible="showSongDetailPopup"
-            @close="closeSongDetailPopup"
-          />
+            @close="closeSongDetailPopup" />
         </div>
       </div>
-      <qrcode-vue :value="sessions[selectedSessionIndex].invitationLink" />
+      <qrcode-vue v-if="isHost" :value="currentSession.inviteLink" />
     </div>
-
+    <!-- Conditionally render VisualizationAid component -->
+    <VisualizationAid v-if="showVisualizationAid" @close-popup="closeVisualizationAid" />/>
     <!-- Popup Overlay -->
     <div v-if="showAddMoreSongPopup" class="popup-overlay" @click="toggleAddMoreSongPopup">
       <div class="popup-content" @click.stop>
@@ -226,5 +281,20 @@ function toggleInfo(){
   margin: 0 20px 20px;
   gap: 8px;
   justify-content: space-between;
+}
+.settings-icon {
+    position: absolute;
+    right: 30px;
+    color: var(--logo-highlight-color);
+    font-size: 30px;
+    cursor: pointer;
+}
+
+.visualization {
+  display: contents;
+}
+
+.error {
+  color: var(--font-color);
 }
 </style>
