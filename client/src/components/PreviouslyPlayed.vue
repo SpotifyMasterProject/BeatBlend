@@ -5,16 +5,14 @@
         <thead>
           <tr>
             <th class="icon-header"></th>  <!-- Empty for the icon -->
+            <th class="icon-header"></th>
             <th class="track-name">Track Name</th>
-            <th>Album</th>
             <th>Artists</th>
             <th>Danceability</th>
             <th>Energy</th>
             <th>Speechiness</th>
             <th>Valence</th>
             <th>Tempo</th>
-            <th>Popularity</th>
-            <th>Release Date</th>
           </tr>
         </thead>
         <tbody>
@@ -22,7 +20,10 @@
             <td class="icon-cell">
               <img src="../assets/table-play-icon.png" alt="play-icon" class="song-icon">
             </td>
-            <td class="track-name">{{ song.track_name }}</td>
+            <td class="icon-cell" @click="showSongDetails(song)">
+              <img src="../assets/eye-icon.svg" alt="eye-icon" class="eye-icon">
+            </td>
+            <td class="track-name">{{ song.trackName }}</td>
             <td>{{ song.album }}</td>
             <td>{{ song.artists.join(', ') }}</td>
             <td>{{ song.danceability }}</td>
@@ -30,8 +31,6 @@
             <td>{{ song.speechiness }}</td>
             <td>{{ song.valence }}</td>
             <td>{{ song.tempo }}</td>
-            <td>{{ song.popularity }}</td>
-            <td>{{song.release_date}}</td>
           </tr>
         </tbody>
       </table>
@@ -42,6 +41,12 @@
 <script setup>
 import { ref } from 'vue';
 import { Song } from '@/types/Song';
+
+const emit = defineEmits(['show-song-details']);
+
+function showSongDetails(song) {
+  emit('show-song-details', song);
+}
 
 const props = defineProps({
     songs: {
@@ -94,17 +99,31 @@ const props = defineProps({
 }
 
 .song-table th.icon-header, .song-table td.icon-cell {
-  width: 20px;
+  width: 35px;
   text-align: center;
 }
 
 .song-table th.track-name, .song-table td.track-name {
-  width: 180px;
+  width: 220px;
 }
 
 .song-table img.song-icon {
   width: 20px;
   height: 20px;
   vertical-align: middle;
+}
+
+.song-table img.eye-icon {
+  width: 20px;
+  height: 20px;
+  vertical-align: middle;
+  filter: invert(1);
+  transition: transform 0.3s ease, background-color 0.3s ease;
+}
+
+.song-table img.eye-icon:hover {
+  background-color: #828282;
+  border-radius: 25%;
+  transform: scale(1.05);
 }
 </style>

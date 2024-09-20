@@ -136,7 +136,6 @@ a,
 .type2 .previously-played{
   background-color: var(--backcore-color1);
   height: 20vh;
-  margin: 0 20px 20px;
   padding: 20px;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));

@@ -11,6 +11,7 @@ import LogoIntroScreen from "@/components/LogoIntroScreen.vue";
 import PreviouslyPlayed from "@/components/PreviouslyPlayed.vue";
 import QrcodeVue from 'qrcode.vue'
 import AddMoreSong from "@/components/AddMoreSong.vue";
+import SongDetailsPopUp from "@/components/SongDetailsPopUp.vue";
 import Sidebar from "primevue/sidebar";
 import StartBlendButton from "@/components/StartBlendButton.vue";
 import PlaylistCreator from "@/components/PlaylistCreator.vue";
@@ -19,6 +20,10 @@ import { sessionService } from "@/services/sessionService";
 
 const showPreviouslyPlayed = ref(false);
 const showAddMoreSongPopup = ref(false);
+
+const showSongDetailPopup = ref(false);
+const selectedSong = ref(null);
+
 const showVisualizationAid = ref(false);
 
 const LOCAL_IP_ADDRESS = import.meta.env.VITE_LOCAL_IP_ADDRESS;
@@ -26,6 +31,16 @@ const LOCAL_IP_ADDRESS = import.meta.env.VITE_LOCAL_IP_ADDRESS;
 const toggleVisibility = () => {
   showPreviouslyPlayed.value = !showPreviouslyPlayed.value;
 };
+
+function handleShowSongDetails(song) {
+  selectedSong.value = song;
+  showSongDetailPopup.value = true;
+}
+
+function closeSongDetailPopup() {
+  showSongDetailPopup.value = false;
+}
+
 
 const router = useRouter();
 const route = useRoute();
@@ -135,8 +150,14 @@ const closeVisualizationAid = () => {
         </div>
         <div v-show="showPreviouslyPlayed" class="table-scroll">
           <PreviouslyPlayed
+            @show-song-details="handleShowSongDetails"
             :songs="currentSession.playlist"
             ></PreviouslyPlayed>
+          <SongDetailsPopUp
+            v-if="showSongDetailPopup"
+            :song="selectedSong"
+            :isVisible="showSongDetailPopup"
+            @close="closeSongDetailPopup" />
         </div>
       </div>
       <qrcode-vue v-if="isHost" :value="currentSession.inviteLink" />
@@ -214,12 +235,10 @@ const closeVisualizationAid = () => {
 .previously-played.minimized .table-header-container {
   padding-bottom: 0; /* No padding when minimized */
 }
-.previously-played:not(.minimized) .table-header-container {
-  padding-bottom: 10px; /* Adds space between the header/button and the table when shown */
-}
+
 .previously-played h3 {
   margin: 0;
-  font-size:16px;
+  font-size:18px;
   width: 100%;
 }
 .previously-played button {
