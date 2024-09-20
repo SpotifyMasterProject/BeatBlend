@@ -134,7 +134,7 @@ class Service:
         await self.repo.set_session(session)
         host.sessions.append(session.id)
         await self.repo.set_user(host)
-        await manager.publish(channel=self.repo.get_session_key(session.id), message="New session created")
+        await manager.publish(channel=session.id, message="New session created")
 
         return session
 
@@ -159,7 +159,7 @@ class Service:
             await self.repo.set_session(session)
             guest.sessions.append(session.id)
             await self.repo.set_user(guest)
-            await manager.publish(channel=self.repo.get_session_key(session.id), message=f"Guest {guest_id} has joined the session")
+            await manager.publish(channel=session.id, message=f"Guest {guest_id} has joined the session")
         return session
 
     async def get_song(self, song_id: str) -> Song:
@@ -176,7 +176,7 @@ class Service:
 
         session.playlist.append(song)
         await self.repo.set_session(session)
-        await manager.publish(channel=self.repo.get_session_key(session.id), message=f"User {user_id} has added song {song.name}")
+        await manager.publish(channel=session.id, message=f"User {user_id} has added song {song.name}")
 
         return session
 
@@ -186,7 +186,7 @@ class Service:
         for idx, song in enumerate(session.playlist):
             if song.id == song_id:
                 del session.playlist[idx]
-                await manager.publish(channel=self.repo.get_session_key(session.id), message=f"User {host_id} has removed song {song.name}")
+                await manager.publish(channel=session.id, message=f"User {host_id} has removed song {song.name}")
                 return
 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song not part of playlist")
@@ -204,24 +204,14 @@ class Service:
             guest.sessions.remove(session.id)
             await self.repo.set_user(guest)
             if host_id:
-                await manager.publish(channel=self.repo.get_session_key(session.id), message=f"Guest {guest_id} was removed from session by host")
+                await manager.publish(channel=session.id, message=f"Guest {guest_id} was removed from session by host")
             else:
-                await manager.publish(channel=self.repo.get_session_key(session.id), message=f"Guest {guest_id} left session")
+                await manager.publish(channel=session.id, message=f"Guest {guest_id} left session")
         else:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Guest not part of session.")
 
     async def verify_session(self, session_id: str) -> None:
         await self.repo.verify_session_by_id(session_id)
-
-    async def establish_ws_connection_to_session(self, websocket: WebSocket, session_id: str) -> None:
-        channel = self.repo.get_session_key(session_id)
-
-        async with manager.subscribe(channel=channel) as subscriber:
-            try:
-                async for event in subscriber:
-                    await websocket.send_text(event.message)
-            except WebSocketDisconnect:
-                pass
 
     async def add_song_to_database(self, song_id: str) -> Song:
         song_info = self.spotify_client.track(song_id)
@@ -239,3 +229,32 @@ class Service:
 
     # async def delete_song_from_database(self, song_id: str) -> None:
     #     await self.repo.delete_song_by_id(song_id)
+
+    @staticmethod
+    async def establish_ws_connection_to_channel_by_session_id(websocket: WebSocket, session_id: str) -> None:
+        manager.active_connections[session_id].add(websocket)
+        async with manager.subscribe(channel=session_id) as subscriber:
+            try:
+                async for event in subscriber:
+                    await websocket.send_text(event.message)
+            except WebSocketDisconnect:
+                pass
+
+    @staticmethod
+    async def end_all_ws_connections_to_channel_by_session_id(session_id: str) -> None:
+        for websocket in manager.active_connections[session_id]:
+            await websocket.close(code=1000, reason='Session ended')
+        del manager.active_connections[session_id]
+
+    async def end_session(self, host_id: str, session_id: str):
+        host = await self.get_user(host_id)
+        session = await self.get_session(session_id)
+        self.verify_host_of_session(host_id, session)
+        host.sessions.remove(session.id)
+        for guest_id in session.guests:
+            guest = await self.get_user(guest_id)
+            guest.sessions.remove(session.id)
+        await self.end_all_ws_connections_to_channel_by_session_id(session_id)
+        await self.repo.delete_session_by_id(session_id)
+        # TODO: create and return session artifact
+        return

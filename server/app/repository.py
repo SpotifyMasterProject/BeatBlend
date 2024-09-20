@@ -88,4 +88,5 @@ class Repository:
     #     query = delete(songs).where(songs.c.id == song_id)
     #     await self.postgres.execute(query)
 
-
+    async def delete_session_by_id(self, session_id: str) -> None:
+        await self.redis.delete(self.get_session_key(session_id))

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, status, Depends, WebSocket
+from fastapi import FastAPI, status, Depends, WebSocket, WebSocketDisconnect
 from service import Service, lifespan
 from models.token import Token
 from models.user import User, SpotifyUser
@@ -101,6 +101,12 @@ async def get_matching_songs(user_id: Annotated[str, Depends(service.verify_toke
     return await service.get_matching_songs_from_database(pattern, limit)
 
 
+@app.delete("/sessions/{session_id}", status_code=status.HTTP_200_OK)
+async def end_existing_session(host_id: Annotated[str, Depends(service.verify_token)], session_id: str):
+    await service.verify_instances(user_ids=host_id, session_id=session_id)
+    return await service.end_session(host_id, session_id)
+
+
 @app.delete("/sessions/{session_id}/guests/{guest_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_guest(host_id: Annotated[str, Depends(service.verify_token)], session_id: str, guest_id: str) -> None:
     await service.verify_instances(user_ids=[host_id, guest_id], session_id=session_id)
@@ -116,7 +122,7 @@ async def leave_session(guest_id: Annotated[str, Depends(service.verify_token)],
 @app.websocket("/ws/{session_id}")
 async def websocket_session(websocket: WebSocket, session_id: str):
     await websocket.accept()
-    await service.establish_ws_connection_to_session(websocket, session_id)
+    await service.establish_ws_connection_to_channel_by_session_id(websocket, session_id)
 
 
 # This WS code is inspired by the encode/broadcaster package.
