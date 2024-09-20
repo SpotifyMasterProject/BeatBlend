@@ -23,7 +23,7 @@
             <td class="icon-cell" @click="showSongDetails(song)">
               <img src="../assets/eye-icon.svg" alt="eye-icon" class="eye-icon">
             </td>
-            <td class="track-name">{{ song.track_name }}</td>
+            <td class="track-name">{{ song.trackName }}</td>
             <td>{{ song.album }}</td>
             <td>{{ song.artists.join(', ') }}</td>
             <td>{{ song.danceability }}</td>

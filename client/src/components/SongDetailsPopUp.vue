@@ -2,7 +2,7 @@
   <div v-if="isVisible" class="song-detail-modal">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>{{ song.name }}</h3>
+        <h3>{{ song.trackName }}</h3>
         <button @click="closeModal">X</button>
       </div>
       <p><strong>Artist: </strong> {{ song.artists.join(', ') }}</p>
