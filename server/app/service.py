@@ -61,7 +61,7 @@ class Service:
             scope="user-library-read"  # scope defines functionalities
         )
 
-        self.spotify_client = Spotify(auth_manager=self.spotify_oauth)
+        self.spotify_api_client = Spotify(auth_manager=self.spotify_oauth)
 
     @staticmethod
     def generate_token(user: User, spotify_token: Token = None) -> Token:
@@ -105,9 +105,15 @@ class Service:
         if session_id:
             await self.verify_session(session_id)
 
-    def get_spotify_name(self) -> str:
-        user_profile = self.spotify_client.me()
-        return user_profile['id']
+    def get_spotify_token(self, host: User) -> Token:
+        spotify_token_info = self.spotify_oauth.get_access_token(host.auth_code)
+        return Token(**spotify_token_info)
+
+    @staticmethod
+    def get_display_name(token: Token) -> str:
+        spotify_host_client = Spotify(auth=token.access_token)
+        user_info = spotify_host_client.current_user()
+        return user_info['display_name']
 
     async def create_user(self, user: User) -> User:
         user.id = str(uuid.uuid4())
@@ -214,7 +220,7 @@ class Service:
         await self.repo.verify_session_by_id(session_id)
 
     async def add_song_to_database(self, song_id: str) -> Song:
-        song_info = self.spotify_client.track(song_id)
+        song_info = self.spotify_api_client.track(song_id)
         await self.repo.add_song_by_info(song_info)
         return Song(**song_info)
 
