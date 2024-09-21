@@ -1,6 +1,7 @@
 from typing import Optional, List
 from pydantic import BaseModel
 
+
 class User(BaseModel):
     id: Optional[str] = None
     username: str
@@ -8,4 +9,5 @@ class User(BaseModel):
 
 
 class SpotifyUser(User):
+    username: Optional[str] = None
     auth_code: str
