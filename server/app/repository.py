@@ -3,6 +3,7 @@ from databases.interfaces import Record
 from fastapi import HTTPException, status
 from models.session import Session
 from models.user import User
+from models.song import Song
 from redis.asyncio import Redis
 from sqlalchemy import Column, Table, MetaData, Integer, String, ARRAY, Float, Date, insert, select
 from typing import Optional
@@ -88,6 +89,48 @@ class Repository:
     # async def delete_song_by_id(self, song_id: str) -> None:
     #     query = delete(songs).where(songs.c.id == song_id)
     #     await self.postgres.execute(query)
+
+    async def get_recommendations_by_song_id(self, playlist: list[Song], limit: int = 3) -> list[Record]:
+        if not playlist:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Playlist is empty")
+
+        create_extension_query = "CREATE EXTENSION IF NOT EXISTS cube;"
+        await self.postgres.execute(create_extension_query)
+
+        song_ids = [song.id for song in playlist]
+
+        query = """
+            WITH target_songs AS (
+            SELECT 
+                AVG(danceability) AS avg_danceability, 
+                AVG(energy) AS avg_energy,
+                AVG(speechiness) AS avg_speechiness,
+                AVG(valence) AS avg_valence,
+                AVG(tempo) AS avg_tempo
+            FROM songs
+            WHERE id = ANY(:song_ids)  -- match multiple song IDs
+        ),
+        song_distances AS (
+            -- calculate cosine distance between the averaged vector and each song
+            SELECT 
+                s.id,
+                cube_distance(
+                    cube(array[s.danceability, s.energy, s.speechiness, s.valence, s.tempo]),
+                    cube(array[t.avg_danceability, t.avg_energy, t.avg_speechiness, t.avg_valence, t.avg_tempo])
+                ) AS cosine_distance
+            FROM songs s, target_songs t
+            WHERE s.id != ALL(:song_ids)  -- exclude the target songs
+        )
+        -- return the 3 closest songs
+        SELECT * FROM song_distances
+        ORDER BY cosine_distance
+        LIMIT :limit;
+        """
+
+        result = await self.postgres.fetch_all(query, {"song_ids": song_ids, "limit": limit})
+        if result is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No recommendations found")
+        return result
 
     async def delete_session_by_id(self, session_id: str) -> None:
         await self.redis.delete(self.get_session_key(session_id))
