@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional
 
 
 class Song(BaseModel):
@@ -8,8 +8,8 @@ class Song(BaseModel):
     track_name: Optional[str] = None
     album: Optional[str] = None
     album_id: Optional[str] = None
-    artists: List[str] = []
-    artist_ids: List[str] = []
+    artists: list[str] = []
+    artist_ids: list[str] = []
     danceability: Optional[float] = None
     energy: Optional[float] = None
     speechiness: Optional[float] = None
