@@ -1,10 +1,11 @@
 from databases import Database
+from databases.interfaces import Record
 from fastapi import HTTPException, status
 from models.session import Session
 from models.user import User
 from redis.asyncio import Redis
 from sqlalchemy import Column, Table, MetaData, Integer, String, ARRAY, Float, Date, insert, select
-from typing import Optional, List
+from typing import Optional
 
 metadata = MetaData()
 songs = Table(
@@ -70,14 +71,14 @@ class Repository:
         query = insert(songs).values(song_info)
         await self.postgres.execute(query)
 
-    async def get_song_by_id(self, song_id: str) -> Optional[bytes]:
+    async def get_song_by_id(self, song_id: str) -> Record:
         query = select(songs).where(songs.c.id == song_id)
         result = await self.postgres.fetch_one(query)
         if result is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song not found")
         return result
 
-    async def get_songs_by_pattern(self, pattern: str, limit: int) -> List[Optional[bytes]]:
+    async def get_songs_by_pattern(self, pattern: str, limit: int) -> list[Record]:
         query = select(songs).where(songs.c.track_name.ilike(f'%{pattern}%') | songs.c.artists.any(pattern)).limit(limit)
         result = await self.postgres.fetch_all(query)
         if result is None:

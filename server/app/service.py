@@ -67,7 +67,7 @@ class Service:
     def generate_token(user: User, spotify_token: SpotifyToken = None) -> Token:
         to_encode = {"sub": user.id, "username": user.username}
         if spotify_token:  # additionally encode the spotify token for hosts
-            to_encode["spotify_token"] = spotify_token.dict()
+            to_encode["spotify_token"] = spotify_token.model_dump()
         access_token_expires = timedelta(minutes=JWT_EXPIRES_MINUTES)
         expire = datetime.now(timezone.utc) + (access_token_expires or timedelta(minutes=30))
         to_encode.update({"exp": expire})
@@ -229,11 +229,11 @@ class Service:
 
     async def get_song_from_database(self, song_id: str) -> Song:
         result = await self.repo.get_song_by_id(song_id)
-        return Song.model_validate_json(result)
+        return Song.model_validate(dict(result))
 
     async def get_matching_songs_from_database(self, pattern: str, limit: int) -> SongList:
         result = await self.repo.get_songs_by_pattern(pattern, limit)
-        songs = [Song.parse_obj(dict(row)) for row in result] #TODO: change this to use model_validate_json()
+        songs = [Song.model_validate(dict(row)) for row in result]
         return SongList(songs=songs)
 
     # async def delete_song_from_database(self, song_id: str) -> None:

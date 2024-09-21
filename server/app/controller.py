@@ -1,4 +1,4 @@
-from fastapi import FastAPI, status, Depends, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, status, Depends, WebSocket
 from service import Service, lifespan
 from models.token import Token
 from models.user import User, SpotifyUser
