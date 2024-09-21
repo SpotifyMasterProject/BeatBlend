@@ -107,8 +107,7 @@ class Service:
 
     def get_spotify_token(self, host: SpotifyUser) -> SpotifyToken:
         try:
-            # TODO: whenever host is verified, cached token is used even if auth_code is invalid
-            spotify_token_info = self.spotify_oauth.get_access_token(host.auth_code)
+            spotify_token_info = self.spotify_oauth.get_access_token(host.auth_code, check_cache=False)
             return SpotifyToken(**spotify_token_info)
         except SpotifyOauthError:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authorization code")
