@@ -119,6 +119,12 @@ async def leave_session(guest_id: Annotated[str, Depends(service.verify_token)],
     await service.remove_guest_from_session("", guest_id, session_id)
 
 
+@app.get("/sessions/{session_id}/recommendations", status_code=status.HTTP_200_OK, response_model=SongList)
+async def get_recommendations(user_id: Annotated[str, Depends(service.verify_token)], session_id: str, limit: int = 3) -> SongList:
+    await service.verify_instances(user_ids=user_id, session_id=session_id)
+    return await service.get_recommendations_from_database(session_id, limit)
+
+
 @app.websocket("/ws/{session_id}")
 async def websocket_session(websocket: WebSocket, session_id: str):
     await websocket.accept()

@@ -93,7 +93,7 @@ class Service:
 
     @staticmethod
     def verify_host_of_session(host_id: str, session: Session) -> None:
-        if session.host != host_id:
+        if session.host_id != host_id:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not host of session.")
 
     async def verify_instances(self, user_ids: str | list[str] = "", session_id: str = ""):
@@ -185,7 +185,7 @@ class Service:
 
         session.playlist.append(song)
         await self.repo.set_session(session)
-        await manager.publish(channel=session.id, message=f"User {user_id} has added song {song.name}")
+        await manager.publish(channel=session.id, message=f"User {user_id} has added song {song.track_name}")
 
         return session
 
@@ -195,7 +195,8 @@ class Service:
         for idx, song in enumerate(session.playlist):
             if song.id == song_id:
                 del session.playlist[idx]
-                await manager.publish(channel=session.id, message=f"User {host_id} has removed song {song.name}")
+                await self.repo.set_session(session)
+                await manager.publish(channel=session.id, message=f"User {host_id} has removed song {song.track_name}")
                 return
 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song not part of playlist")
@@ -238,6 +239,19 @@ class Service:
 
     # async def delete_song_from_database(self, song_id: str) -> None:
     #     await self.repo.delete_song_by_id(song_id)
+
+    async def get_recommendations_from_database(self, session_id: str, limit: int) -> SongList:
+        session = await self.get_session(session_id)
+        session.recommendations.clear()
+        await self.repo.set_session(session)
+        result = await self.repo.get_recommendations_by_song_id(session.playlist, limit)
+        songs = [await self.get_song_from_database(row['id']) for row in result]
+        for song in songs:
+            session.recommendations[song.id] = 0
+        await self.repo.set_session(session)
+        await manager.publish(channel=session.id, message="New recommendations fetched.")
+        return SongList(songs=songs)
+
 
     @staticmethod
     async def establish_ws_connection_to_channel_by_session_id(websocket: WebSocket, session_id: str) -> None:
