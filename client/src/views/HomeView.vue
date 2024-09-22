@@ -15,6 +15,7 @@ import SongDetailsPopUp from "@/components/SongDetailsPopUp.vue";
 import Sidebar from "primevue/sidebar";
 import StartBlendButton from "@/components/StartBlendButton.vue";
 import PlaylistCreator from "@/components/PlaylistCreator.vue";
+import MobileMainViz from "@/components/MobileMainViz.vue";
 import { HostSession } from "@/types/Session";
 import { sessionService } from "@/services/sessionService";
 
@@ -131,7 +132,8 @@ const closeVisualizationAid = () => {
         <div class="info-box" :class="{ active: showVisualizationAid }" @click="toggleInfo">
           <div> i </div>
         </div>
-        <MainVisualization />
+        <MainVisualization v-if="isHost"/>
+        <MobileMainViz v-if="!isHost"/>
       </template>
     </div>
     <div v-if="currentSession" class="footer-section">
@@ -163,7 +165,7 @@ const closeVisualizationAid = () => {
       <qrcode-vue v-if="isHost" :value="currentSession.inviteLink" />
     </div>
     <!-- Conditionally render VisualizationAid component -->
-    <VisualizationAid v-if="showVisualizationAid" @close-popup="closeVisualizationAid" />/>
+    <VisualizationAid v-if="showVisualizationAid" @close-popup="closeVisualizationAid" />
     <!-- Popup Overlay -->
     <div v-if="showAddMoreSongPopup" class="popup-overlay" @click="toggleAddMoreSongPopup">
       <div class="popup-content" @click.stop>
@@ -184,6 +186,7 @@ const closeVisualizationAid = () => {
 .function-icon-container button {
   width: 45px;
   height: 45px;
+  display: flex;
   align-items: center;
   justify-content: center;
   background-color: #6BA149;
@@ -225,12 +228,13 @@ const closeVisualizationAid = () => {
   display: flex;
   flex-direction: row;  /* Aligns the header and button horizontally */
   align-items: center;
-  justify-content: flex-start;
   width: 100%;
   position: sticky;
   top: 0;
   z-index: 1000;
   background-color: #272525;
+  padding-bottom: 0;
+  margin-bottom: 0;
 }
 .previously-played.minimized .table-header-container {
   padding-bottom: 0; /* No padding when minimized */
@@ -242,6 +246,9 @@ const closeVisualizationAid = () => {
   width: 100%;
 }
 .previously-played button {
+  position: sticky;
+  right: 0;
+  z-index: 1001;
   padding: 8px 16px;
   background-color: #6BA149;
   color: #D9D9D9;
@@ -259,7 +266,7 @@ const closeVisualizationAid = () => {
 .previously-played .table-scroll {
   max-height: 700px;
   overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: auto;
 }
 
 .popup-overlay {
@@ -296,5 +303,44 @@ const closeVisualizationAid = () => {
 
 .error {
   color: var(--font-color);
+}
+
+/* Adjust for better placement on mobile */
+@media (max-width: 600px) {
+  .function-icon-container {
+    top: 30px;
+    left: 30px;
+  }
+
+  .function-icon-container button {
+    width: 35px;
+    height: 35px;
+    font-size: 14px;
+  }
+
+  .previously-played {
+    padding: 10px;
+    max-height: 300px;
+  }
+
+  .previously-played .table-header-container {
+    padding-bottom: 0;
+    margin-bottom: 0;
+  }
+
+  .previously-played h3 {
+    font-size: 14px;
+  }
+
+  .previously-played button {
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+
+  .previously-played .table-scroll {
+    max-height: 300px;
+    margin-top: 0;
+    padding-top: 0;
+  }
 }
 </style>
