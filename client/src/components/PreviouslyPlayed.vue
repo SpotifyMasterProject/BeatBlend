@@ -24,7 +24,6 @@
               <img src="../assets/eye-icon.svg" alt="eye-icon" class="eye-icon">
             </td>
             <td class="track-name">{{ song.trackName }}</td>
-            <td>{{ song.album }}</td>
             <td>{{ song.artists.join(', ') }}</td>
             <td>{{ song.danceability }}</td>
             <td>{{ song.energy }}</td>
@@ -60,7 +59,7 @@ const props = defineProps({
 <style scoped>
 .song-table-container {
   background-color: #363636;
-  padding: 5px 0px 5px 0px;
+  padding: 0px 0px 5px 0px;
   border-radius: 15px;
   max-height: 500px;
 }
@@ -125,5 +124,38 @@ const props = defineProps({
   background-color: #828282;
   border-radius: 25%;
   transform: scale(1.05);
+}
+
+@media (max-width: 600px) {
+  .song-table-container {
+    padding: 0;
+    max-height: 300px;
+  }
+
+  .song-table th {
+    font-size: 13px;
+  }
+
+  .song-table td {
+    padding: 6px;
+    font-size: 12px;
+  }
+
+  .song-table th.track-name, .song-table td.track-name {
+    width: auto;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .song-table img.song-icon,
+  .song-table img.eye-icon {
+    width: 15px;
+    height: 15px;
+  }
+
+  .song-table table {
+    width: 800px;
+  }
 }
 </style>
