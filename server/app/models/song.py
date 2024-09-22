@@ -26,8 +26,8 @@ class Song(BaseModel):
 
     @model_validator(mode='after')
     def set_scaled_tempo(self) -> 'Song':
-        scaled_tempo = (self.tempo - MIN_TEMPO) * 2 / (MAX_TEMPO - MIN_TEMPO) - 1
-        # Clamp between -1 and 1
-        self.scaled_tempo = max(-1, min(scaled_tempo, 1))
+        scaled_tempo = (self.tempo - MIN_TEMPO) / (MAX_TEMPO - MIN_TEMPO)
+        # Clamp between 0 and 1
+        self.scaled_tempo = max(0, min(scaled_tempo, 1))
 
         return self
