@@ -1,21 +1,18 @@
 <script setup lang ="ts">
-import { computed, defineProps} from 'vue';
+import { computed} from 'vue';
 import Petal from './Petal.vue';
 import { SongFeature } from '@/types/SongFeature';
 
 const props = defineProps<{
   features: SongFeature[];
-  size?: number;
   circleRadius?: number;
 }>();
 
 const emit = defineEmits(['onPetalClick']);
 
-const size = props.size ?? 80;
 const circleRadius = props.circleRadius ?? 40;
 
 const maxPetalLength = computed(() => circleRadius + Math.max(...props.features.map(f => f.value * circleRadius)));
-const center = computed(() => size / 2);
 const rotation = computed(() => {
   const maxFeatureIndex = props.features.reduce(
       (maxIndex, feature, index, features) =>

@@ -2,6 +2,7 @@ import jwt
 import os
 import time
 import uuid
+import json
 
 from datetime import timedelta, datetime, timezone
 from spotipy import Spotify
@@ -255,7 +256,8 @@ class Service:
 
     @staticmethod
     async def establish_ws_connection_to_channel_by_session_id(websocket: WebSocket, session_id: str) -> None:
-        manager.active_connections[session_id].add(websocket)
+        session_connections =  manager.active_connections.get(session_id, set())
+        session_connections.add(websocket)
         async with manager.subscribe(channel=session_id) as subscriber:
             try:
                 async for event in subscriber:

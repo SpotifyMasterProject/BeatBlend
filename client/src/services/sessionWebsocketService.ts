@@ -1,21 +1,18 @@
-export default class WebsocketService {
-    socket: WebSocket
-    handler: ((message: any) => void) | null
+export default class SessionWebsocketService {
+    socket: WebSocket | null
     reconnectTimeout: number;
     maxReconnectAttempts: number;
     reconnectAttempts: number;
 
     constructor() {
-        this.handler = null;
         this.reconnectTimeout = 2000;
         this.maxReconnectAttempts = 10;
         this.reconnectAttempts = 0;
-        this.connect();
+        this.socket = null;
     }
 
-    connect() {
-        this.socket = new WebSocket('ws://localhost:8000/ws')
-        this.handler = null
+    connect(sessionId: string, handler: ((message: any) => void)) {
+        this.socket = new WebSocket(`ws://localhost:8000/ws/${sessionId}`)
 
         this.socket.onopen = () => {
             console.log('Websocket connection established!')
@@ -23,31 +20,29 @@ export default class WebsocketService {
         }
 
         this.socket.onmessage = (event) => {
-            console.log('Message received:' + event.data)
-            if (this.handler) {
-                this.handler(event.data)
-            }
+            console.log('Message received:' + event.data);
+            handler(event.data);
         }
 
         this.socket.onclose = (event) => {
             console.log('Websocket disconnected! Attempting to reconnect.')
             if (event.code !== 1000) { // Do not attempt to reconnect if the connection was closed normally (code 1000)
-                this.attemptReconnect();
+                this.attemptReconnect(sessionId, handler);
             }
         }
 
         this.socket.onerror = (event) => {
             console.log('Websocket error:' + event)
-            this.socket.close()
+            this.socket?.close()
         }
     }
 
-    attemptReconnect() {
+    attemptReconnect(sessionId: string, handler: ((message: any) => void)) {
         if (this.reconnectAttempts < this.maxReconnectAttempts) {
             setTimeout(() => {
                 console.log('Attempting to reconnect to WebSocket...');
                 this.reconnectAttempts++;
-                this.connect();
+                this.connect(sessionId, handler);
             }, this.reconnectTimeout);
             this.reconnectTimeout *= 2; // Exponential backoff
         } else {
@@ -56,20 +51,14 @@ export default class WebsocketService {
     }
 
     sendMessage(message: string) {
-        if (this.socket.readyState === WebSocket.OPEN) {
-            this.socket.send(message);
+        if (this.socket?.readyState === WebSocket.OPEN) {
+            this.socket?.send(message);
         } else {
             console.log('WebSocket is not open. Cannot send message.');
         }
     }
 
     close() {
-        if (this.socket) {
-            this.socket.close(1000, 'Client closed connection.'); // Close with normal closure code 1000
-        }
-    }
-
-    setMessageHandler(messageHandler: (message: any) => void) {
-        this.handler = messageHandler
+        this.socket?.close(1000, 'Client closed connection.'); // Close with normal closure code 1000
     }
 }

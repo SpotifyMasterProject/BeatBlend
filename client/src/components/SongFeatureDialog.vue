@@ -11,7 +11,7 @@ import TabPanel from 'primevue/tabpanel';
 
 const props = defineProps<{
   flowerData: SongFeature[][],
-  currentSelectedFeature: {index: number, featureCategory: SongFeatureCategory};
+  currentSelectedFeature?: {index: number, featureCategory: SongFeatureCategory};
 }>();
 
 const visible = defineModel();

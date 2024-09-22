@@ -1,170 +1,21 @@
 <script setup lang="ts">
-import {ref, watch, onMounted} from 'vue';
+import {ref, watch, onMounted, computed, nextTick} from 'vue';
 import Flower from "@/components/Flower.vue";
+import Recommendations from "@/components/Recommendations.vue";
 import SongFeatureDialog from "@/components/SongFeatureDialog.vue";
 import type { CSSProperties } from 'vue';
 import Button from "primevue/button";
 import { SongFeatureCategory } from '@/types/SongFeature';
+import { Session } from '@/types/Session';
+import { getSongFeatures } from '@/services/sessionService';
 
-// Petal and their color & value -- Adapt length not correct yet
-const flowerData = ref([
-  [
-    {
-      category: SongFeatureCategory.ENERGY,
-      value: 0.4
-    },
-    { 
-      category: SongFeatureCategory.DANCEABILITY,
-      value: 0.6
-    },
-    { 
-      category: SongFeatureCategory.SPEECHINESS,
-      value: 0.5
-    },
-    {
-      category: SongFeatureCategory.VALENCE,
-      value: 0.6
-    },
-    { 
-      category: SongFeatureCategory.TEMPO,
-      value: 0.5
-    },
-  ],
-  [
-    {
-      category: SongFeatureCategory.ENERGY,
-      value: 0.5
-    },
-    { 
-      category: SongFeatureCategory.DANCEABILITY,
-      value: 0.7
-    },
-    { 
-      category: SongFeatureCategory.SPEECHINESS,
-      value: 0.4
-    },
-    {
-      category: SongFeatureCategory.VALENCE,
-      value: 0.6
-    },
-    { 
-      category: SongFeatureCategory.TEMPO,
-      value: 0.5
-    },
-  ],
-    [
-    {
-      category: SongFeatureCategory.ENERGY,
-      value: 0.5
-    },
-    { 
-      category: SongFeatureCategory.DANCEABILITY,
-      value: 0.4
-    },
-    { 
-      category: SongFeatureCategory.SPEECHINESS,
-      value: 0.6
-    },
-    {
-      category: SongFeatureCategory.VALENCE,
-      value: 0.6
-    },
-    { 
-      category: SongFeatureCategory.TEMPO,
-      value: 0.4
-    },
-  ],
-  [
-    {
-      category: SongFeatureCategory.ENERGY,
-      value: 0.4
-    },
-    { 
-      category: SongFeatureCategory.DANCEABILITY,
-      value: 0.8
-    },
-    { 
-      category: SongFeatureCategory.SPEECHINESS,
-      value: 0.6
-    },
-    {
-      category: SongFeatureCategory.VALENCE,
-      value: 0.5
-    },
-    { 
-      category: SongFeatureCategory.TEMPO,
-      value: 0.8
-    },
-  ],
-  [
-    {
-      category: SongFeatureCategory.ENERGY,
-      value: 0.5
-    },
-    { 
-      category: SongFeatureCategory.DANCEABILITY,
-      value: 0.7
-    },
-    { 
-      category: SongFeatureCategory.SPEECHINESS,
-      value: 0.4
-    },
-    {
-      category: SongFeatureCategory.VALENCE,
-      value: 0.6
-    },
-    { 
-      category: SongFeatureCategory.TEMPO,
-      value: 0.5
-    },
-  ],
-  [
-    {
-      category: SongFeatureCategory.ENERGY,
-      value: 0.5
-    },
-    { 
-      category: SongFeatureCategory.DANCEABILITY,
-      value: 0.7
-    },
-    { 
-      category: SongFeatureCategory.SPEECHINESS,
-      value: 0.6
-    },
-    {
-      category: SongFeatureCategory.VALENCE,
-      value: 0.6
-    },
-    { 
-      category: SongFeatureCategory.TEMPO,
-      value: 0.5
-    },
-  ],
-  [
-    {
-      category: SongFeatureCategory.ENERGY,
-      value: 0.4
-    },
-    { 
-      category: SongFeatureCategory.DANCEABILITY,
-      value: 0.8
-    },
-    { 
-      category: SongFeatureCategory.SPEECHINESS,
-      value: 0.6
-    },
-    {
-      category: SongFeatureCategory.VALENCE,
-      value: 0.65
-    },
-    { 
-      category: SongFeatureCategory.TEMPO,
-      value: 0.8
-    },
-  ],
+const props = defineProps<{
+  session: Session,
+}>();
 
-  // Add more flowers as needed
-]);
+const flowerData = computed(() => {
+  return props.session.playlist.map(getSongFeatures);
+});
 
 //Zoom Function for the main visualization --> will be adapted at a later point
 const zoomLevel = ref(1);
@@ -237,7 +88,6 @@ watch(flowerData, () => {
   }
 }, { immediate: true });
 
-
 // Define a grid size and positions for flowers
 const gridSize = 80;
 const maxVerticalMoves = 3;
@@ -245,56 +95,65 @@ const maxVerticalMoves = 3;
 let containerWidth = 0;
 let containerHeight = 0;
 
+const gridPositionToScreenPositionDeltaX = 100;
+const gridPositionToScreenPositionDeltaY = 150;
+let lastVerticalDirection = 0;
+let currentX = 0;
+let currentY = Math.floor(Math.random() * gridSize * maxVerticalMoves); //Random vertical placement for the first flower
+let verticalNrFlowers = 1; //Nr of flowers vertically
+
+
+const generateNextRandomGridPosition = () => {
+  const stayInColumn = Math.random() > 0.5; //Decide whether to stay in same column or move to right
+  const maxStack = (currentY <= gridSize || currentY >= gridSize * (maxVerticalMoves-1)) ? 3 : 2; // Determine maximum vertical based on currentY position
+
+  if (stayInColumn && verticalNrFlowers < maxStack) {
+    let verticalDirection = lastVerticalDirection;
+
+    if (lastVerticalDirection === 1) {
+      verticalDirection = 1;
+    } else if (lastVerticalDirection === -1) {
+      verticalDirection = -1;
+    } else {
+      if (currentY <= gridSize) { // If currentY too close to top, next flower will be placed down
+        verticalDirection = 1;
+      } else if (currentY >= gridSize * maxVerticalMoves) { // If currentY too close to bottom, next flower will be placed up
+        verticalDirection = -1;;
+      } else {
+        verticalDirection = Math.random() > 0.5 ? 1 : -1;
+      }
+    }
+    lastVerticalDirection = verticalDirection
+    const verticalMove = verticalDirection * gridSize * (Math.random() > 0.5 ? 1.5 : 2);
+    currentY += verticalMove;
+    verticalNrFlowers++;
+    return {x: currentX, y: currentY};
+
+  } else {
+    verticalNrFlowers = 0;
+    const horizontalMove = gridSize * (Math.random() > 0.5 ? 1.5 : 2);
+    currentX += horizontalMove;
+    verticalNrFlowers = 1;
+
+    lastVerticalDirection = 0;
+
+    // Define first currentY, when moved horizontally
+    const randomStartPositions = [0, gridSize * maxVerticalMoves, gridSize * Math.floor(maxVerticalMoves / 2)];
+    currentY = randomStartPositions[Math.floor(Math.random() * randomStartPositions.length)];
+
+    return { x: currentX, y: currentY };
+  }
+}
+
 // Assign positions randomly
 const generateRandomGridPositions = (flowerCount: number) => {
   const positions = [];
-  let currentX = 0;
-  let currentY = Math.floor(Math.random() * gridSize * maxVerticalMoves); //Random vertical placement for the first flower
-  let verticalNrFlowers = 1; //Nr of flowers vertically
-  let lastVerticalDirection = 0;
 
   for (let i = 0; i < flowerCount; i++) {
     if (i == 0) {
       positions.push({ x:0, y:currentY}); // First flower starts in first column and random Y
     } else {
-      const stayInColumn = Math.random() > 0.5; //Decide whether to stay in same column or move to right
-      const maxStack = (currentY <= gridSize || currentY >= gridSize * (maxVerticalMoves-1)) ? 3 : 2; // Determine maximum vertical based on currentY position
-
-      if (stayInColumn && verticalNrFlowers < maxStack) {
-        let verticalDirection = lastVerticalDirection;
-
-        if (lastVerticalDirection === 1) {
-          verticalDirection = 1;
-        } else if (lastVerticalDirection === -1) {
-          verticalDirection = -1;
-        } else {
-          if (currentY <= gridSize) { // If currentY too close to top, next flower will be placed down
-            verticalDirection = 1;
-          } else if (currentY >= gridSize * maxVerticalMoves) { // If currentY too close to bottom, next flower will be placed up
-            verticalDirection = -1;;
-          } else {
-            verticalDirection = Math.random() > 0.5 ? 1 : -1;
-          }
-        }
-        lastVerticalDirection = verticalDirection
-        const verticalMove = verticalDirection * gridSize * (Math.random() > 0.5 ? 1.5 : 2);
-        currentY += verticalMove;
-        verticalNrFlowers++;
-        positions.push({x: currentX, y: currentY});
-      } else {
-        verticalNrFlowers = 0;
-        const horizontalMove = gridSize * (Math.random() > 0.5 ? 1.5 : 2);
-        currentX += horizontalMove;
-        verticalNrFlowers = 1;
-
-        lastVerticalDirection = 0;
-
-        // Define first currentY, when moved horizontally
-        const randomStartPositions = [0, gridSize * maxVerticalMoves, gridSize * Math.floor(maxVerticalMoves / 2)];
-        currentY = randomStartPositions[Math.floor(Math.random() * randomStartPositions.length)];
-
-        positions.push({ x: currentX, y: currentY });
-      }
+      positions.push(generateNextRandomGridPosition());
     }
   }
 
@@ -303,31 +162,49 @@ const generateRandomGridPositions = (flowerCount: number) => {
 
 const gridPositions = ref(generateRandomGridPositions(flowerData.value.length));
 
+const recommendationsContainer = ref(null);
 
-// Function to calculate styles for each flower based on grid positions
-const getFlowerStyles = (index: number): CSSProperties => {
-  const position = gridPositions.value[index];
+// Position the next recommendations close to the last song
+const recommendationsStyle = computed(() => {
 
-  if (!position) {
-    console.error(`Position for flower at index ${index} is undefined.`);
-    return {
-      position: 'absolute',
-      left: `0px`,
-      top: `0px`,
-      width: `160px`,
-      height: `160px`,
-    };
+  const distanceToLastSong = 50;
+
+  let x = 0;
+  let y = 0;
+
+  if (gridPositions.value.length !== 0) {
+    const lastSongPosition = gridPositions.value[gridPositions.value.length - 1];
+    x = lastSongPosition.x + distanceToLastSong;
+    y = lastSongPosition.y;
   }
 
-  const { x, y } = position;
-
   return {
-    position: 'absolute',
-    left: `${x + 40}px`,
-    top: `${y + 40}px`,
-    width: `160px`,
-    height: `160px`,
+    left: `${x + gridPositionToScreenPositionDeltaX}px`,
+    top: `${y + gridPositionToScreenPositionDeltaY}px`,
   };
+
+});
+
+const flowerStyles = computed(() => {
+  for (let i = gridPositions.value.length; i < flowerData.value.length; i++) {
+    gridPositions.value = [...gridPositions.value, generateNextRandomGridPosition()];
+  }
+
+  return gridPositions.value.map((position) => {
+    const { x, y } = position;
+
+    return {
+      position: 'absolute',
+      left: `${x + gridPositionToScreenPositionDeltaX}px`,
+      top: `${y + gridPositionToScreenPositionDeltaY}px`,
+    };
+  });
+});
+
+
+const scrollRecommendationsIntoView = async () => {
+  await nextTick();
+  recommendationsContainer.value?.firstChild.scrollIntoView({behavior: "smooth", block: "start"});
 };
 
 onMounted(() => {
@@ -379,16 +256,22 @@ const onPetalClick = (index: number, featureCategory: SongFeatureCategory) => {
           <div
               v-for="(flower, index) in flowerData"
               :key="index"
-              :style="getFlowerStyles(index)"
+              :style="flowerStyles[index]"
               class="flower-wrapper"
           >
             <Flower
                 :features="flower"
-                :size="80"
                 :circleRadius="40"
                 @onPetalClick="(featureCategory) => onPetalClick(index, featureCategory)"
             />
           </div>
+            <Recommendations
+              :sessionId="session.id"
+              :key="flowerData.length"
+              class="recommendations"
+              :style="recommendationsStyle"
+              @recommendationsLoaded="scrollRecommendationsIntoView()"
+            />
         </div>
       </div>
     </div>
@@ -400,7 +283,7 @@ const onPetalClick = (index: number, featureCategory: SongFeatureCategory) => {
   </div>
 </template>
 
-<style>
+<style scoped>
 .main-visualization {
   width: 100%;
   height: 100%;
@@ -480,7 +363,6 @@ const onPetalClick = (index: number, featureCategory: SongFeatureCategory) => {
 .flower {
   transition: all 0.3s ease;
 }
-
 .flower-wrapper {
   position: absolute;
   display: flex;
@@ -488,5 +370,12 @@ const onPetalClick = (index: number, featureCategory: SongFeatureCategory) => {
   justify-content: center;
   width: 160px;
   height: 160px;
+  transform: translate(-50%, -50%);
+}
+.recommendations {
+  position: relative;
+  transform: translate(0%, -50%);
+  transition: all 0.3s ease;
+  margin: auto;
 }
 </style>

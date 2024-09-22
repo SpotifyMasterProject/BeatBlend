@@ -59,6 +59,7 @@ const generatePetalPath = (totalLength: number, totalWidth: number) => {
 
 const petalPaths = computed(() => {
   const baseRadius = props.circleRadius; // Base radius is 40px
+
   const petalLength = baseRadius * props.feature.value * 2; // Petal length based on value
   const maxMidWidth = petalLength / 2; // Make the middle the broadest part
 
