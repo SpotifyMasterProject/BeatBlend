@@ -96,6 +96,11 @@ class Service:
         if session.host_id != host_id:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not host of session.")
 
+    @staticmethod
+    def verify_guest_of_session(guest_id: str, session: Session) -> None:
+        if guest_id not in session.guests:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Guest not part of session.")
+
     async def verify_instances(self, user_ids: str | list[str] = "", session_id: str = ""):
         if isinstance(user_ids, str) and user_ids:
             await self.verify_user(user_ids)
@@ -208,17 +213,15 @@ class Service:
         if host_id:
             self.verify_host_of_session(host_id, session)
 
-        if guest.id in session.guests:
-            session.guests.remove(guest.id)
-            await self.repo.set_session(session)
-            guest.sessions.remove(session.id)
-            await self.repo.set_user(guest)
-            if host_id:
-                await manager.publish(channel=session.id, message=f"Guest {guest_id} was removed from session by host")
-            else:
-                await manager.publish(channel=session.id, message=f"Guest {guest_id} left session")
+        self.verify_guest_of_session(guest_id, session)
+        session.guests.remove(guest.id)
+        await self.repo.set_session(session)
+        guest.sessions.remove(session.id)
+        await self.repo.set_user(guest)
+        if host_id:
+            await manager.publish(channel=session.id, message=f"Guest {guest_id} was removed from session by host")
         else:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Guest not part of session.")
+            await manager.publish(channel=session.id, message=f"Guest {guest_id} left session")
 
     async def verify_session(self, session_id: str) -> None:
         await self.repo.verify_session_by_id(session_id)
@@ -253,34 +256,41 @@ class Service:
         return SongList(songs=songs)
 
     async def add_vote_to_recommendation(self, guest_id: str, session_id: str, song_id: str) -> Session:
-        guest = await self.get_user(guest_id)
         session = await self.get_session(session_id)
+        self.verify_guest_of_session(guest_id, session)
         if song_id not in session.recommendations:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song is not recommended.")
         session.recommendations[song_id] += 1
         await self.repo.set_session(session)
+
+        guest = await self.get_user(guest_id)
         guest.last_voted_on = song_id
         await self.repo.set_user(guest)
         await manager.publish(channel=session.id, message="Vote added.")
         return session
 
     async def remove_vote_from_recommendation(self, guest_id: str, session_id: str, song_id: str) -> None:
-        guest = await self.get_user(guest_id)
         session = await self.get_session(session_id)
+        self.verify_guest_of_session(guest_id, session)
         if song_id not in session.recommendations:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song is not recommended.")
         session.recommendations[song_id] -= 1
         await self.repo.set_session(session)
+
+        guest = await self.get_user(guest_id)
         guest.last_voted_on = None
         await self.repo.set_user(guest)
         await manager.publish(channel=session.id, message="Vote removed.")
 
     async def change_vote_on_recommendation(self, guest_id: str, session_id: str, song_id: str) -> Session:
+        session = await self.get_session(session_id)
+        self.verify_guest_of_session(guest_id, session)
+
         guest = await self.get_user(guest_id)
         if not guest.last_voted_on:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No vote has been given yet.")
-        await self.remove_vote_from_recommendation(guest.id, session_id, guest.last_voted_on)
-        return await self.add_vote_to_recommendation(guest.id, session_id, song_id)
+        await self.remove_vote_from_recommendation(guest.id, session.id, guest.last_voted_on)
+        return await self.add_vote_to_recommendation(guest.id, session.id, song_id)
 
     @staticmethod
     async def establish_ws_connection_to_channel_by_session_id(websocket: WebSocket, session_id: str) -> None:
