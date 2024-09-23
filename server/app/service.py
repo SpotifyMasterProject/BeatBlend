@@ -243,7 +243,7 @@ class Service:
     # async def delete_song_from_database(self, song_id: str) -> None:
     #     await self.repo.delete_song_by_id(song_id)
 
-    async def get_recommendations_from_database(self, session_id: str, limit: int) -> SongList:
+    async def generate_and_get_recommendations_from_database(self, session_id: str, limit: int) -> SongList:
         session = await self.get_session(session_id)
         session.recommendations.clear()
         await self.repo.set_session(session)
