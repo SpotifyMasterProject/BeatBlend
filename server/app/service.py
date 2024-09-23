@@ -292,6 +292,11 @@ class Service:
         await self.remove_vote_from_recommendation(guest.id, session.id, guest.last_voted_on)
         return await self.add_vote_to_recommendation(guest.id, session.id, song_id)
 
+    async def get_most_popular_recommendation(self, session_id: str) -> Song:
+        session = await self.get_session(session_id)
+        song_id = max(session.recommendations, key=lambda votes: session.recommendations[votes])
+        return await self.get_song_from_database(song_id)
+
     @staticmethod
     async def establish_ws_connection_to_channel_by_session_id(websocket: WebSocket, session_id: str) -> None:
         manager.active_connections[session_id].add(websocket)

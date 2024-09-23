@@ -98,10 +98,16 @@ async def remove_song(host_id: Annotated[str, Depends(service.verify_token)], se
     await service.remove_song_from_session(host_id, session_id, song_id)
 
 
-@app.get("/sessions/{session_id}/recommendations", status_code=status.HTTP_200_OK, response_model=SongList)
+@app.patch("/sessions/{session_id}/recommendations", status_code=status.HTTP_200_OK, response_model=SongList)
 async def get_recommendations(user_id: Annotated[str, Depends(service.verify_token)], session_id: str, limit: int = 3) -> SongList:
     await service.verify_instances(user_ids=user_id, session_id=session_id)
     return await service.get_recommendations_from_database(session_id, limit)
+
+
+@app.get("/sessions/{session_id}/recommendations", status_code=status.HTTP_200_OK, response_model=Song)
+async def get_popular_recommendation(user_id: Annotated[str, Depends(service.verify_token)], session_id: str) -> Song:
+    await service.verify_instances(user_ids=user_id, session_id=session_id)
+    return await service.get_most_popular_recommendation(session_id)
 
 
 @app.post("/sessions/{session_id}/recommendations/{song_id}/vote", status_code=status.HTTP_200_OK, response_model=Session)
