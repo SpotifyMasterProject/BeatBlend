@@ -86,7 +86,7 @@ async def leave_session(guest_id: Annotated[str, Depends(service.verify_token)],
     await service.remove_guest_from_session("", guest_id, session_id)
 
 
-@app.patch("/sessions/{session_id}/songs", status_code=status.HTTP_200_OK, response_model=Session)
+@app.post("/sessions/{session_id}/songs", status_code=status.HTTP_200_OK, response_model=Session)
 async def add_song(user_id: Annotated[str, Depends(service.verify_token)], session_id: str, song_id: str) -> Session:
     await service.verify_instances(user_ids=user_id, session_id=session_id)
     return await service.add_song_to_session(user_id, session_id, song_id)
@@ -102,6 +102,24 @@ async def remove_song(host_id: Annotated[str, Depends(service.verify_token)], se
 async def get_recommendations(user_id: Annotated[str, Depends(service.verify_token)], session_id: str, limit: int = 3) -> SongList:
     await service.verify_instances(user_ids=user_id, session_id=session_id)
     return await service.get_recommendations_from_database(session_id, limit)
+
+
+@app.post("/sessions/{session_id}/recommendations/{song_id}/vote", status_code=status.HTTP_200_OK, response_model=Session)
+async def vote(guest_id: Annotated[str, Depends(service.verify_token)], session_id: str, song_id: str) -> Session:
+    await service.verify_instances(user_ids=guest_id, session_id=session_id)
+    return await service.add_vote_to_recommendation(guest_id, session_id, song_id)
+
+
+@app.put("/sessions/{session_id}/recommendations/{song_id}/vote", status_code=status.HTTP_200_OK, response_model=Session)
+async def change_vote(guest_id: Annotated[str, Depends(service.verify_token)], session_id: str, song_id: str) -> Session:
+    await service.verify_instances(user_ids=guest_id, session_id=session_id)
+    return await service.change_vote_on_recommendation(guest_id, session_id, song_id)
+
+
+@app.delete("/sessions/{session_id}/recommendations/{song_id}/vote", status_code=status.HTTP_204_NO_CONTENT)
+async def change_vote(guest_id: Annotated[str, Depends(service.verify_token)], session_id: str, song_id: str) -> None:
+    await service.verify_instances(user_ids=guest_id, session_id=session_id)
+    await service.remove_vote_from_recommendation(guest_id, session_id, song_id)
 
 
 @app.get("/songs", status_code=status.HTTP_200_OK, response_model=SongList)

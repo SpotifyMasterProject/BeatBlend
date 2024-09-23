@@ -252,6 +252,35 @@ class Service:
         await manager.publish(channel=session.id, message="New recommendations fetched.")
         return SongList(songs=songs)
 
+    async def add_vote_to_recommendation(self, guest_id: str, session_id: str, song_id: str) -> Session:
+        guest = await self.get_user(guest_id)
+        session = await self.get_session(session_id)
+        if song_id not in session.recommendations:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song is not recommended.")
+        session.recommendations[song_id] += 1
+        await self.repo.set_session(session)
+        guest.last_voted_on = song_id
+        await self.repo.set_user(guest)
+        await manager.publish(channel=session.id, message="Vote added.")
+        return session
+
+    async def remove_vote_from_recommendation(self, guest_id: str, session_id: str, song_id: str) -> None:
+        guest = await self.get_user(guest_id)
+        session = await self.get_session(session_id)
+        if song_id not in session.recommendations:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song is not recommended.")
+        session.recommendations[song_id] -= 1
+        await self.repo.set_session(session)
+        guest.last_voted_on = None
+        await self.repo.set_user(guest)
+        await manager.publish(channel=session.id, message="Vote removed.")
+
+    async def change_vote_on_recommendation(self, guest_id: str, session_id: str, song_id: str) -> Session:
+        guest = await self.get_user(guest_id)
+        if not guest.last_voted_on:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No vote has been given yet.")
+        await self.remove_vote_from_recommendation(guest.id, session_id, guest.last_voted_on)
+        return await self.add_vote_to_recommendation(guest.id, session_id, song_id)
 
     @staticmethod
     async def establish_ws_connection_to_channel_by_session_id(websocket: WebSocket, session_id: str) -> None:
