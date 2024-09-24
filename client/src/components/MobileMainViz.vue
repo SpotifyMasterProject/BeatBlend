@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import Flower from "@/components/Flower.vue";
 import {SongFeatureCategory} from '@/types/SongFeature';
-import {ref} from 'vue';
+import {ref, onMounted, onUnmounted} from 'vue';
 
 const songList = ref([
   { title: "Baby Powder", artist: "Jenevieve", features: [
@@ -27,23 +27,42 @@ const songList = ref([
     ]}
 ]);
 
-const votes = ref(songList.value.map(() => ({ up: false, down: false })));
+const selectedVote = ref<number | null>(null);
+const countdown = ref(90);
+let timer: NodeJS.Timeout | null = null;
 
-const handleVote = (type: 'up' | 'down', songIndex: number) => {
-  if (type === 'up') {
-    votes.value[songIndex].up = true;
-    votes.value[songIndex].down = false; // Prevents both upvote and downvote being active simultaneously
-  } else if (type === 'down') {
-    votes.value[songIndex].up = false;
-    votes.value[songIndex].down = true;
+const handleVote = (songIndex: number) => {
+  if (selectedVote.value === songIndex) {
+    selectedVote.value = null; // Deselect the current song if clicked again
+  } else {
+    selectedVote.value = songIndex; // Select the song and deselect any previously selected one
   }
-  console.log(`Voted ${type} for song ${songList.value[songIndex].title}`);
+  console.log(`Voted for song ${songList.value[songIndex].title}`);
 };
+
+// countdown
+onMounted(() => {
+  timer = setInterval(() => {
+    if (countdown.value > 0) {
+      countdown.value -= 1;
+    }
+  }, 1000);
+});
+
+onUnmounted(() => {
+  if (timer) {
+    clearInterval(timer); // Cleanup interval when the component unmounts
+  }
+});
+
 </script>
 
 <template>
   <div class="mobile-visualization">
-    <h2>Vote for the next song!</h2>
+    <div class="sticky-header">
+      <h2 class="header">Vote for the next song!</h2>
+      <p class="countdown">Time remaining: {{ countdown }}s</p>
+    </div>
     <div class="song-list">
       <div v-for="(song, index) in songList" :key="index" class="song-item">
         <Flower :features="song.features" :size="80" :circleRadius="40" />
@@ -53,16 +72,10 @@ const handleVote = (type: 'up' | 'down', songIndex: number) => {
         </div>
         <div class="vote-controls">
           <button
-            :class="{ active: votes[index].up }"
-            @click="handleVote('up', index)"
+            :class="{ active: selectedVote === index }"
+            @click="handleVote(index)"
           >
             <i class="pi pi-thumbs-up"></i>
-          </button>
-          <button
-            :class="{ active: votes[index].down }"
-            @click="handleVote('down', index)"
-          >
-            <i class="pi pi-thumbs-down"></i>
           </button>
         </div>
       </div>
@@ -70,11 +83,31 @@ const handleVote = (type: 'up' | 'down', songIndex: number) => {
   </div>
 </template>
 
+
 <style scoped>
 .mobile-visualization {
   text-align: center;
   color: white;
   overflow: auto;
+}
+
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background-color: #272525;
+}
+
+.header {
+  font-size: 18px;
+  margin-top: 0;
+  margin-bottom: 5px;
+}
+
+.countdown {
+  font-size: 16px;
+  margin-bottom: 5px;
+  color: #ffcc00;
 }
 
 .song-list {
@@ -109,7 +142,6 @@ const handleVote = (type: 'up' | 'down', songIndex: number) => {
 .vote-controls {
   display: flex;
   flex-direction: column;
-  gap: 10px;
   justify-content: center;
   align-items: center;
 }
