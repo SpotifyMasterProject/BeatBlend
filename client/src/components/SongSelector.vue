@@ -43,11 +43,10 @@ const props = defineProps({
     },
 });
 
-const emit = defineEmits(['update:selectedSongs']);
 
 const filteredSongs = ref([]);
 const selectedSong = ref(null);
-const selectedSongs = ref([]);
+const selectedSongs = defineModel();
 
 // Combines the artists into a single string.
 const combineArtists = (artists: string[]) => {
@@ -78,11 +77,6 @@ const removeSong = (songToRemove: Song) => {
     selectedSongs.value = selectedSongs.value.filter((song: Song) => song.id !== songToRemove.id);
 };
 
-
-// Watch for changes in selectedSongs and emit the update to the parent
-watch(selectedSongs, (newVal) => {
-    emit('update:selectedSongs', newVal);
-});
 </script>
 
 <style scoped>

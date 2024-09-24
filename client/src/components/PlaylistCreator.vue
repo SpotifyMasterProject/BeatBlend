@@ -28,7 +28,7 @@ const startSession = async () => {
     <div class="playlist-creator">
         <InputText class="title" type="text" v-model="title" placeholder="Playlist Title..." />
         <SongSelector
-            @update:selectedSongs="val => selectedSongs = val"
+            v-model="selectedSongs"
             headerText="Add 3 songs to start the blend" />
         <Button class="start-session" :disabled="!canStartSession" @click="startSession">
             Start

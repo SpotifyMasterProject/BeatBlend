@@ -17,6 +17,7 @@ import StartBlendButton from "@/components/StartBlendButton.vue";
 import PlaylistCreator from "@/components/PlaylistCreator.vue";
 import { HostSession } from "@/types/Session";
 import { sessionService } from "@/services/sessionService";
+import SessionWebsocketService from "@/services/sessionWebsocketService";
 
 const showPreviouslyPlayed = ref(false);
 const showAddMoreSongPopup = ref(false);
@@ -51,6 +52,12 @@ const authStore = useAuthStore();
 const isHost = authStore.user?.isHost ?? false;
 const errorMessage = ref();
 const loading = ref(true);
+const sessionSocket = new SessionWebsocketService();
+
+// TODO: Handle websocket messages.
+const handleSessionMessages = (message) => {
+  console.log(message);
+};
 
 onMounted(async () => {
   await router.isReady();
@@ -63,6 +70,8 @@ onMounted(async () => {
     loading.value = false;
     return;
   }
+
+  sessionSocket.connect(sessionId, handleSessionMessages);
 
   try {
     sessions.value = [await sessionService.getSessionById(sessionId)];
@@ -91,6 +100,8 @@ const runningSession = ref();
 
 const startSession = async (session) => {
   sessions.value = [await sessionService.createNewSession(session), ...sessions.value];
+  sessionSocket.connect(session.sessionId, handleSessionMessages);
+
   createNewSessionFlow.value = false;
   selectedSessionIndex.value = 0;
 };
@@ -102,6 +113,15 @@ function toggleInfo(){
 }
 const closeVisualizationAid = () => {
   showVisualizationAid.value = false;
+};
+
+const addSongs = (songs) => {
+  if (sessions.value && sessions.value.length) {
+    sessions.value[selectedSessionIndex.value].playlist = [
+      ...sessions.value[selectedSessionIndex.value].playlist,
+      ...songs
+    ];
+  }
 };
 </script>
 
@@ -131,7 +151,7 @@ const closeVisualizationAid = () => {
         <div class="info-box" :class="{ active: showVisualizationAid }" @click="toggleInfo">
           <div> i </div>
         </div>
-        <MainVisualization />
+        <MainVisualization :session="currentSession" />
       </template>
     </div>
     <div v-if="currentSession" class="footer-section">
@@ -163,11 +183,14 @@ const closeVisualizationAid = () => {
       <qrcode-vue v-if="isHost" :value="currentSession.inviteLink" />
     </div>
     <!-- Conditionally render VisualizationAid component -->
-    <VisualizationAid v-if="showVisualizationAid" @close-popup="closeVisualizationAid" />/>
+    <VisualizationAid v-if="showVisualizationAid" @close-popup="closeVisualizationAid" />
     <!-- Popup Overlay -->
     <div v-if="showAddMoreSongPopup" class="popup-overlay" @click="toggleAddMoreSongPopup">
       <div class="popup-content" @click.stop>
-        <AddMoreSong @close-popup="toggleAddMoreSongPopup"/>
+        <AddMoreSong
+          @close-popup="toggleAddMoreSongPopup"
+          :sessionId="currentSession.id"
+          @songsSelected="(songs) => addSongs(songs)" />
       </div>
     </div>
   </div>

@@ -3,7 +3,6 @@ import HomeView from '../views/HomeView.vue'
 import LandingView from '@/views/LandingView.vue'
 import { useAuthStore } from '@/stores/auth'
 import { userService } from '@/services/userService'
-import WebsocketView from '@/views/WebsocketView.vue'
 import AuthorizeSpotifyView from '@/views/AuthorizeSpotifyView.vue'
 
 const router = createRouter({
@@ -50,11 +49,6 @@ const router = createRouter({
       // this generates a separate chunk (About.[hash].js) for this route
       // which is lazy-loaded when the route is visited.
       component: () => import('../views/AboutView.vue'),
-    },
-    {
-      path: '/websockets',
-      name: 'websockets',
-      component: WebsocketView
     },
   ]
 })
