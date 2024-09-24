@@ -47,7 +47,8 @@ const closeModal = () => {
   border-radius: 15px;
   padding: 10px;
   z-index: 1001;
-  width: 300px;
+  width: 90%;
+  max-width: 400px;
   color: #D9D9D9;
   border: 2px solid #6AA834;
 }
@@ -69,6 +70,7 @@ const closeModal = () => {
   margin: 0;
   font-size: 18px;
   font-weight: bold;
+  word-wrap: break-word;
 }
 
 .modal-header button {
@@ -143,5 +145,37 @@ input[type="range"]:disabled {
 .range-labels span {
   font-size: 12px;
   color: #D9D9D9;
+}
+
+@media (max-width: 600px) {
+  .song-detail-modal {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 70%;
+    padding: 15px;
+  }
+
+  .modal-header h3 {
+    font-size: 16px;
+  }
+
+  p {
+    font-size: 14px;
+  }
+
+  .modal-header button {
+    font-size: 18px;
+  }
+
+  input[type="range"] {
+    height: 3px;
+  }
+
+  input[type="range"]::-webkit-slider-thumb,
+  input[type="range"]::-moz-range-thumb {
+    width: 15px;
+    height: 15px;
+  }
 }
 </style>
