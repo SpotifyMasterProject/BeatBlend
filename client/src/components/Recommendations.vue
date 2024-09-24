@@ -55,7 +55,7 @@ onMounted(async () => {
   white-space: nowrap;
 }
 .song-details {
-  overflow: auto;
+  overflow: hidden;
   text-overflow: ellipsis;
 }
 .recommendations-wrapper {

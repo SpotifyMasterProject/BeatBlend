@@ -7,6 +7,6 @@ export enum SongFeatureCategory {
 };
 
 export interface SongFeature {
-    readonly category: SongFeatureCategory;
+    readonly category?: SongFeatureCategory;
     readonly value: number;
 };
