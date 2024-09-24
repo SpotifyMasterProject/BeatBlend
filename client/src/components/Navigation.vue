@@ -7,7 +7,6 @@ import {RouterLink} from "vue-router";
     <RouterLink to="/">Landing Page</RouterLink>
     <RouterLink to="/home">Home</RouterLink>
     <RouterLink to="/about">About</RouterLink>
-    <RouterLink to="/websockets">Websocket Test</RouterLink>
   </nav>
 </template>
 

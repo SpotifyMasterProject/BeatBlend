@@ -11,7 +11,7 @@ import TabPanel from 'primevue/tabpanel';
 
 const props = defineProps<{
   flowerData: SongFeature[][],
-  currentSelectedFeature: {index: number, featureCategory: SongFeatureCategory};
+  currentSelectedFeature?: {index: number, featureCategory: SongFeatureCategory};
 }>();
 
 const visible = defineModel();
@@ -26,10 +26,10 @@ const chartOptions = {
   },
   scales: {
     y: {
-      min: -1,
+      min: 0,
       max: 1,
       ticks: {
-        stepSize: 0.5
+        stepSize: 0.25
       }
     }
   }

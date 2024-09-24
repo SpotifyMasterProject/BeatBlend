@@ -1,12 +1,12 @@
 export enum SongFeatureCategory {
-    TEMPO,
-    ENERGY,
-    VALENCE,
-    DANCEABILITY,
-    SPEECHINESS
+    TEMPO = 0,
+    ENERGY = 1,
+    VALENCE = 2,
+    DANCEABILITY = 3,
+    SPEECHINESS = 4
 };
 
 export interface SongFeature {
-    readonly category: SongFeatureCategory;
+    readonly category?: SongFeatureCategory;
     readonly value: number;
 };

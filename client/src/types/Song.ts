@@ -8,6 +8,7 @@ export class Song {
     speechiness: number
     valence: number
     tempo: number
+    scaledTempo: number
     release_date: string
     popularity: number
 
@@ -21,6 +22,7 @@ export class Song {
         speechiness: number
         valence: number
         tempo: number
+        scaledTempo: number
         release_date: string
         popularity: number
     }) {
@@ -33,6 +35,7 @@ export class Song {
         this.speechiness = data.speechiness
         this.valence = data.valence
         this.tempo = data.tempo
+        this.scaledTempo = data.scaledTempo
         this.release_date = data.release_date
         this.popularity = data.popularity
     }

@@ -8,7 +8,7 @@ const props = defineProps<{
   circleRadius: number;
 }>();
 
-const rotation = computed(() => (props.feature.category * 360) / 5);
+const rotation = computed(() => ((props.feature.category ?? 0) * 360 / 5));
 
 const colorPalettes = {
   [SongFeatureCategory.DANCEABILITY]: ['#0F3740', '#144550', '#194E59', '#1D5864', '#25606C'],
@@ -24,7 +24,7 @@ const calculateEllipseArea = (width: number, height: number) => {
 
 const generatePetalPath = (totalLength: number, totalWidth: number) => {
   const pathData: string[] = [];
-  const sections = 5;
+  const sections = (props.feature.category !== undefined) ? 5 : 1;
   const totalArea = calculateEllipseArea(totalWidth, totalLength);
 
   // Calculate the area for each section (linear distribution)
@@ -65,7 +65,13 @@ const petalPaths = computed(() => {
   return generatePetalPath(petalLength, maxMidWidth);
 });
 
-const petalColors = computed(() => colorPalettes[props.feature.category]);
+const petalColors = computed(() => {
+  if (props.feature.category !== undefined) {
+    return colorPalettes[props.feature.category];
+  }
+
+  return [null];
+});
 
 
 </script>
@@ -78,7 +84,7 @@ const petalColors = computed(() => colorPalettes[props.feature.category]);
         :d="path"
         :fill="petalColors[i]"
         stroke="rgba(255, 255, 255, 0.3)"
-        stroke-width="0.5"
+        :stroke-width="props.feature.category !== undefined ? 0.5 : 2.0"
     />
   </g>
 </template>

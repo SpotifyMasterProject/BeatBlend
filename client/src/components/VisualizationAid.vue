@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import Flower from './Flower.vue';
 import Petal from './Petal.vue';
+import { SongFeature, SongFeatureCategory } from '@/types/SongFeature';
 
 const showPopup = ref(true);
 
@@ -24,15 +25,13 @@ function closePopup(){
             <svg width="160" height="160">
               <circle cx="80" cy="80" r="40" fill="none" stroke="#FFFFFF" stroke-width="2"/>
               <Petal
-                  :index="0"
-                  :value="1"
+                  :feature="{value: 0.5}"
                   :center="80"
                   :circleRadius="40"
                   fill="none"
               />
               <Petal
-                  :index="0"
-                  :value="0.5"
+                  :feature="{value: 1.0}"
                   :center="80"
                   :circleRadius="40"
                   fill="none"
@@ -59,32 +58,32 @@ function closePopup(){
           <!-- Right Column: Flower and Audio Features Below -->
           <div class="flower-container">
             <Flower :features="[
-              { value: 0.5, color: '#144550' },
-              { value: 0.5, color: '#597738' },
-              { value: 0.5, color: '#F38E36' },
-              { value: 0.5, color: '#A65FDD' },
-              { value: 0.5, color: '#FEFAE1' }
+              { value: 0.5, category: SongFeatureCategory.TEMPO },
+              { value: 0.5, category: SongFeatureCategory.ENERGY },
+              { value: 0.5, category: SongFeatureCategory.DANCEABILITY },
+              { value: 0.5, category: SongFeatureCategory.SPEECHINESS },
+              { value: 0.5, category: SongFeatureCategory.VALENCE }
             ]"/>
           </div>
           <div class="petal-descriptions-horizontal">
             <div class="petal-description">
-              <div class="petal-color" style="background-color: #25606C;"></div>
+              <div class="petal-color energy"></div>
               <p>Energy</p>
-            </div>
+            </div>  
             <div class="petal-description">
-              <div class="petal-color" style="background-color: #597738;"></div>
+              <div class="petal-color danceability"></div>
               <p>Danceability</p>
             </div>
             <div class="petal-description">
-              <div class="petal-color" style="background-color: #F99945;"></div>
+              <div class="petal-color speechiness"></div>
               <p>Speechiness</p>
             </div>
             <div class="petal-description">
-              <div class="petal-color" style="background-color: #CCA9E9;"></div>
+              <div class="petal-color valence"></div>
               <p>Valence</p>
             </div>
             <div class="petal-description">
-              <div class="petal-color" style="background-color: #FEFAE1;"></div>
+              <div class="petal-color tempo"></div>
               <p>Tempo</p>
             </div>
           </div>
@@ -289,5 +288,24 @@ function closePopup(){
   .column-1::after {
     display: none; /* Hides the line */
   }
+}
+.tempo {
+  background-color: var(--tempo-color);
+}
+
+.valence {
+  background-color: var(--valence-color);
+}
+
+.speechiness {
+  background-color: var(--speechiness-color);
+}
+
+.danceability {
+  background-color: var(--danceability-color);
+}
+
+.energy {
+  background-color: var(--energy-color);
 }
 </style>

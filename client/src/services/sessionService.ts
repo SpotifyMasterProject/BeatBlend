@@ -1,6 +1,8 @@
 import apiClient from '@/services/axios';
 import { Session } from '@/types/Session';
 import { Song } from '@/types/Song';
+import { SongFeatureCategory } from '@/types/SongFeature';
+import type { SongFeature } from '@/types/SongFeature';
 
 export const sessionService = {
 
@@ -28,5 +30,42 @@ export const sessionService = {
         return apiClient.post(`/sessions`, {...session}).then((response) => {
             return response.data;
         })
+    },
+    async getRecommendations(sessionId: string): Promise<Song[]> {
+        return apiClient.get(`/sessions/${sessionId}/recommendations`).then((response) => {
+            return response.data['songs'];
+        })
+    },
+    async addSong(sessionId: string, songId: string): Promise<Session> {
+        return apiClient.patch(
+            `/sessions/${sessionId}/songs`, null,
+            {params: {songId}}).then((response) => {
+            return response.data;
+        })
     }
 };
+
+export const getSongFeatures = (song: Song): SongFeature[] => {
+    return [
+        {
+            category: SongFeatureCategory.TEMPO,
+            value: song.scaledTempo
+        },
+        {
+            category: SongFeatureCategory.ENERGY,
+            value: song.energy
+        },
+        {
+            category: SongFeatureCategory.VALENCE,
+            value: song.valence
+        },
+            {
+            category: SongFeatureCategory.DANCEABILITY,
+            value: song.danceability
+        },
+        {
+            category: SongFeatureCategory.SPEECHINESS,
+            value: song.speechiness
+        },
+    ];
+}
