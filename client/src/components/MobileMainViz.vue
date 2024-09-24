@@ -29,32 +29,41 @@ const songList = ref([
 
 const selectedVote = ref<number | null>(null);
 const countdown = ref(90);
+const isTimeUp = ref(false);
 let timer: NodeJS.Timeout | null = null;
 
 const handleVote = (songIndex: number) => {
   if (selectedVote.value === songIndex) {
-    selectedVote.value = null; // Deselect the current song if clicked again
+    selectedVote.value = null;
   } else {
-    selectedVote.value = songIndex; // Select the song and deselect any previously selected one
+    selectedVote.value = songIndex;
   }
   console.log(`Voted for song ${songList.value[songIndex].title}`);
 };
 
-// countdown
+// Countdown logic
 onMounted(() => {
   timer = setInterval(() => {
     if (countdown.value > 0) {
       countdown.value -= 1;
+    } else if (countdown.value === 0) {
+      isTimeUp.value = true; // Show popup when countdown reaches 0
+
+      // Automatically hide popup after 3 seconds
+      setTimeout(() => {
+        isTimeUp.value = false;
+      }, 5000);
+
+      clearInterval(timer);
     }
   }, 1000);
 });
 
 onUnmounted(() => {
   if (timer) {
-    clearInterval(timer); // Cleanup interval when the component unmounts
+    clearInterval(timer);
   }
 });
-
 </script>
 
 <template>
@@ -78,6 +87,12 @@ onUnmounted(() => {
             <i class="pi pi-thumbs-up"></i>
           </button>
         </div>
+      </div>
+    </div>
+    <div v-if="isTimeUp" class="popup">
+      <div class="popup-content">
+        <p class="line1">Time up!</p>
+        <p class="line2">Your vote has been collected!</p>
       </div>
     </div>
   </div>
@@ -107,7 +122,7 @@ onUnmounted(() => {
 .countdown {
   font-size: 16px;
   margin-bottom: 5px;
-  color: #ffcc00;
+  color: #FFCC00;
 }
 
 .song-list {
@@ -156,5 +171,36 @@ onUnmounted(() => {
 
 .vote-controls button.active {
   color: #6AA834;
+}
+
+.popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+}
+
+.popup-content {
+  background: #363636;
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.line1 {
+  font-size: 18px;
+  color: #FFCC00;
+}
+
+.line2 {
+  font-size: 16px;
+  color: #FFF;
 }
 </style>
