@@ -116,12 +116,6 @@ async def add_vote(guest_id: Annotated[str, Depends(service.verify_token)], sess
     return await service.add_vote_to_recommendation(guest_id, session_id, song_id)
 
 
-@app.put("/sessions/{session_id}/recommendations/{song_id}/vote", status_code=status.HTTP_200_OK, response_model=Session)
-async def change_vote(guest_id: Annotated[str, Depends(service.verify_token)], session_id: str, song_id: str) -> Session:
-    await service.verify_instances(user_ids=guest_id, session_id=session_id)
-    return await service.change_vote_on_recommendation(guest_id, session_id, song_id)
-
-
 @app.delete("/sessions/{session_id}/recommendations/{song_id}/vote", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_vote(guest_id: Annotated[str, Depends(service.verify_token)], session_id: str, song_id: str) -> None:
     await service.verify_instances(user_ids=guest_id, session_id=session_id)

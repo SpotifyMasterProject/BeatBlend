@@ -6,7 +6,6 @@ class User(BaseModel):
     id: Optional[str] = None
     username: str
     sessions: list[str] = []
-    last_voted_on: Optional[str] = None
 
 
 class SpotifyUser(User):

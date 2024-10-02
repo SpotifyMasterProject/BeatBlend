@@ -250,7 +250,7 @@ class Service:
         result = await self.repo.get_recommendations_by_song_id(session.playlist, limit)
         songs = [await self.get_song_from_database(row['id']) for row in result]
         for song in songs:
-            session.recommendations[song.id] = 0
+            session.recommendations[song.id] = []
         await self.repo.set_session(session)
         await manager.publish(channel=session.id, message="New recommendations fetched.")
         return SongList(songs=songs)
@@ -260,12 +260,13 @@ class Service:
         self.verify_guest_of_session(guest_id, session)
         if song_id not in session.recommendations:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song is not recommended.")
-        session.recommendations[song_id] += 1
+        previous_song_id = next((curr_song_id for curr_song_id, guests_voted in session.recommendations.items() if guest_id in guests_voted), None)  # not None if guest has previously voted
+        if previous_song_id:
+            session.recommendations[previous_song_id].remove(guest_id)
+        if guest_id in session.recommendations[song_id]:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Vote already added.")
+        session.recommendations[song_id].append(guest_id)
         await self.repo.set_session(session)
-
-        guest = await self.get_user(guest_id)
-        guest.last_voted_on = song_id
-        await self.repo.set_user(guest)
         await manager.publish(channel=session.id, message="Vote added.")
         return session
 
@@ -274,27 +275,15 @@ class Service:
         self.verify_guest_of_session(guest_id, session)
         if song_id not in session.recommendations:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song is not recommended.")
-        session.recommendations[song_id] -= 1
+        if guest_id not in session.recommendations[song_id]:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No vote added prior.")
+        session.recommendations[song_id].remove(guest_id)
         await self.repo.set_session(session)
-
-        guest = await self.get_user(guest_id)
-        guest.last_voted_on = None
-        await self.repo.set_user(guest)
         await manager.publish(channel=session.id, message="Vote removed.")
-
-    async def change_vote_on_recommendation(self, guest_id: str, session_id: str, song_id: str) -> Session:
-        session = await self.get_session(session_id)
-        self.verify_guest_of_session(guest_id, session)
-
-        guest = await self.get_user(guest_id)
-        if not guest.last_voted_on:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No vote has been given yet.")
-        await self.remove_vote_from_recommendation(guest.id, session.id, guest.last_voted_on)
-        return await self.add_vote_to_recommendation(guest.id, session.id, song_id)
 
     async def get_most_popular_recommendation(self, session_id: str) -> Song:
         session = await self.get_session(session_id)
-        song_id = max(session.recommendations, key=lambda votes: session.recommendations[votes])
+        song_id = max(session.recommendations, key=lambda guests_voted: len(session.recommendations[guests_voted]))
         return await self.get_song_from_database(song_id)
 
     @staticmethod
