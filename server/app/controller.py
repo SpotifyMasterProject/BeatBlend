@@ -68,7 +68,7 @@ async def end_existing_session(host_id: Annotated[str, Depends(service.verify_to
 #     return await service.get_user_sessions(user)
 
 
-@app.post("/sessions/{session_id}/guests", status_code=status.HTTP_200_OK, response_model=Session)
+@app.patch("/sessions/{session_id}/guests", status_code=status.HTTP_200_OK, response_model=Session)
 async def add_guest(guest_id: Annotated[str, Depends(service.verify_token)], session_id: str) -> Session:
     await service.verify_instances(user_ids=guest_id, session_id=session_id)
     return await service.add_guest_to_session(guest_id, session_id)
@@ -86,7 +86,7 @@ async def leave_session(guest_id: Annotated[str, Depends(service.verify_token)],
     await service.remove_guest_from_session("", guest_id, session_id)
 
 
-@app.post("/sessions/{session_id}/songs", status_code=status.HTTP_200_OK, response_model=Session)
+@app.patch("/sessions/{session_id}/songs", status_code=status.HTTP_200_OK, response_model=Session)
 async def add_song(user_id: Annotated[str, Depends(service.verify_token)], session_id: str, song_id: str) -> Session:
     await service.verify_instances(user_ids=user_id, session_id=session_id)
     return await service.add_song_to_session(user_id, session_id, song_id)
@@ -110,7 +110,7 @@ async def get_popular_recommendation(user_id: Annotated[str, Depends(service.ver
     return await service.get_most_popular_recommendation(session_id)
 
 
-@app.post("/sessions/{session_id}/recommendations/{song_id}/vote", status_code=status.HTTP_200_OK, response_model=Session)
+@app.patch("/sessions/{session_id}/recommendations/{song_id}/vote", status_code=status.HTTP_200_OK, response_model=Session)
 async def add_vote(guest_id: Annotated[str, Depends(service.verify_token)], session_id: str, song_id: str) -> Session:
     await service.verify_instances(user_ids=guest_id, session_id=session_id)
     return await service.add_vote_to_recommendation(guest_id, session_id, song_id)
