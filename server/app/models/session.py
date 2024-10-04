@@ -13,5 +13,5 @@ class Session(BaseModel):
     invite_link: Optional[str] = None
     playlist: list[Song] = []
     creation_date: Optional[datetime] = None
-    recommendations: dict[str, int] = {}
+    recommendations: dict[str, list[str]] = {}
     # is_running: bool = False
