@@ -140,7 +140,7 @@ class Service:
             session.guests.append(guest_id)
             await self.repo.set_session(session)
             await self.manager.publish(channel=f"session:{session.id}", message=SessionOut(**session.model_dump()))
-        return session
+        return SessionOut(**session.model_dump())
 
     @staticmethod
     def verify_guest_of_session(guest_id: str, session: Session) -> None:
