@@ -121,7 +121,7 @@ class Service:
         session.invite_link = f'http://{LOCAL_IP_ADDRESS}:8080/{session.id}/join'
 
         await self.repo.set_session(session)
-        host.sessions.append(session.id)
+        host.joined_sessions.append(session.id)
         await self.repo.set_user(host)
         # Todo: remove
         await manager.publish(channel=session.id, message="New session created")
@@ -147,7 +147,7 @@ class Service:
         if guest.id not in session.guests:
             session.guests.append(guest.id)
             await self.repo.set_session(session)
-            guest.sessions.append(session.id)
+            guest.joined_sessions.append(session.id)
             await self.repo.set_user(guest)
             await manager.publish(channel=session.id, message=f"Guest {guest_id} has joined the session")
 
@@ -194,7 +194,7 @@ class Service:
         self.verify_guest_of_session(guest_id, session)
         session.guests.remove(guest.id)
         await self.repo.set_session(session)
-        guest.sessions.remove(session.id)
+        guest.joined_sessions.remove(session.id)
         await self.repo.set_user(guest)
         if host_id:
             await manager.publish(channel=session.id, message=f"Guest {guest_id} was removed from session by host")
@@ -268,10 +268,10 @@ class Service:
         host = await self.get_user(host_id)
         session = await self.get_session(session_id)
         self.verify_host_of_session(host_id, session)
-        host.sessions.remove(session.id)
+        host.joined_sessions.remove(session.id)
         for guest_id in session.guests:
             guest = await self.get_user(guest_id)
-            guest.sessions.remove(session.id)
+            guest.joined_sessions.remove(session.id)
         await self.repo.delete_session_by_id(session_id)
         # TODO: create and return session artifact
         return
