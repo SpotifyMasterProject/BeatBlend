@@ -4,8 +4,8 @@ from .song import Song
 
 
 class Recommendation(Song):
-    votes: list[str]
+    votes: list[str] = []
 
 
 class RecommendationList(BaseModel):
-    recommendations: list[Recommendation]
+    recommendations: list[Recommendation] = []
