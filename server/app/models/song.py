@@ -6,6 +6,7 @@ from typing import Optional
 MAX_TEMPO = 200
 MIN_TEMPO = 60
 
+
 class Song(BaseModel):
     id: Optional[str] = None
     track_name: Optional[str] = None
@@ -31,3 +32,13 @@ class Song(BaseModel):
         self.scaled_tempo = max(0, min(scaled_tempo, 1))
 
         return self
+
+
+class SongList(BaseModel):
+    songs: list[Song]
+
+
+class Playlist(BaseModel):
+    played_songs: list[Song]
+    current_song: Song
+    queued_songs: list[Song]
