@@ -1,24 +1,21 @@
 import jwt
 import os
-import time
 import uuid
-import json
 
-from datetime import timedelta, datetime, timezone
-from spotipy import Spotify
-from spotipy.oauth2 import SpotifyOAuth, SpotifyOauthError
-from contextlib import asynccontextmanager
-from repository import Repository
 from databases import Database
+from datetime import timedelta, datetime, timezone
+from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt import InvalidTokenError
+from spotipy import Spotify
+from spotipy.oauth2 import SpotifyOAuth, SpotifyOauthError
 from typing import Annotated
-from fastapi import FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect
+
 from models.user import User, SpotifyUser
 from models.token import Token, SpotifyToken
 from models.session import Session
-from models.song import Song
-from models.song_list import SongList
+from models.song import Song, SongList
+from repository import Repository
 from ws.websocket_manager import WebsocketManager
 
 SECRET_KEY = os.getenv("JWT_SECRET_KEY")
@@ -28,40 +25,18 @@ SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 SPOTIFY_REDIRECT_URI = os.getenv("SPOTIFY_REDIRECT_URI")
 LOCAL_IP_ADDRESS = os.getenv("LOCAL_IP_ADDRESS")
-POSTGRES_USER = os.getenv("POSTGRES_USER")
-POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
-POSTGRES_DB = os.getenv("POSTGRES_DB")
-
-manager = WebsocketManager()
-postgres = Database(f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@postgres:5432/{POSTGRES_DB}")
-
-
-@asynccontextmanager
-async def lifespan(_: FastAPI):
-    await manager.connect()
-    for attempt in range(10):
-        try:
-            await postgres.connect()
-            break
-        except ConnectionRefusedError as e:
-            if attempt == 9:
-                raise e
-            time.sleep(6)
-    yield
-    await manager.disconnect()
-    await postgres.disconnect()
 
 
 class Service:
-    def __init__(self):
-        self.repo = Repository(postgres)
+    def __init__(self, database: Database, websocket_manager: WebsocketManager):
+        self.repo = Repository(database)
+        self.manager = websocket_manager
         self.spotify_oauth = SpotifyOAuth(
             client_id=SPOTIFY_CLIENT_ID,
             client_secret=SPOTIFY_CLIENT_SECRET,
             redirect_uri=SPOTIFY_REDIRECT_URI,
             scope="user-library-read"  # scope defines functionalities
         )
-
         self.spotify_api_client = Spotify(auth_manager=self.spotify_oauth)
 
     @staticmethod
@@ -142,13 +117,13 @@ class Service:
         session.host_id = str(host.id)
         session.host_name = host.username
         session.creation_date = datetime.now()
-        # session.is_running = True
         # TODO: adjust URL
         session.invite_link = f'http://{LOCAL_IP_ADDRESS}:8080/{session.id}/join'
 
         await self.repo.set_session(session)
         host.sessions.append(session.id)
         await self.repo.set_user(host)
+        # Todo: remove
         await manager.publish(channel=session.id, message="New session created")
 
         return session
@@ -175,6 +150,8 @@ class Service:
             guest.sessions.append(session.id)
             await self.repo.set_user(guest)
             await manager.publish(channel=session.id, message=f"Guest {guest_id} has joined the session")
+
+            await self.manager.publish(channel=f"session:{session.id}", message=session)
         return session
 
     async def get_song(self, song_id: str) -> Song:
@@ -287,23 +264,6 @@ class Service:
         song_id = max(session.recommendations, key=lambda guests_voted: len(session.recommendations[guests_voted]))
         return await self.get_song_from_database(song_id)
 
-    @staticmethod
-    async def establish_ws_connection_to_channel_by_session_id(websocket: WebSocket, session_id: str) -> None:
-        session_connections =  manager.active_connections.get(session_id, set())
-        session_connections.add(websocket)
-        async with manager.subscribe(channel=session_id) as subscriber:
-            try:
-                async for event in subscriber:
-                    await websocket.send_text(event.message)
-            except WebSocketDisconnect:
-                pass
-
-    @staticmethod
-    async def end_all_ws_connections_to_channel_by_session_id(session_id: str) -> None:
-        for websocket in manager.active_connections[session_id]:
-            await websocket.close(code=1000, reason='Session ended')
-        del manager.active_connections[session_id]
-
     async def end_session(self, host_id: str, session_id: str):
         host = await self.get_user(host_id)
         session = await self.get_session(session_id)
@@ -312,7 +272,6 @@ class Service:
         for guest_id in session.guests:
             guest = await self.get_user(guest_id)
             guest.sessions.remove(session.id)
-        await self.end_all_ws_connections_to_channel_by_session_id(session_id)
         await self.repo.delete_session_by_id(session_id)
         # TODO: create and return session artifact
         return

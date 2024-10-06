@@ -1,16 +1,43 @@
+import os
+import time
+
+from contextlib import asynccontextmanager
+from databases import Database
 from fastapi import FastAPI, status, Depends, WebSocket
-from service import Service, lifespan
+from starlette.middleware.cors import CORSMiddleware
+from typing import Annotated
+
 from models.token import Token
 from models.user import User, SpotifyUser
 from models.session import Session
-from models.song import Song
-from models.song_list import SongList
-from starlette.middleware.cors import CORSMiddleware
-from typing import Annotated
-from recommender.songs_dataset import SongsDataset
+from models.song import Song, SongList
+from service import Service
+from websocket_service import WebSocketService
+from ws.websocket_manager import WebsocketManager
 
-service = Service()
-#songsDataset = SongsDataset("./recommender/dataset.csv")
+POSTGRES_USER = os.getenv("POSTGRES_USER")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+POSTGRES_DB = os.getenv("POSTGRES_DB")
+
+manager = WebsocketManager()
+postgres = Database(f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@postgres:5432/{POSTGRES_DB}")
+service = Service(postgres, manager)
+ws_service = WebSocketService(manager)
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    await manager.connect()
+    for attempt in range(10):
+        try:
+            await postgres.connect()
+            break
+        except ConnectionRefusedError as e:
+            if attempt == 9:
+                raise e
+            time.sleep(6)
+    yield
+    await manager.disconnect()
+    await postgres.disconnect()
 
 app = FastAPI(lifespan=lifespan)
 app.add_middleware(
@@ -57,6 +84,7 @@ async def get_specific_session(session_id: str) -> Session:
 @app.delete("/sessions/{session_id}", status_code=status.HTTP_200_OK)
 async def end_existing_session(host_id: Annotated[str, Depends(service.verify_token)], session_id: str):
     await service.verify_instances(user_ids=host_id, session_id=session_id)
+    await ws_service.disconnect(session_id)
     return await service.end_session(host_id, session_id)
 
 
@@ -143,10 +171,20 @@ async def get_specific_song(song_id: str) -> Song:
 #     await service.delete_song_from_database(song_id)
 
 
-@app.websocket("/ws/{session_id}")
+@app.websocket("/sessions/{session_id}")
 async def websocket_session(websocket: WebSocket, session_id: str):
     await websocket.accept()
-    await service.establish_ws_connection_to_channel_by_session_id(websocket, session_id)
+    await ws_service.connect(websocket, session_id, ws_type="session")
+
+@app.websocket("/songs/{session_id}")
+async def websocket_session(websocket: WebSocket, session_id: str):
+    await websocket.accept()
+    await ws_service.connect(websocket, session_id, ws_type="songs")
+
+@app.websocket("/recommendations/{session_id}")
+async def websocket_session(websocket: WebSocket, session_id: str):
+    await websocket.accept()
+    await ws_service.connect(websocket, session_id, ws_type="recommendations")
 
 
 # This WS code is inspired by the encode/broadcaster package.
