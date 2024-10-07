@@ -174,18 +174,19 @@ async def get_specific_song(song_id: str) -> Song:
 
 @app.websocket("/sessions/{session_id}")
 async def websocket_session(websocket: WebSocket, session_id: str):
+    #TODO: check if session exists
     await websocket.accept()
     await ws_service.connect(websocket, session_id, ws_type="session")
 
 
-@app.websocket("/songs/{session_id}")
-async def websocket_session(websocket: WebSocket, session_id: str):
+@app.websocket("/playlist/{session_id}")
+async def websocket_playlist(websocket: WebSocket, session_id: str):
     await websocket.accept()
     await ws_service.connect(websocket, session_id, ws_type="playlist")
 
 
 @app.websocket("/recommendations/{session_id}")
-async def websocket_session(websocket: WebSocket, session_id: str):
+async def websocket_recommendations(websocket: WebSocket, session_id: str):
     await websocket.accept()
     await ws_service.connect(websocket, session_id, ws_type="recommendations")
 

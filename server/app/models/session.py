@@ -18,5 +18,5 @@ class Session(BaseModel):
 
 
 class SessionDB(Session):
-    playlist: Optional[Playlist] = None
+    playlist: Playlist
     recommendations: list[Recommendation] = []
