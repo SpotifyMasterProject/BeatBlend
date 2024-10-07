@@ -8,6 +8,7 @@ import Button from "primevue/button";
 import { SongFeatureCategory } from '@/types/SongFeature';
 import { Session } from '@/types/Session';
 import { getSongFeatures } from '@/services/sessionService';
+import SongDetailsPopUp from "@/components/SongDetailsPopUp.vue";
 
 const props = defineProps<{
   session: Session,
@@ -238,6 +239,16 @@ const onPetalClick = (index: number) => {
   currentSelectedFeature.value = {index};
   emit('flowerSelected', index);
 };
+
+const showSongDetails = ref(false);
+const hoverIndex = ref(null);
+const onHoverFlower = (index: number) => {
+  hoverIndex.value = index
+  showSongDetails.value = true;
+}
+const onLeaveFlower = () => {
+  showSongDetails.value = false;
+}
 </script>
 
 <template>
@@ -260,6 +271,8 @@ const onPetalClick = (index: number) => {
                 :features="flower"
                 :circleRadius="40"
                 @onPetalClick="() => onPetalClick(index)"
+                @hover="() => onHoverFlower(index)"
+                @leave="onLeaveFlower"
             />
           </div>
             <Recommendations
@@ -271,6 +284,7 @@ const onPetalClick = (index: number) => {
             />
         </div>
       </div>
+      <SongDetailsPopUp v-if="showSongDetails && hoverIndex !== null" :song="session.playlist[hoverIndex]" />
     </div>
   </div>
 </template>
