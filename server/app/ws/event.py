@@ -6,7 +6,7 @@ from models.song import Playlist
 
 MODEL_MAPPING = {
     "session": Session,
-    "songs": Playlist,
+    "playlist": Playlist,
     "recommendations": RecommendationList
 }
 

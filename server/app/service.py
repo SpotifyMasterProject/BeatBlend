@@ -13,7 +13,7 @@ from typing import Annotated
 
 from models.user import User, SpotifyUser
 from models.token import Token, SpotifyToken
-from models.session import SessionOut, Session
+from models.session import Session, SessionDB
 from models.song import Song, SongList, Playlist
 from models.recommendation import Recommendation, RecommendationList
 from repository import Repository
@@ -105,7 +105,7 @@ class Service:
         result = await self.repo.get_user_by_id(user_id)
         return User.model_validate_json(result)
 
-    async def create_session(self, host_id: str, session: Session) -> SessionOut:
+    async def create_session(self, host_id: str, session: SessionDB) -> Session:
         host = await self.get_user(host_id)
         session.id = str(uuid.uuid4())
         session.host_id = str(host.id)
@@ -115,14 +115,14 @@ class Service:
         session.invite_link = f'http://{LOCAL_IP_ADDRESS}:8080/{session.id}/join'
         session.playlist = Playlist()
         await self.repo.set_session(session)
-        return SessionOut(**session.model_dump())
+        return Session(**session.model_dump())
 
-    async def get_session(self, session_id: str) -> Session:
+    async def get_session(self, session_id: str) -> SessionDB:
         result = await self.repo.get_session_by_id(session_id)
-        return Session.model_validate_json(result)
+        return SessionDB.model_validate_json(result)
 
     @staticmethod
-    def verify_host_of_session(host_id: str, session: Session) -> None:
+    def verify_host_of_session(host_id: str, session: SessionDB) -> None:
         if session.host_id != host_id:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not host of session.")
 
@@ -133,17 +133,17 @@ class Service:
         # TODO: create and return session artifact
         return
 
-    async def add_guest_to_session(self, guest_id: str, session_id: str) -> SessionOut:
+    async def add_guest_to_session(self, guest_id: str, session_id: str) -> Session:
         session = await self.get_session(session_id)
 
         if guest_id not in session.guests:
             session.guests.append(guest_id)
             await self.repo.set_session(session)
-            await self.manager.publish(channel=f"session:{session.id}", message=SessionOut(**session.model_dump()))
-        return SessionOut(**session.model_dump())
+            await self.manager.publish(channel=f"session:{session.id}", message=Session(**session.model_dump()))
+        return Session(**session.model_dump())
 
     @staticmethod
-    def verify_guest_of_session(guest_id: str, session: Session) -> None:
+    def verify_guest_of_session(guest_id: str, session: SessionDB) -> None:
         if guest_id not in session.guests:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Guest not part of session.")
 
@@ -156,7 +156,7 @@ class Service:
         self.verify_guest_of_session(guest_id, session)
         session.guests.remove(guest_id)
         await self.repo.set_session(session)
-        await self.manager.publish(channel=f"session:{session.id}", message=SessionOut(**session.model_dump()))
+        await self.manager.publish(channel=f"session:{session.id}", message=Session(**session.model_dump()))
 
     async def get_song_from_database(self, song_id: str) -> Song:
         result = await self.repo.get_song_by_id(song_id)

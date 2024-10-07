@@ -1,7 +1,7 @@
 from databases import Database
 from databases.interfaces import Record
 from fastapi import HTTPException, status
-from models.session import Session
+from models.session import SessionDB
 from models.user import User
 from models.song import Song
 from redis.asyncio import Redis
@@ -52,7 +52,7 @@ class Repository:
         if await self.redis.exists(self.get_user_key(user_id)) == 0:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authorized! Invalid user ID.")
 
-    async def set_session(self, session: Session) -> None:
+    async def set_session(self, session: SessionDB) -> None:
         await self.redis.set(self.get_session_key(session.id), session.model_dump_json())
 
     async def get_session_by_id(self, session_id: str) -> Optional[bytes]:

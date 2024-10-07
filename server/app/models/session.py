@@ -1,12 +1,12 @@
-from typing import Optional
 from datetime import datetime
 from pydantic import BaseModel
+from typing import Optional
 
-from .song import Playlist
 from .recommendation import Recommendation
+from .song import Playlist
 
 
-class SessionOut(BaseModel):
+class Session(BaseModel):
     id: Optional[str] = None
     name: str
     host_id: Optional[str] = None
@@ -17,6 +17,6 @@ class SessionOut(BaseModel):
     # is_running: bool = False
 
 
-class Session(SessionOut):
+class SessionDB(Session):
     playlist: Optional[Playlist] = None
     recommendations: list[Recommendation] = []
