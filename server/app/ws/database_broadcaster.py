@@ -2,8 +2,8 @@ import asyncio
 
 from pydantic import BaseModel
 
-from ws.event import Event
 from redis.asyncio import Redis
+from ws.event import Event
 
 
 # This WS code is inspired by the encode/broadcaster package.

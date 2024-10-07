@@ -1,12 +1,13 @@
 from databases import Database
 from databases.interfaces import Record
 from fastapi import HTTPException, status
-from models.session import SessionDB
-from models.user import User
-from models.song import Song
 from redis.asyncio import Redis
 from sqlalchemy import Column, Table, MetaData, Integer, String, ARRAY, Float, Date, insert, select
 from typing import Optional
+
+from models.session import SessionDB
+from models.user import User
+from models.song import Song
 
 metadata = MetaData()
 songs = Table(
