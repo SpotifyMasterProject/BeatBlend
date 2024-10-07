@@ -8,10 +8,8 @@ import MainVisualization from "@/components/MainVisualization.vue";
 import VisualizationAid from '@/components/VisualizationAid.vue';
 import Button from 'primevue/button';
 import LogoIntroScreen from "@/components/LogoIntroScreen.vue";
-import PreviouslyPlayed from "@/components/PreviouslyPlayed.vue";
 import QrcodeVue from 'qrcode.vue'
 import AddMoreSong from "@/components/AddMoreSong.vue";
-import SongDetailsPopUp from "@/components/SongDetailsPopUp.vue";
 import Sidebar from "primevue/sidebar";
 import StartBlendButton from "@/components/StartBlendButton.vue";
 import PlaylistCreator from "@/components/PlaylistCreator.vue";
@@ -35,15 +33,6 @@ const LOCAL_IP_ADDRESS = import.meta.env.VITE_LOCAL_IP_ADDRESS;
 const toggleVisibility = () => {
   showSongFeatureDialog.value = !showSongFeatureDialog.value;
 };
-
-function handleShowSongDetails(song) {
-  selectedSong.value = song;
-  showSongDetailPopup.value = true;
-}
-
-function closeSongDetailPopup() {
-  showSongDetailPopup.value = false;
-}
 
 
 const router = useRouter();
@@ -240,7 +229,7 @@ function handleFlowerSelected(index) {
 
 .song-feature-dialog{
   background-color: var(--backcore-color1);
-  padding: 15px;
+  padding: 0 0 15px 10px;
   display: flex;
   flex-direction: column;
   gap: 5px;
@@ -273,15 +262,15 @@ function handleFlowerSelected(index) {
 }
 
 .song-feature-dialog h3 {
-  margin: 0;
-  font-size:18px;
+  margin: 10px 0 0 10px;
+  font-size: 18px;
   width: 100%;
 }
 .song-feature-dialog button {
   position: sticky;
   right: 0;
   z-index: 1001;
-  padding: 5px 8px;
+  padding: 4px 8px;
   background-color: #6BA149;
   color: #D9D9D9;
   border: none;
