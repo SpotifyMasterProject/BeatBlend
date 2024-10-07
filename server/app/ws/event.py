@@ -2,12 +2,11 @@ from pydantic import BaseModel
 
 from models.recommendation import RecommendationList
 from models.session import Session
-from models.song import Song
+from models.song import Playlist
 
-#TODO: adjust types
 MODEL_MAPPING = {
     "session": Session,
-    "songs": Song,
+    "songs": Playlist,
     "recommendations": RecommendationList
 }
 
