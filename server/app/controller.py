@@ -54,6 +54,12 @@ async def get_specific_session(session_id: str) -> Session:
     return await service.get_session(session_id)
 
 
+@app.delete("/sessions/{session_id}", status_code=status.HTTP_200_OK)
+async def end_existing_session(host_id: Annotated[str, Depends(service.verify_token)], session_id: str):
+    await service.verify_instances(user_ids=host_id, session_id=session_id)
+    return await service.end_session(host_id, session_id)
+
+
 # TODO: used for getting all artifacts
 # @app.get("/sessions", status_code=status.HTTP_200_OK, response_model=list[Session])
 # async def get_all_user_sessions(user_id: Annotated[str, Depends(service.verify_token)]) -> list[Session]:
@@ -62,49 +68,10 @@ async def get_specific_session(session_id: str) -> Session:
 #     return await service.get_user_sessions(user)
 
 
-@app.post("/sessions/{session_id}/guests", status_code=status.HTTP_200_OK, response_model=Session)
+@app.patch("/sessions/{session_id}/guests", status_code=status.HTTP_200_OK, response_model=Session)
 async def add_guest(guest_id: Annotated[str, Depends(service.verify_token)], session_id: str) -> Session:
     await service.verify_instances(user_ids=guest_id, session_id=session_id)
     return await service.add_guest_to_session(guest_id, session_id)
-
-
-@app.patch("/sessions/{session_id}/songs", status_code=status.HTTP_200_OK)
-async def add_song(user_id: Annotated[str, Depends(service.verify_token)], session_id: str, song_id: str) -> Session:
-    await service.verify_instances(user_ids=user_id, session_id=session_id)
-    return await service.add_song_to_session(user_id, session_id, song_id)
-
-
-@app.get("/songs/{song_id}", status_code=status.HTTP_200_OK, response_model=Song)
-async def get_specific_song(song_id: str) -> Song:
-    return await service.get_song(song_id)
-
-
-# @app.post("/songs/{song_id}", status_code=status.HTTP_200_OK, response_model=Song)
-# async def add_song(song_id: str) -> Song:
-#     return await service.add_song_to_database(song_id)
-#
-#
-# @app.delete("/songs/{song_id}", status_code=status.HTTP_204_NO_CONTENT)
-# async def delete_song(song_id: str) -> None:
-#     await service.delete_song_from_database(song_id)
-
-
-@app.delete("/sessions/{session_id}/songs/{song_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def remove_song(host_id: Annotated[str, Depends(service.verify_token)], session_id: str, song_id: str) -> None:
-    await service.verify_instances(user_ids=host_id, session_id=session_id)
-    await service.remove_song_from_session(host_id, session_id, song_id)
-
-
-@app.get("/songs", status_code=status.HTTP_200_OK, response_model=SongList)
-async def get_matching_songs(user_id: Annotated[str, Depends(service.verify_token)], pattern: str, limit: int = 10) -> SongList:
-    await service.verify_instances(user_ids=user_id)
-    return await service.get_matching_songs_from_database(pattern, limit)
-
-
-@app.delete("/sessions/{session_id}", status_code=status.HTTP_200_OK)
-async def end_existing_session(host_id: Annotated[str, Depends(service.verify_token)], session_id: str):
-    await service.verify_instances(user_ids=host_id, session_id=session_id)
-    return await service.end_session(host_id, session_id)
 
 
 @app.delete("/sessions/{session_id}/guests/{guest_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -119,10 +86,61 @@ async def leave_session(guest_id: Annotated[str, Depends(service.verify_token)],
     await service.remove_guest_from_session("", guest_id, session_id)
 
 
-@app.get("/sessions/{session_id}/recommendations", status_code=status.HTTP_200_OK, response_model=SongList)
-async def get_recommendations(user_id: Annotated[str, Depends(service.verify_token)], session_id: str, limit: int = 3) -> SongList:
+@app.patch("/sessions/{session_id}/songs", status_code=status.HTTP_200_OK, response_model=Session)
+async def add_song(user_id: Annotated[str, Depends(service.verify_token)], session_id: str, song_id: str) -> Session:
     await service.verify_instances(user_ids=user_id, session_id=session_id)
-    return await service.get_recommendations_from_database(session_id, limit)
+    return await service.add_song_to_session(user_id, session_id, song_id)
+
+
+@app.delete("/sessions/{session_id}/songs/{song_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_song(host_id: Annotated[str, Depends(service.verify_token)], session_id: str, song_id: str) -> None:
+    await service.verify_instances(user_ids=host_id, session_id=session_id)
+    await service.remove_song_from_session(host_id, session_id, song_id)
+
+
+@app.patch("/sessions/{session_id}/recommendations", status_code=status.HTTP_200_OK, response_model=SongList)
+async def generate_and_get_recommendations(user_id: Annotated[str, Depends(service.verify_token)], session_id: str, limit: int = 3) -> SongList:
+    await service.verify_instances(user_ids=user_id, session_id=session_id)
+    return await service.generate_and_get_recommendations_from_database(session_id, limit)
+
+
+@app.get("/sessions/{session_id}/recommendations", status_code=status.HTTP_200_OK, response_model=Song)
+async def get_popular_recommendation(user_id: Annotated[str, Depends(service.verify_token)], session_id: str) -> Song:
+    await service.verify_instances(user_ids=user_id, session_id=session_id)
+    return await service.get_most_popular_recommendation(session_id)
+
+
+@app.patch("/sessions/{session_id}/recommendations/{song_id}/vote", status_code=status.HTTP_200_OK, response_model=Session)
+async def add_vote(guest_id: Annotated[str, Depends(service.verify_token)], session_id: str, song_id: str) -> Session:
+    await service.verify_instances(user_ids=guest_id, session_id=session_id)
+    return await service.add_vote_to_recommendation(guest_id, session_id, song_id)
+
+
+@app.delete("/sessions/{session_id}/recommendations/{song_id}/vote", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_vote(guest_id: Annotated[str, Depends(service.verify_token)], session_id: str, song_id: str) -> None:
+    await service.verify_instances(user_ids=guest_id, session_id=session_id)
+    await service.remove_vote_from_recommendation(guest_id, session_id, song_id)
+
+
+@app.get("/songs", status_code=status.HTTP_200_OK, response_model=SongList)
+async def get_matching_songs(user_id: Annotated[str, Depends(service.verify_token)], pattern: str, limit: int = 10) -> SongList:
+    await service.verify_instances(user_ids=user_id)
+    return await service.get_matching_songs_from_database(pattern, limit)
+
+
+# @app.post("/songs/{song_id}", status_code=status.HTTP_200_OK, response_model=Song)
+# async def add_song(song_id: str) -> Song:
+#     return await service.add_song_to_database(song_id)
+
+
+@app.get("/songs/{song_id}", status_code=status.HTTP_200_OK, response_model=Song)
+async def get_specific_song(song_id: str) -> Song:
+    return await service.get_song(song_id)
+
+
+# @app.delete("/songs/{song_id}", status_code=status.HTTP_204_NO_CONTENT)
+# async def delete_song(song_id: str) -> None:
+#     await service.delete_song_from_database(song_id)
 
 
 @app.websocket("/ws/{session_id}")
