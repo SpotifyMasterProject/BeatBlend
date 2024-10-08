@@ -1,7 +1,7 @@
 import { Song } from './Song';
 
 export class Recommendation extends Song {
-    votes: string[] = [];
+    votes: string[];
 
     constructor(data: Recommendation) {
         super(data);
