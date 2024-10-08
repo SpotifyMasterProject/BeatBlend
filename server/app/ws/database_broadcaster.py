@@ -43,7 +43,6 @@ class DatabaseBroadcaster:
     async def next_published(self) -> Event:
         return await self._queue.get()
 
-    #TODO: investigate if attributes are lost when instantiating BaseModel instead of subtype (e.g. Song)
     async def _pubsub_listener(self) -> None:
         # redis-py does not listen to the pubsub connection if there are no channels subscribed
         # so we need to wait until the first channel is subscribed to start listening
@@ -53,7 +52,7 @@ class DatabaseBroadcaster:
                 if message["type"] == "message":
                     event = Event(
                         channel=message["channel"].decode(),
-                        message=BaseModel.model_validate_json(message["data"].decode()),
+                        message=message["data"].decode()
                     )
                     await self._queue.put(event)
             self._ready.clear()

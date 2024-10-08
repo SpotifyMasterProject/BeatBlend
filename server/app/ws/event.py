@@ -1,25 +1,7 @@
-from pydantic import BaseModel
-
-from models.recommendation import RecommendationList
-from models.session import Session
-from models.song import Playlist
-
-MODEL_MAPPING = {
-    "session": Session,
-    "playlist": Playlist,
-    "recommendations": RecommendationList
-}
-
-
 class Event:
-    def __init__(self, channel: str, message: BaseModel) -> None:
+    def __init__(self, channel: str, message: str) -> None:
         self.channel = channel
-        for prefix, model in MODEL_MAPPING.items():
-            if channel.startswith(prefix):
-                self.message = model(**message.model_dump())
-                break
-        else:
-            self.message = message
+        self.message = message
 
     def __eq__(self, other: object) -> bool:
         return isinstance(other, Event) and self.channel == other.channel and self.message == other.message

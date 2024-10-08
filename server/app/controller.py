@@ -9,7 +9,7 @@ from typing import Annotated
 
 from models.token import Token
 from models.user import User, SpotifyUser
-from models.session import SessionCore, Session
+from models.session import Session
 from models.song import Song, SongList, Playlist
 from models.recommendation import RecommendationList
 from service import Service
