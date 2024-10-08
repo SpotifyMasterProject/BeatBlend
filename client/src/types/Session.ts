@@ -9,9 +9,9 @@ export class Session {
     hostName: string
     inviteLink: string
     guests: User[]
-    playlist: Playlist[]
+    playlist: Playlist
     creationDate: Date
-    recommendations: Recommendation[]
+    //recommendations: Recommendation[]
 
     constructor(data: Session) {
         this.id = data.id
@@ -22,7 +22,6 @@ export class Session {
         this.guests = data.guests
         this.playlist = data.playlist
         this.creationDate = data.creationDate
-        this.recommendations = data.recommendations
+        //this.recommendations = data.recommendations
     }
 }
-

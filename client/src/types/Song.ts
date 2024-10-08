@@ -9,7 +9,7 @@ export class Song {
     valence: number
     tempo: number
     scaledTempo: number
-    release_date: string
+    releaseDate: string
     popularity: number
 
     constructor(data: Song) {
@@ -23,7 +23,7 @@ export class Song {
         this.valence = data.valence
         this.tempo = data.tempo
         this.scaledTempo = data.scaledTempo
-        this.release_date = data.release_date
+        this.releaseDate = data.release_date
         this.popularity = data.popularity
     }
 }
