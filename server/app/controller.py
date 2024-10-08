@@ -9,7 +9,7 @@ from typing import Annotated
 
 from models.token import Token
 from models.user import User, SpotifyUser
-from models.session import Session, SessionDB
+from models.session import SessionCore, Session
 from models.song import Song, SongList, Playlist
 from models.recommendation import RecommendationList
 from service import Service
@@ -70,16 +70,16 @@ async def read_root(user_id: Annotated[str, Depends(service.verify_token)]) -> U
     return await service.get_user(user_id)
 
 
-@app.post("/sessions", status_code=status.HTTP_201_CREATED, response_model=Session)
-async def create_new_session(host_id: Annotated[str, Depends(service.verify_token)], session: SessionDB) -> Session:
+@app.post("/sessions", status_code=status.HTTP_201_CREATED, response_model=SessionCore)
+async def create_new_session(host_id: Annotated[str, Depends(service.verify_token)], session: Session) -> SessionCore:
     await service.verify_instances(user_ids=host_id)
     return await service.create_session(host_id, session)
 
 
-@app.get("/sessions/{session_id}", status_code=status.HTTP_200_OK, response_model=Session)
-async def get_specific_session(session_id: str) -> Session:
+@app.get("/sessions/{session_id}", status_code=status.HTTP_200_OK, response_model=SessionCore)
+async def get_specific_session(session_id: str) -> SessionCore:
     await service.verify_instances(session_id=session_id)
-    return Session(**(await service.get_session(session_id)).model_dump())
+    return SessionCore(**(await service.get_session(session_id)).model_dump())
 
 
 @app.delete("/sessions/{session_id}", status_code=status.HTTP_200_OK)
@@ -97,8 +97,8 @@ async def end_existing_session(host_id: Annotated[str, Depends(service.verify_to
 #     return await service.get_user_sessions(user)
 
 
-@app.patch("/sessions/{session_id}/guests", status_code=status.HTTP_200_OK, response_model=Session)
-async def add_guest(guest_id: Annotated[str, Depends(service.verify_token)], session_id: str) -> Session:
+@app.patch("/sessions/{session_id}/guests", status_code=status.HTTP_200_OK, response_model=SessionCore)
+async def add_guest(guest_id: Annotated[str, Depends(service.verify_token)], session_id: str) -> SessionCore:
     await service.verify_instances(user_ids=guest_id, session_id=session_id)
     return await service.add_guest_to_session(guest_id, session_id)
 

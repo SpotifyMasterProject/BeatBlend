@@ -6,7 +6,7 @@ from .recommendation import Recommendation
 from .song import Playlist
 
 
-class Session(BaseModel):
+class SessionCore(BaseModel):
     id: Optional[str] = None
     name: str
     host_id: Optional[str] = None
@@ -17,6 +17,6 @@ class Session(BaseModel):
     # is_running: bool = False
 
 
-class SessionDB(Session):
+class Session(SessionCore):
     playlist: Playlist
     recommendations: list[Recommendation] = []
