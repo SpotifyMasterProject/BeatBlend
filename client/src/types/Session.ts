@@ -1,5 +1,5 @@
 import { User } from './User';
-import { Song } from './Song';
+import { Playlist } from '@/types/Playlist';
 
 export class Session {
     id: string
@@ -7,21 +7,10 @@ export class Session {
     hostName: string
     inviteLink: string
     guests: User[]
-    playlist: Song[]
+    playlist: Playlist[]
     creationDate: Date
-    isRunning: boolean
 
-    constructor(data: {
-        id: string
-        name: string
-        hostName: string
-        inviteLink: string
-        guests: User[]
-        playlistName: string
-        playlist: Song[]
-        creationDate: Date
-        isRunning: boolean
-    }) {
+    constructor(data: Session) {
         this.id = data.id
         this.name = data.name
         this.hostName = data.hostName
@@ -29,7 +18,6 @@ export class Session {
         this.guests = data.guests
         this.playlist = data.playlist
         this.creationDate = data.creationDate
-        this.isRunning = data.isRunning ?? false
     }
 }
 

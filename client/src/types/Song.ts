@@ -12,20 +12,7 @@ export class Song {
     release_date: string
     popularity: number
 
-    constructor(data: {
-        id: string
-        trackName: string
-        artists: string[]
-        album: string
-        danceability: number
-        energy: number
-        speechiness: number
-        valence: number
-        tempo: number
-        scaledTempo: number
-        release_date: string
-        popularity: number
-    }) {
+    constructor(data: Song) {
         this.id = data.id
         this.trackName = data.trackName
         this.artists = data.artists
