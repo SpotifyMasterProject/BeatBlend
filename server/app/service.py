@@ -105,7 +105,7 @@ class Service:
         result = await self.repo.get_user_by_id(user_id)
         return User.model_validate_json(result)
 
-    async def create_session(self, host_id: str, session: Session) -> SessionCore:
+    async def create_session(self, host_id: str, session: Session) -> Session:
         host = await self.get_user(host_id)
         session.id = str(uuid.uuid4())
         session.host_id = str(host.id)
@@ -115,7 +115,7 @@ class Service:
         session.invite_link = f'http://{LOCAL_IP_ADDRESS}:8080/{session.id}/join'
         session.playlist = Playlist()
         await self.repo.set_session(session)
-        return SessionCore(**session.model_dump())
+        return session
 
     async def get_session(self, session_id: str) -> Session:
         result = await self.repo.get_session_by_id(session_id)
@@ -133,14 +133,14 @@ class Service:
         # TODO: create and return session artifact
         return
 
-    async def add_guest_to_session(self, guest_id: str, session_id: str) -> SessionCore:
+    async def add_guest_to_session(self, guest_id: str, session_id: str) -> Session:
         session = await self.get_session(session_id)
 
         if guest_id not in session.guests:
             session.guests.append(guest_id)
             await self.repo.set_session(session)
-            await self.manager.publish(channel=f"session:{session.id}", message=SessionCore(**session.model_dump()))
-        return SessionCore(**session.model_dump())
+            await self.manager.publish(channel=f"session:{session_id}", message=SessionCore(**session.model_dump()))
+        return session
 
     @staticmethod
     def verify_guest_of_session(guest_id: str, session: Session) -> None:
@@ -156,7 +156,7 @@ class Service:
         self.verify_guest_of_session(guest_id, session)
         session.guests.remove(guest_id)
         await self.repo.set_session(session)
-        await self.manager.publish(channel=f"session:{session.id}", message=SessionCore(**session.model_dump()))
+        await self.manager.publish(channel=f"session:{session_id}", message=SessionCore(**session.model_dump()))
 
     async def get_song_from_database(self, song_id: str) -> Song:
         result = await self.repo.get_song_by_id(song_id)
@@ -184,7 +184,7 @@ class Service:
 
         session.playlist.queued_songs.append(song)
         await self.repo.set_session(session)
-        await self.manager.publish(channel=f"songs:{session.id}", message=session.playlist)
+        await self.manager.publish(channel=f"playlist:{session_id}", message=session.playlist)
 
         return session.playlist
 
@@ -195,7 +195,7 @@ class Service:
             if song.id == song_id:
                 del session.playlist.queued_songs[idx]
                 await self.repo.set_session(session)
-                await self.manager.publish(channel=f"songs:{session.id}", message=session.playlist)
+                await self.manager.publish(channel=f"playlist:{session_id}", message=session.playlist)
                 return
 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song not part of playlist")
@@ -209,7 +209,7 @@ class Service:
         for song in songs:
             session.recommendations.append(Recommendation(**song.model_dump()))
         await self.repo.set_session(session)
-        await self.manager.publish(channel=f"recommendations:{session.id}", message=RecommendationList(recommendations=session.recommendations))
+        await self.manager.publish(channel=f"recommendations:{session_id}", message=RecommendationList(recommendations=session.recommendations))
         return RecommendationList(recommendations=session.recommendations)
 
     async def get_most_popular_recommendation(self, session_id: str) -> Song:
@@ -230,7 +230,7 @@ class Service:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Vote already added.")
         curr_rec.votes.append(guest_id)
         await self.repo.set_session(session)
-        await self.manager.publish(channel=f"recommendations:{session.id}", message=RecommendationList(recommendations=session.recommendations))
+        await self.manager.publish(channel=f"recommendations:{session_id}", message=RecommendationList(recommendations=session.recommendations))
         return RecommendationList(recommendations=session.recommendations)
 
     async def remove_vote_from_recommendation(self, guest_id: str, session_id: str, song_id: str) -> None:
@@ -243,7 +243,7 @@ class Service:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No vote added prior.")
         curr_rec.votes.remove(guest_id)
         await self.repo.set_session(session)
-        await self.manager.publish(channel=f"recommendations:{session.id}", message=RecommendationList(recommendations=session.recommendations))
+        await self.manager.publish(channel=f"recommendations:{session_id}", message=RecommendationList(recommendations=session.recommendations))
 
     async def get_matching_songs_from_database(self, pattern: str, limit: int) -> SongList:
         result = await self.repo.get_songs_by_pattern(pattern, limit)
