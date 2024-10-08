@@ -2,7 +2,6 @@ import jwt
 import os
 import uuid
 
-from databases import Database
 from datetime import timedelta, datetime, timezone
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -29,8 +28,8 @@ LOCAL_IP_ADDRESS = os.getenv("LOCAL_IP_ADDRESS")
 
 
 class Service:
-    def __init__(self, database: Database, websocket_manager: WebsocketManager):
-        self.repo = Repository(database)
+    def __init__(self, repository: Repository, websocket_manager: WebsocketManager):
+        self.repo = repository
         self.manager = websocket_manager
         self.spotify_oauth = SpotifyOAuth(
             client_id=SPOTIFY_CLIENT_ID,

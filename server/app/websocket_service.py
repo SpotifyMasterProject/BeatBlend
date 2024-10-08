@@ -1,10 +1,12 @@
 from fastapi import WebSocket, WebSocketDisconnect
 
+from repository import Repository
 from ws.websocket_manager import WebsocketManager
 
 
 class WebSocketService:
-    def __init__(self, websocket_manager: WebsocketManager):
+    def __init__(self, repository: Repository, websocket_manager: WebsocketManager):
+        self._repository = repository
         self._manager = websocket_manager
         self._active_connections: dict[str, set[WebSocket]] = {}
 

@@ -4,6 +4,7 @@ import time
 from contextlib import asynccontextmanager
 from databases import Database
 from fastapi import FastAPI, status, Depends, WebSocket
+from redis.asyncio import Redis
 from starlette.middleware.cors import CORSMiddleware
 from typing import Annotated
 
@@ -12,6 +13,7 @@ from models.user import User, SpotifyUser
 from models.session import Session
 from models.song import Song, SongList, Playlist
 from models.recommendation import RecommendationList
+from repository import Repository
 from service import Service
 from websocket_service import WebSocketService
 from ws.websocket_manager import WebsocketManager
@@ -22,8 +24,10 @@ POSTGRES_DB = os.getenv("POSTGRES_DB")
 
 manager = WebsocketManager()
 postgres = Database(f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@postgres:5432/{POSTGRES_DB}")
-service = Service(postgres, manager)
-ws_service = WebSocketService(manager)
+redis = Redis(host="redis", port=6379, decode_responses=True)
+repository = Repository(postgres, redis)
+service = Service(repository, manager)
+ws_service = WebSocketService(repository, manager)
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):

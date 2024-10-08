@@ -31,8 +31,8 @@ songs = Table(
 
 
 class Repository:
-    def __init__(self, postgres: Database):
-        self.redis = Redis(host="redis", port=6379, decode_responses=True)
+    def __init__(self, postgres: Database, redis: Redis):
+        self.redis = redis
         self.postgres = postgres
 
     @staticmethod
