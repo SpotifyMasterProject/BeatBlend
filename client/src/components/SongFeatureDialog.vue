@@ -1,5 +1,5 @@
 <script setup lang ="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { SongFeatureCategory, SongFeature } from '@/types/SongFeature';
 import Dialog from 'primevue/dialog';
 import Tabs from 'primevue/tabs';
@@ -16,6 +16,17 @@ const props = defineProps<{
   flowerData: SongFeature[][],
   selectedFlowerIndex: number | null,
 }>();
+
+const datasetLength = computed(() => props.flowerData.length);
+const bufferLength = computed(() => {
+  if (datasetLength.value <= 5) {
+    return 0.3;
+  } else if (datasetLength.value >= 9) {
+    return 1;
+  } else {
+    return 0.5;
+  }
+});
 
 // TODO: Adjust scale for TEMPO.
 const chartOptions = {
@@ -123,7 +134,7 @@ const chartOptionsAllFeatures = {
         stepSize: 1,
       },
       min: 1,
-      max: (context) => context.chart.data.labels.length + 0.2,  // Add subtle space on the right
+      max: (context) => context.chart.data.labels.length + bufferLength.value,  // Add subtle space on the right
     },
     y: {
       min: 0,
@@ -147,50 +158,78 @@ onMounted(() => {
       }
 
       const ctx = chart.ctx;
-      const datasetMeta = args.meta;
-      const dataset = chart.data.datasets[args.index];
+      // Parameters
+      const labelHeight = 14; // Approximate label height in pixels
+      const labelSpacing = 4; // Spacing between labels
+      const padding = 10;     // Padding from chart boundaries
+      const minY = chart.chartArea.top + padding;
+      const maxY = chart.chartArea.bottom - padding;
 
-      ctx.save();
+      // Get the datasets with the last data point and its position
+      const labelsWithPositions = chart.data.datasets.map((dataset, index) => {
+        const datasetMeta = chart.getDatasetMeta(index);
+        const lastDataPoint = datasetMeta.data[datasetMeta.data.length - 1];
+        const position = lastDataPoint.tooltipPosition();
 
-      // Get the last data point in the dataset
-      const lastDataPoint = datasetMeta.data[datasetMeta.data.length - 1];
-      const { x, y } = lastDataPoint.tooltipPosition();  // Get x, y coordinates of the last data point
+        return {
+          dataset,
+          desiredX: position.x + 10, // Offset X position for label
+          desiredY: position.y,      // Desired Y position (same as data point)
+          adjustedY: position.y,     // Will adjust to prevent overlap
+          color: dataset.borderColor,
+        };
+      });
 
-      const canvasWidth = chart.chartArea.right;
+      // Sort labels by desiredY (from top to bottom)
+      labelsWithPositions.sort((a, b) => a.desiredY - b.desiredY);
 
-      let adjustedX = x + 10;
-      let adjustedY = y - 10;
+      // Adjust labels to prevent overlapping
+      for (let i = 0; i < labelsWithPositions.length; i++) {
+        const label = labelsWithPositions[i];
 
-      // If the label is too close to the right edge, move it to the left
-      if (adjustedX + 50 > canvasWidth) {
-        adjustedX = x - 100;
-      }
+        if (i > 0) {
+          const prevLabel = labelsWithPositions[i - 1];
+          const minYPosition = prevLabel.adjustedY + labelHeight + labelSpacing;
+          if (label.adjustedY < minYPosition) {
+            label.adjustedY = minYPosition;
+          }
+        }
 
-      // If the label is too close to the bottom edge, move it upwards
-      if (adjustedY < 20) {
-        adjustedY = y + 20;
-      }
+        // Ensure labels are within chart area
+        if (label.adjustedY < minY) {
+          label.adjustedY = minY;
+        }
 
-      // Iterate through previous datasets to avoid overlapping labels
-      for (let i = 0; i < args.index; i++) {
-        const previousDatasetMeta = chart.getDatasetMeta(i);
-        const previousLastDataPoint = previousDatasetMeta.data[previousDatasetMeta.data.length - 1];
-        const { x: prevX, y: prevY } = previousLastDataPoint.tooltipPosition();
-
-        // Calculate distance between current and previous labels
-        const distance = Math.sqrt((x - prevX) ** 2 + (y - prevY) ** 2);
-
-        // If the labels are too close, adjust the current label position
-        if (distance < 30) {
-          adjustedY += 20;  // Increase offset more to prevent overlap
+        if (label.adjustedY > maxY) {
+          label.adjustedY = maxY;
         }
       }
 
-      // Draw the label at the adjusted position
-      ctx.font = 'bold 14px Arial';
-      ctx.fillStyle = dataset.borderColor;
-      ctx.fillText(dataset.label, adjustedX, adjustedY);
+      // Check if the last label exceeds maxY and shift all labels up if necessary
+      const lastLabel = labelsWithPositions[labelsWithPositions.length - 1];
+      if (lastLabel.adjustedY > maxY) {
+        const shiftAmount = lastLabel.adjustedY - maxY;
+        for (let i = 0; i < labelsWithPositions.length; i++) {
+          labelsWithPositions[i].adjustedY -= shiftAmount;
+        }
+      }
 
+      // Check if the first label is above minY and shift all labels down if necessary
+      const firstLabel = labelsWithPositions[0];
+      if (firstLabel.adjustedY < minY) {
+        const shiftAmount = minY - firstLabel.adjustedY;
+        for (let i = 0; i < labelsWithPositions.length; i++) {
+          labelsWithPositions[i].adjustedY += shiftAmount;
+        }
+      }
+
+      // Draw the labels at the adjusted positions
+      ctx.save();
+      ctx.font = '14px Arial';
+      labelsWithPositions.forEach(item => {
+        ctx.fillStyle = item.color;
+        ctx.fillText(item.dataset.label, item.desiredX, item.adjustedY);
+      });
       ctx.restore();
     }
   });
