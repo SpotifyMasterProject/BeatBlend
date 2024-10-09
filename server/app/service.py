@@ -105,7 +105,6 @@ class Service:
         return User.model_validate_json(result)
 
     async def create_session(self, host_id: str, session: Session) -> Session:
-        print("SESSION: ", session)
         host = await self.get_user(host_id)
         session.id = str(uuid.uuid4())
         session.host_id = str(host.id)
