@@ -235,9 +235,9 @@ onMounted(() => {
 
 const currentSelectedFeature = ref(null);
 const emit = defineEmits(['flowerSelected']);
-const onPetalClick = (index: number) => {
-  currentSelectedFeature.value = {index};
-  emit('flowerSelected', index);
+const onPetalClick = (index: number, featureCategory: SongFeatureCategory) => {
+  currentSelectedFeature.value = {index, featureCategory};
+  emit('flowerSelected', index, featureCategory);
 };
 
 const showSongDetails = ref(false);
@@ -270,7 +270,7 @@ const onLeaveFlower = () => {
             <Flower
                 :features="flower"
                 :circleRadius="40"
-                @onPetalClick="() => onPetalClick(index)"
+                @onPetalClick="(featureCategory) => onPetalClick(index, featureCategory)"
                 @hover="() => onHoverFlower(index)"
                 @leave="onLeaveFlower"
             />
