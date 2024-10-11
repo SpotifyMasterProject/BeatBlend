@@ -23,7 +23,7 @@ import {SongFeatureCategory} from "@/types/SongFeature";
 const showSongFeatureDialog = ref(false);
 const showAddMoreSongPopup = ref(false);
 
-const showVisualizationAid = ref(true);
+const showVisualizationAid = ref(false);
 
 const LOCAL_IP_ADDRESS = import.meta.env.VITE_LOCAL_IP_ADDRESS;
 
@@ -94,6 +94,8 @@ const startSession = async (session) => {
 
   createNewSessionFlow.value = false;
   selectedSessionIndex.value = 0;
+
+  showVisualizationAid.value = true;
 };
 
 //Information Button to read more about how the visualization can be read
