@@ -47,17 +47,4 @@ export class Song {
         this.duration = this.formatDuration(this.durationMs);
         this.genre = data.genre
     }
-
-    // Convert duration from milliseconds to minute:second format
-    formatDuration(durationMs: number): string {
-        const minutes = Math.floor(durationMs / 60000);
-        const seconds = Math.floor((durationMs % 60000) / 1000);
-        return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-    }
-
-    // Format release_date to 'YYYY-MM-DD' format
-    formatDate(dateString: string): string {
-        const date = new Date(dateString);
-        return date.toISOString().split('T')[0]; // Returns YYYY-MM-DD
-    }
 }
