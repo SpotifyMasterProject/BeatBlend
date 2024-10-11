@@ -1,18 +1,32 @@
 <script setup lang ="ts">
-import { watch } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { SongFeatureCategory, SongFeature } from '@/types/SongFeature';
 import Dialog from 'primevue/dialog';
 import Tabs from 'primevue/tabs';
 import Chart from 'primevue/chart';
+import { Chart as ChartJS, registerables } from 'chart.js';
 import TabList from 'primevue/tablist';
 import Tab from 'primevue/tab';
 import TabPanels from 'primevue/tabpanels';
 import TabPanel from 'primevue/tabpanel';
 
+ChartJS.register(...registerables);
+
 const props = defineProps<{
   flowerData: SongFeature[][],
   selectedFlowerIndex: number | null,
 }>();
+
+const datasetLength = computed(() => props.flowerData.length);
+const bufferLength = computed(() => {
+  if (datasetLength.value <= 5) {
+    return 0.3;
+  } else if (datasetLength.value >= 9) {
+    return 1;
+  } else {
+    return 0.5;
+  }
+});
 
 // TODO: Adjust scale for TEMPO.
 const chartOptions = {
@@ -21,7 +35,10 @@ const chartOptions = {
   plugins: {
     legend: {
       display: false
-    }
+    },
+    customLegend: {
+      drawLegend: false
+      },
   },
   scales: {
     y: {
@@ -97,46 +114,28 @@ const chartData = (songFeatureCategory: SongFeatureCategory | null) => {
   }
 };
 
-const chartDataAll = () => {
-  const datasets = Object.keys(SongFeatureCategory).filter((key) => isNaN(key)).map((categoryKey) => {
-    const category = SongFeatureCategory[categoryKey];
-    return {
-      label: SongFeatureCategory[category],
-      data: props.flowerData.flatMap(
-        (flower) => flower.filter(
-          (songFeature) => songFeature.category === category).map(
-            (songFeature) => songFeature.value)
-      ),
-      fill: false,
-      borderColor: colorPalettes[category],
-      backgroundColor: colorPalettes[category],
-      tension: 0.4
-    };
-  });
-
-  return {
-    labels: Array.from({ length: props.flowerData.length }, (_, i) => i + 1),
-    datasets: datasets
-  };
-};
-
 const chartOptionsAllFeatures = {
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
     legend: {
-      display: true,
-      position: 'right',
-      align: 'end',
-      labels: {
-        color: 'white',
-        font: {
-          size: 10
-        }
-      }
-    }
+      display: false,
+        },
+    customLegend: {
+      drawLegend: true
+      },
   },
   scales: {
+    x: {
+      type: 'linear',
+      ticks: {
+        padding: 10,
+        autoSkip: false,
+        stepSize: 1,
+      },
+      min: 1,
+      max: (context) => context.chart.data.labels.length + bufferLength.value,  // Add subtle space on the right
+    },
     y: {
       min: 0,
       max: 1,
@@ -147,6 +146,94 @@ const chartOptionsAllFeatures = {
   }
 };
 
+
+// customize the legend
+onMounted(() => {
+  ChartJS.register({
+    id: 'customLegend',
+    afterDatasetDraw(chart, args) {
+
+      if (!chart.options.plugins.customLegend || !chart.options.plugins.customLegend.drawLegend) {
+        return;
+      }
+
+      const ctx = chart.ctx;
+      // Parameters
+      const labelHeight = 14; // Approximate label height in pixels
+      const labelSpacing = 4; // Spacing between labels
+      const padding = 10;     // Padding from chart boundaries
+      const minY = chart.chartArea.top + padding;
+      const maxY = chart.chartArea.bottom - padding;
+
+      // Get the datasets with the last data point and its position
+      const labelsWithPositions = chart.data.datasets.map((dataset, index) => {
+        const datasetMeta = chart.getDatasetMeta(index);
+        const lastDataPoint = datasetMeta.data[datasetMeta.data.length - 1];
+        const position = lastDataPoint.tooltipPosition();
+
+        return {
+          dataset,
+          desiredX: position.x + 10, // Offset X position for label
+          desiredY: position.y,      // Desired Y position (same as data point)
+          adjustedY: position.y,     // Will adjust to prevent overlap
+          color: dataset.borderColor,
+        };
+      });
+
+      // Sort labels by desiredY (from top to bottom)
+      labelsWithPositions.sort((a, b) => a.desiredY - b.desiredY);
+
+      // Adjust labels to prevent overlapping
+      for (let i = 0; i < labelsWithPositions.length; i++) {
+        const label = labelsWithPositions[i];
+
+        if (i > 0) {
+          const prevLabel = labelsWithPositions[i - 1];
+          const minYPosition = prevLabel.adjustedY + labelHeight + labelSpacing;
+          if (label.adjustedY < minYPosition) {
+            label.adjustedY = minYPosition;
+          }
+        }
+
+        // Ensure labels are within chart area
+        if (label.adjustedY < minY) {
+          label.adjustedY = minY;
+        }
+
+        if (label.adjustedY > maxY) {
+          label.adjustedY = maxY;
+        }
+      }
+
+      // Check if the last label exceeds maxY and shift all labels up if necessary
+      const lastLabel = labelsWithPositions[labelsWithPositions.length - 1];
+      if (lastLabel.adjustedY > maxY) {
+        const shiftAmount = lastLabel.adjustedY - maxY;
+        for (let i = 0; i < labelsWithPositions.length; i++) {
+          labelsWithPositions[i].adjustedY -= shiftAmount;
+        }
+      }
+
+      // Check if the first label is above minY and shift all labels down if necessary
+      const firstLabel = labelsWithPositions[0];
+      if (firstLabel.adjustedY < minY) {
+        const shiftAmount = minY - firstLabel.adjustedY;
+        for (let i = 0; i < labelsWithPositions.length; i++) {
+          labelsWithPositions[i].adjustedY += shiftAmount;
+        }
+      }
+
+      // Draw the labels at the adjusted positions
+      ctx.save();
+      ctx.font = '14px Arial';
+      labelsWithPositions.forEach(item => {
+        ctx.fillStyle = item.color;
+        ctx.fillText(item.dataset.label, item.desiredX, item.adjustedY);
+      });
+      ctx.restore();
+    }
+  });
+});
 </script>
 
 <template>
