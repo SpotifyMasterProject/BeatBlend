@@ -18,7 +18,10 @@
 import { Song } from '@/types/Song.ts';
 
 const props = defineProps({
-  song: Song,
+  song: {
+    type: Object,
+    required: true
+  },
 });
 
 // Format duration from milliseconds to minute:second format
