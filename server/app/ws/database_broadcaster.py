@@ -37,7 +37,7 @@ class DatabaseBroadcaster:
         await self._pubsub.unsubscribe(channel)
 
     async def publish(self, channel: str, message: BaseModel) -> None:
-        serialized_message = message.model_dump_json()
+        serialized_message = message.model_dump_json(by_alias=True)
         await self._connection.publish(channel, serialized_message)
 
     async def next_published(self) -> Event:

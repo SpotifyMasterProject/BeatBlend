@@ -1,8 +1,8 @@
-from pydantic import BaseModel
 from typing import Optional
+from .camel_model import CamelModel
 
 
-class Token(BaseModel):
+class Token(CamelModel):
     access_token: str
     token_type: str
 
