@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { storeToRefs } from 'pinia'
 import { ref, onMounted, computed } from "vue";
 import { Session } from "@/types/Session";
 import { useAuthStore } from "@/stores/auth";
+import { useSession } from "@/stores/session";
 import { useRouter, useRoute } from 'vue-router';
 import Navigation from "@/components/Navigation.vue";
 import MainVisualization from "@/components/MainVisualization.vue";
@@ -14,12 +16,8 @@ import Sidebar from "primevue/sidebar";
 import StartBlendButton from "@/components/StartBlendButton.vue";
 import PlaylistCreator from "@/components/PlaylistCreator.vue";
 import MobileMainViz from "@/components/MobileMainViz.vue";
-import { HostSession } from "@/types/Session";
-import { SessionMessageType } from "@/types/SessionMessage";
-import { sessionService } from "@/services/sessionService";
-import { SessionWebsocketService } from "@/services/sessionWebsocketService";
+import { Playlist, flattenPlaylist } from "@/types/Playlist";
 import {getSongFeatures, sessionService} from "@/services/sessionService";
-import SessionWebsocketService from "@/services/sessionWebsocketService";
 import SongFeatureDialog from "@/components/SongFeatureDialog.vue";
 import {SongFeatureCategory} from "@/types/SongFeature";
 
@@ -41,7 +39,6 @@ const toggleVisibility = () => {
 const router = useRouter();
 const route = useRoute();
 
-const sessions = ref<Session[]>([]);
 const settingsVisible = ref(false);
 const sessionEnded = ref(false);
 
@@ -49,51 +46,23 @@ const authStore = useAuthStore();
 const isHost = authStore.user?.isHost ?? false;
 const errorMessage = ref();
 const loading = ref(true);
-const sessionSocket = new SessionWebsocketService();
-
-// TODO: Handle websocket messages.
-const handleSessionMessages = (sessionMessage) => {
-  switch (sessionMessage.type) {
-    case SessionMessageType.GUEST_ADDED:
-      sessions.value[selectedSessionIndex.value].guests[sessionMessage.guest.id] = sessionMessage.guest;
-      break;
-    case SessionMessageType.GUEST_REMOVED:
-      delete sessions.value[selectedSessionIndex.value].guests[sessionMessage.guestId];
-      break;
-    default:
-      break;
-  }
-};
+const sessionStore = useSession();
+const {session} = storeToRefs(sessionStore);
 
 onMounted(async () => {
   await router.isReady();
 
-  const sessionId = isHost ? authStore.user?.sessions?.[0] : route.params.sessionId;
-  if (!sessionId) {
+  const sessionId = isHost ? null : route.params.sessionId;
+
+  try {
+    await sessionStore.fetchSession(sessionId);
+  } catch (error) {
     if (!isHost) {
       errorMessage.value = "Could not find session. Please try to join again."
     }
-    loading.value = false;
-    return;
   }
-
-  sessionSocket.connect(sessionId, handleSessionMessages);
-
-  try {
-    sessions.value = [await sessionService.getSessionById(sessionId)];
-    loading.value = false;
-  } catch (error) {
-    errorMessage.value = "Could not find session. Please try to join again."
-  }
-});
-const selectedSessionIndex = ref(0);
-
-const currentSession = computed(() => {
-  if (sessions.value && sessions.value.length) {
-    return sessions.value[selectedSessionIndex.value];
-  }
-
-  return null;
+  
+  loading.value = false;
 });
 
 const toggleAddMoreSongPopup = () => {
@@ -103,51 +72,37 @@ const toggleAddMoreSongPopup = () => {
 const createNewSessionFlow = ref(false);
 const runningSession = ref();
 
-const startSession = async (session) => {
-  const createdSession = await sessionService.createNewSession(session);
-  sessionSocket.connect(createdSession.id, handleSessionMessages);
-
-  sessions.value = [createdSession, ...sessions.value];
-
+const startSession = async (newSession) => {
+  await sessionStore.createSession(newSession);
   createNewSessionFlow.value = false;
-  selectedSessionIndex.value = 0;
 };
 
 //Information Button to read more about how the visualization can be read
 const infoVisible = ref(true);
 function toggleInfo(){
+  console.log("toggle");
   showVisualizationAid.value = !showVisualizationAid.value;
 }
 const closeVisualizationAid = () => {
   showVisualizationAid.value = false;
 };
 
-const addSongs = (songs) => {
-  if (sessions.value && sessions.value.length) {
-    sessions.value[selectedSessionIndex.value].playlist = [
-      ...sessions.value[selectedSessionIndex.value].playlist,
-      ...songs
-    ];
-  }
-};
 const showSettings = () => {
   settingsVisible.value = true;
 };
 
 const removeGuest = async (guestId) => {
-  await sessionService.removeGuest(currentSession.value.id, guestId);
+  await sessionService.removeGuest(session.value.id, guestId);
 };
 
-const endSession = async () => {
-  await sessionService.endSession(currentSession.value.id);
+const endCurrentSession = async () => {
+  await sessionStore.endSession();
   settingsVisible.value = false;
-  sessions.value[selectedSessionIndex.value].isRunning = false;
 };
-
 
 const flowerData = computed(() => {
-  if (currentSession.value && currentSession.value.playlist) {
-    return currentSession.value.playlist.map(getSongFeatures);
+  if (session.value && session.value.playlist) {
+    return flattenPlaylist(session.value.playlist).map(getSongFeatures);
   }
   return [];
 });
@@ -163,19 +118,19 @@ function handleFlowerSelected(index) {
 <template>
   <div class="type2">
     <header>
-      <div class="function-icon-container" v-if="currentSession?.isRunning">
+      <div class="function-icon-container" v-if="session?.isRunning">
         <Button icon="pi pi-search" severity="success" text raised rounded aria-label="Search" @click="toggleAddMoreSongPopup" />
       </div>
       <div class="logo-nav-container">
         <logo-intro-screen/>
       </div>
-      <i v-if="isHost && currentSession?.isRunning" class="settings-icon pi pi-cog" @click="showSettings()"></i>
+      <i v-if="isHost && session?.isRunning" class="settings-icon pi pi-cog" @click="showSettings()"></i>
     </header>
     <div class="middle" v-if="!loading">
       <div v-if="errorMessage" class="error">
           {{errorMessage}}
       </div>
-      <div v-else-if="!sessions.length && isHost">
+      <div v-else-if="!session && isHost">
         <start-blend-button v-if="!createNewSessionFlow" @click="createNewSessionFlow = true" />
         <playlist-creator v-else @startSession="startSession"></playlist-creator>
       </div>
@@ -183,11 +138,11 @@ function handleFlowerSelected(index) {
         <div class="info-box" :class="{ active: showVisualizationAid }" @click="toggleInfo">
           <div> i </div>
         </div>
-        <MainVisualization v-if="isHost" :session="currentSession" @flowerSelected="handleFlowerSelected"/>
-        <MobileMainViz v-if="!isHost" :sessionId="currentSession.id" />
+        <MainVisualization v-if="isHost" :session="session" @flowerSelected="handleFlowerSelected"/>
+        <MobileMainViz v-if="!isHost" :session="session" />
       </template>
     </div>
-    <div v-if="currentSession && currentSession.isRunning" class="footer-section">
+    <div v-if="session && session.isRunning" class="footer-section">
       <div
         class="song-feature-dialog"
         :class="{ minimized: !showSongFeatureDialog }"
@@ -208,7 +163,7 @@ function handleFlowerSelected(index) {
           />
         </div>
       </div>
-      <qrcode-vue v-if="isHost" :value="currentSession.inviteLink" />
+      <qrcode-vue v-if="isHost" :value="session.inviteLink" />
     </div>
     <!-- Conditionally render VisualizationAid component -->
     <VisualizationAid v-if="showVisualizationAid" @close-popup="closeVisualizationAid" />
@@ -217,20 +172,19 @@ function handleFlowerSelected(index) {
       <div class="popup-content" @click.stop>
         <AddMoreSong
           @close-popup="toggleAddMoreSongPopup"
-          :sessionId="currentSession.id"
-          @songsSelected="(songs) => addSongs(songs)" />
+          :sessionId="session.id" />
       </div>
     </div>
     <Sidebar v-model:visible="settingsVisible" header="Settings" :unstyled="false">
        <h3>Guests</h3>
        <div class="guests-container">
-        <div v-for="guest in currentSession.guests" class="guest" :key="currentSession.guests.length">
+        <div v-for="guest in session.guests" class="guest" :key="session.guests.length">
           {{guest.username}}
           <i class="delete-guest-icon pi pi-trash" @click="removeGuest(guest.id)"/>
         </div>
       </div>
 
-       <button class="end-session-button" @click="endSession()">
+       <button class="end-session-button" @click="endCurrentSession()">
         End Session
        </button>
     </Sidebar>

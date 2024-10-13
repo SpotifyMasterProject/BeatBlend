@@ -1,24 +1,16 @@
 <script setup lang="ts">
 import {ref, onMounted, computed} from 'vue';
 import Flower from "@/components/Flower.vue";
-import { sessionService, getSongFeatures } from "@/services/sessionService";
+import { Recommendations } from "@/types/Recommendation";
+import { getSongFeatures } from "@/services/sessionService";
 
 const props = defineProps<{
-  sessionId: string,
+  recommendations: Recommendation[],
 }>();
 
-const recommendations = ref([]);
 const flowerData = computed(() => {
-  return recommendations.value.map(getSongFeatures);
+  return props.recommendations?.map(getSongFeatures) ?? [];
 });
-
-const emit = defineEmits(['recommendationsLoaded']);
-
-onMounted(async () => {
-  recommendations.value = await sessionService.getRecommendations(props.sessionId);
-  emit('recommendationsLoaded');
-});
-
 
 </script>
 <template>

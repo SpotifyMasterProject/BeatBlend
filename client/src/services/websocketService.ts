@@ -1,33 +1,28 @@
-import { SessionMessageType } from "@/types/SessionMessage";
-import type { SessionMessage } from "@/types/SessionMessage";
-
-export enum WebsocketType {
-    SESSIONS = 0,
-    PLAYLIST = 1,
-    RECOMMENDATIONS = 2,
-};
-
-export class WebsocketService {
+import { Session } from "@/types/Session";
+import { Playlist } from "@/types/Playlist";
+import { RecommendationList } from "@/types/Recommendation";
 
 
+class WebsocketService<Type> {
     socket: WebSocket | null
     reconnectTimeout: number;
     maxReconnectAttempts: number;
     reconnectAttempts: number;
+    typeAddress: string;
 
-    constructor() {
+    constructor(typeAddress: string) {
         this.reconnectTimeout = 2000;
         this.maxReconnectAttempts = 10;
         this.reconnectAttempts = 0;
         this.socket = null;
+        this.typeAddress = typeAddress;
     }
 
     connect(
         sessionId: string,
-        type: WebsocketType,
-        handler: ((message: SessionMessage) => void)
+        handler: ((message: Type) => void)
     ) {
-        this.socket = new WebSocket(`ws://${import.meta.env.VITE_LOCAL_IP_ADDRESS}:8000/${this.wsTypeToAddress(type)}/${sessionId}`)
+        this.socket = new WebSocket(`ws://${import.meta.env.VITE_LOCAL_IP_ADDRESS}:8000/${this.typeAddress}/${sessionId}`)
 
         this.socket.onopen = () => {
             console.log('Websocket connection established!')
@@ -36,13 +31,13 @@ export class WebsocketService {
 
         this.socket.onmessage = (event) => {
             console.log('Message received:' + event.data);
-            handler(convertMessage(event.data));
+            handler(JSON.parse(event.data));
         }
 
         this.socket.onclose = (event) => {
             console.log('Websocket disconnected! Attempting to reconnect.')
             if (event.code !== 1000) { // Do not attempt to reconnect if the connection was closed normally (code 1000)
-                this.attemptReconnect(sessionId, type, handler);
+                this.attemptReconnect(sessionId, handler);
             }
         }
 
@@ -54,14 +49,13 @@ export class WebsocketService {
 
     attemptReconnect(
         sessionId: string,
-        type: WebsocketType,
-        handler: ((message: SessionMessage) => void)
+        handler: ((message: Type) => void)
     ) {
         if (this.reconnectAttempts < this.maxReconnectAttempts) {
             setTimeout(() => {
                 console.log('Attempting to reconnect to WebSocket...');
                 this.reconnectAttempts++;
-                this.connect(sessionId, type, handler);
+                this.connect(sessionId, handler);
             }, this.reconnectTimeout);
             this.reconnectTimeout *= 2; // Exponential backoff
         } else {
@@ -80,48 +74,22 @@ export class WebsocketService {
     close() {
         this.socket?.close(1000, 'Client closed connection.'); // Close with normal closure code 1000
     }
+}
 
-
-    private wsTypeToAddress(type: WebsocketType) {
-        switch (type) {
-            case WebsocketType.SESSIONS:
-                return "/sessions";
-            case WebsocketType.PLAYLIST:
-                return "/playlist";
-            case WebsocketType.RECOMMENDATIONS:
-                return "/recommendations";
-            default:
-                throw new TypeError(`WebsocketType: ${type} not supported`);
-        }
+export class SessionWebsocketService extends WebsocketService<Session> {
+    constructor() {
+        super("sessions");
     }
 }
 
-function convertMessage(message: string): SessionMessage {
-  const guestAddedRegex = /Guest ([0-9a-f\-]*):(.*) has joined the session/i;
-  const guestRemovedRegex = /Guest ([0-9a-f\-]*) was removed from session by host/i;
+export class PlaylistWebsocketService extends WebsocketService<Playlist> {
+    constructor() {
+        super("playlist");
+    }
+}
 
-  const guestAdded = message.match(guestAddedRegex);
-  const guestRemoved = message.match(guestRemovedRegex);
-
-  if (guestAdded) {
-    const id = guestAdded[1];
-    const username = guestAdded[2];
-
-    return {
-      type: SessionMessageType.GUEST_ADDED,
-      guest: {
-        id, username, isHost: false, sessions: []
-      }
-    };
-  } else if (guestRemoved) {
-    const guestId = guestRemoved[1];
-    return {
-      type: SessionMessageType.GUEST_REMOVED,
-      guestId
-    };
-  }
-
-  return {
-    type: SessionMessageType.UNKNOWN
-  };
+export class RecommendationWebsocketService extends WebsocketService<RecommendationList> {
+    constructor() {
+        super("recommendations");
+    }
 }

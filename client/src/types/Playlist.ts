@@ -11,3 +11,7 @@ export class Playlist {
         this.queuedSongs = data.queuedSongs
     }
 }
+
+export function flattenPlaylist(playlist: Playlist) {
+    return playlist.playedSongs.concat(playlist.currentSong ? [playlist.currentSong] : []).concat(playlist.queuedSongs);
+}

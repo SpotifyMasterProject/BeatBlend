@@ -47,10 +47,16 @@ export const sessionService = {
     async addSong(sessionId: string, songId: string): Promise<Session> {
         return apiClient.patch(
             `/sessions/${sessionId}/songs`, null,
-            {params: {songId}}).then((response) => {
+            {params: {"song_id": songId}}).then((response) => {
             return response.data;
         })
-    }
+    },
+    async addVote(sessionId: string, songId: string): Promise<void> {
+        return apiClient.patch(`/sessions/${sessionId}/recommendations/${songId}/vote`);
+    },
+    async deleteVote(sessionId: string, songId: string): Promise<void> {
+        return apiClient.delete(`/sessions/${sessionId}/recommendations/${songId}/vote`);
+    },
 };
 
 export const getSongFeatures = (song: Song): SongFeature[] => {
