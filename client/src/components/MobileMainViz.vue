@@ -29,9 +29,6 @@ const selectedVote = computed(() => {
 })
 
 const removedFromSession = computed(() => {
-  console.log(Object.keys(props.session.guests));
-  console.log(user.id);
-  console.log(Object.keys(props.session.guests).includes(user.id));
   return !Object.keys(props.session.guests).includes(user.id);
 });
 
