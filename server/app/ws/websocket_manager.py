@@ -3,10 +3,11 @@ from __future__ import annotations
 import asyncio
 
 from contextlib import asynccontextmanager
+from pydantic import BaseModel
+from typing import Any, AsyncGenerator, AsyncIterator
+
 from ws.database_broadcaster import DatabaseBroadcaster
 from ws.event import Event
-from typing import Any, AsyncGenerator, AsyncIterator
-from fastapi import WebSocket
 
 
 # This WS code is inspired by the encode/broadcaster package.
@@ -16,7 +17,6 @@ class WebsocketManager:
         self._broadcaster = DatabaseBroadcaster()
         self._subscribers: dict[str, set[asyncio.Queue[Event | None]]] = {}
         self._listener_task: asyncio.Task[None] | None = None
-        self.active_connections: dict[str, set[WebSocket]] = {}
 
     async def __aenter__(self) -> WebsocketManager:
         await self.connect()
@@ -42,7 +42,7 @@ class WebsocketManager:
             for queue in list(self._subscribers.get(event.channel, [])):
                 await queue.put(event)
 
-    async def publish(self, channel: str, message: Any) -> None:
+    async def publish(self, channel: str, message: BaseModel) -> None:
         await self._broadcaster.publish(channel, message)
 
     @asynccontextmanager

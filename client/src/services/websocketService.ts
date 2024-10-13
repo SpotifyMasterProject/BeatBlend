@@ -1,7 +1,15 @@
 import { SessionMessageType } from "@/types/SessionMessage";
 import type { SessionMessage } from "@/types/SessionMessage";
 
-export class SessionWebsocketService {
+export enum WebsocketType {
+    SESSIONS = 0,
+    PLAYLIST = 1,
+    RECOMMENDATIONS = 2,
+};
+
+export class WebsocketService {
+
+
     socket: WebSocket | null
     reconnectTimeout: number;
     maxReconnectAttempts: number;
@@ -14,8 +22,12 @@ export class SessionWebsocketService {
         this.socket = null;
     }
 
-    connect(sessionId: string, handler: ((message: SessionMessage) => void)) {
-        this.socket = new WebSocket(`ws://${import.meta.env.VITE_LOCAL_IP_ADDRESS}:8000/ws/${sessionId}`)
+    connect(
+        sessionId: string,
+        type: WebsocketType,
+        handler: ((message: SessionMessage) => void)
+    ) {
+        this.socket = new WebSocket(`ws://${import.meta.env.VITE_LOCAL_IP_ADDRESS}:8000/${this.wsTypeToAddress(type)}/${sessionId}`)
 
         this.socket.onopen = () => {
             console.log('Websocket connection established!')
@@ -30,7 +42,7 @@ export class SessionWebsocketService {
         this.socket.onclose = (event) => {
             console.log('Websocket disconnected! Attempting to reconnect.')
             if (event.code !== 1000) { // Do not attempt to reconnect if the connection was closed normally (code 1000)
-                this.attemptReconnect(sessionId, handler);
+                this.attemptReconnect(sessionId, type, handler);
             }
         }
 
@@ -40,12 +52,16 @@ export class SessionWebsocketService {
         }
     }
 
-    attemptReconnect(sessionId: string, handler: ((message: SessionMessage) => void)) {
+    attemptReconnect(
+        sessionId: string,
+        type: WebsocketType,
+        handler: ((message: SessionMessage) => void)
+    ) {
         if (this.reconnectAttempts < this.maxReconnectAttempts) {
             setTimeout(() => {
                 console.log('Attempting to reconnect to WebSocket...');
                 this.reconnectAttempts++;
-                this.connect(sessionId, handler);
+                this.connect(sessionId, type, handler);
             }, this.reconnectTimeout);
             this.reconnectTimeout *= 2; // Exponential backoff
         } else {
@@ -63,6 +79,20 @@ export class SessionWebsocketService {
 
     close() {
         this.socket?.close(1000, 'Client closed connection.'); // Close with normal closure code 1000
+    }
+
+
+    private wsTypeToAddress(type: WebsocketType) {
+        switch (type) {
+            case WebsocketType.SESSIONS:
+                return "/sessions";
+            case WebsocketType.PLAYLIST:
+                return "/playlist";
+            case WebsocketType.RECOMMENDATIONS:
+                return "/recommendations";
+            default:
+                throw new TypeError(`WebsocketType: ${type} not supported`);
+        }
     }
 }
 

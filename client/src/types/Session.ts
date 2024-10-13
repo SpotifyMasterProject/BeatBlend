@@ -1,35 +1,27 @@
 import { User } from './User';
-import { Song } from './Song';
+import { Playlist } from '@/types/Playlist';
+import { Recommendation } from '@/types/Recommendation';
 
 export class Session {
     id: string
     name: string
+    hostId: string
     hostName: string
     inviteLink: string
     guests: {[key: string]: User}
-    playlist: Song[]
+    playlist: Playlist
     creationDate: Date
-    isRunning: boolean
+    recommendations: Recommendation[]
 
-    constructor(data: {
-        id: string
-        name: string
-        hostName: string
-        inviteLink: string
-        guests:  {[key: string]: User}
-        playlistName: string
-        playlist: Song[]
-        creationDate: Date
-        isRunning: boolean
-    }) {
+    constructor(data: Session) {
         this.id = data.id
         this.name = data.name
+        this.hostId = data.hostId
         this.hostName = data.hostName
         this.inviteLink = data.inviteLink
         this.guests = data.guests
         this.playlist = data.playlist
         this.creationDate = data.creationDate
-        this.isRunning = data.isRunning ?? true
+        this.recommendations = data.recommendations
     }
 }
-

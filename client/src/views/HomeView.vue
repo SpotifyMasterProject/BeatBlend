@@ -8,10 +8,8 @@ import MainVisualization from "@/components/MainVisualization.vue";
 import VisualizationAid from '@/components/VisualizationAid.vue';
 import Button from 'primevue/button';
 import LogoIntroScreen from "@/components/LogoIntroScreen.vue";
-import PreviouslyPlayed from "@/components/PreviouslyPlayed.vue";
 import QrcodeVue from 'qrcode.vue'
 import AddMoreSong from "@/components/AddMoreSong.vue";
-import SongDetailsPopUp from "@/components/SongDetailsPopUp.vue";
 import Sidebar from "primevue/sidebar";
 import StartBlendButton from "@/components/StartBlendButton.vue";
 import PlaylistCreator from "@/components/PlaylistCreator.vue";
@@ -20,8 +18,12 @@ import { HostSession } from "@/types/Session";
 import { SessionMessageType } from "@/types/SessionMessage";
 import { sessionService } from "@/services/sessionService";
 import { SessionWebsocketService } from "@/services/sessionWebsocketService";
+import {getSongFeatures, sessionService} from "@/services/sessionService";
+import SessionWebsocketService from "@/services/sessionWebsocketService";
+import SongFeatureDialog from "@/components/SongFeatureDialog.vue";
+import {SongFeatureCategory} from "@/types/SongFeature";
 
-const showPreviouslyPlayed = ref(false);
+const showSongFeatureDialog = ref(false);
 const showAddMoreSongPopup = ref(false);
 
 const showSongDetailPopup = ref(false);
@@ -32,17 +34,8 @@ const showVisualizationAid = ref(false);
 const LOCAL_IP_ADDRESS = import.meta.env.VITE_LOCAL_IP_ADDRESS;
 
 const toggleVisibility = () => {
-  showPreviouslyPlayed.value = !showPreviouslyPlayed.value;
+  showSongFeatureDialog.value = !showSongFeatureDialog.value;
 };
-
-function handleShowSongDetails(song) {
-  selectedSong.value = song;
-  showSongDetailPopup.value = true;
-}
-
-function closeSongDetailPopup() {
-  showSongDetailPopup.value = false;
-}
 
 
 const router = useRouter();
@@ -151,6 +144,20 @@ const endSession = async () => {
   sessions.value[selectedSessionIndex.value].isRunning = false;
 };
 
+
+const flowerData = computed(() => {
+  if (currentSession.value && currentSession.value.playlist) {
+    return currentSession.value.playlist.map(getSongFeatures);
+  }
+  return [];
+});
+const currentSelectedFeature = ref({ index: 2, featureCategory: 'ALL' });
+
+const selectedFlowerIndex = ref(null);
+function handleFlowerSelected(index) {
+  console.log("flower index received", index)
+  selectedFlowerIndex.value = index;
+}
 </script>
 
 <template>
@@ -161,9 +168,6 @@ const endSession = async () => {
       </div>
       <div class="logo-nav-container">
         <logo-intro-screen/>
-        <nav>
-          <Navigation/>
-        </nav>
       </div>
       <i v-if="isHost && currentSession?.isRunning" class="settings-icon pi pi-cog" @click="showSettings()"></i>
     </header>
@@ -179,34 +183,29 @@ const endSession = async () => {
         <div class="info-box" :class="{ active: showVisualizationAid }" @click="toggleInfo">
           <div> i </div>
         </div>
-        <MainVisualization v-if="isHost" :session="currentSession" />
+        <MainVisualization v-if="isHost" :session="currentSession" @flowerSelected="handleFlowerSelected"/>
         <MobileMainViz v-if="!isHost" :sessionId="currentSession.id" />
       </template>
     </div>
     <div v-if="currentSession && currentSession.isRunning" class="footer-section">
       <div
-        class="previously-played"
-        :class="{ minimized: !showPreviouslyPlayed }"
+        class="song-feature-dialog"
+        :class="{ minimized: !showSongFeatureDialog }"
       >
         <div class="table-header-container">
-          <h3>Previously Played</h3>
+          <h3>Audio Feature Chart</h3>
           <button
             class="text-sm rounded min-h-[32px] px-3 py-0.5 font-semibold hover:bg-gray-800"
             @click="toggleVisibility"
           >
-            {{ showPreviouslyPlayed ? "Hide" : "Show" }}
+            <i :class="showSongFeatureDialog ? 'pi pi-chevron-down' : 'pi pi-chevron-left' "></i>
           </button>
         </div>
-        <div v-show="showPreviouslyPlayed" class="table-scroll">
-          <PreviouslyPlayed
-            @show-song-details="handleShowSongDetails"
-            :songs="currentSession.playlist"
-            ></PreviouslyPlayed>
-          <SongDetailsPopUp
-            v-if="showSongDetailPopup"
-            :song="selectedSong"
-            :isVisible="showSongDetailPopup"
-            @close="closeSongDetailPopup" />
+        <div v-show="showSongFeatureDialog" class="song-feature">
+          <SongFeatureDialog
+              :flowerData="flowerData"
+              :selectedFlowerIndex="selectedFlowerIndex"
+          />
         </div>
       </div>
       <qrcode-vue v-if="isHost" :value="currentSession.inviteLink" />
@@ -241,14 +240,14 @@ const endSession = async () => {
 <style scoped>
 .function-icon-container {
   position: absolute;
-  top: 55px;
-  left: 40px;
+  top: 10px;
+  left: 30px;
   z-index: 1000;
 }
 
 .function-icon-container button {
-  width: 45px;
-  height: 45px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -266,15 +265,16 @@ const endSession = async () => {
   transform: scale(1.05);
 }
 
-.previously-played.minimized{
+.song-feature-dialog.minimized{
   height: auto;
 }
 
-.previously-played{
+.song-feature-dialog{
   background-color: var(--backcore-color1);
-  padding: 20px;
+  padding: 0 0 15px 10px;
   display: flex;
   flex-direction: column;
+  gap: 5px;
   align-items: flex-start;
   justify-content: flex-start;
   overflow-y: hidden;
@@ -283,11 +283,11 @@ const endSession = async () => {
   text-align: left;
   color: #FFFFFF;
   transition: all 0.5s ease;
-  max-height: 23vh;
+  max-height: 40vh;
   width: 100%;
 }
 
-.previously-played .table-header-container {
+.song-feature-dialog .table-header-container {
   display: flex;
   flex-direction: row;  /* Aligns the header and button horizontally */
   align-items: center;
@@ -299,20 +299,20 @@ const endSession = async () => {
   padding-bottom: 0;
   margin-bottom: 0;
 }
-.previously-played.minimized .table-header-container {
+.song-feature-dialog.minimized .table-header-container {
   padding-bottom: 0; /* No padding when minimized */
 }
 
-.previously-played h3 {
-  margin: 0;
-  font-size:18px;
+.song-feature-dialog h3 {
+  margin: 10px 0 0 10px;
+  font-size: 18px;
   width: 100%;
 }
-.previously-played button {
+.song-feature-dialog button {
   position: sticky;
   right: 0;
   z-index: 1001;
-  padding: 8px 16px;
+  padding: 4px 8px;
   background-color: #6BA149;
   color: #D9D9D9;
   border: none;
@@ -322,12 +322,11 @@ const endSession = async () => {
   font-weight: bold;
   transition: background-color 0.3s ease, transform 0.2s ease;
 }
-.previously-played button:hover {
+.song-feature-dialog button:hover {
   background-color: #6AA834;
   transform: scale(1.05); /* Slightly enlarge the button on hover */
 }
-.previously-played .table-scroll {
-  max-height: 700px;
+.song-feature-dialog .table-scroll {
   overflow-y: auto;
   overflow-x: auto;
 }
@@ -352,6 +351,17 @@ const endSession = async () => {
   gap: 8px;
   justify-content: space-between;
 }
+
+.song-feature {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  padding: 10px;
+  overflow-y: scroll;
+  background-color: var(--backcore-color3);
+  box-sizing: border-box;
+}
+
 .settings-icon {
     position: absolute;
     right: 30px;
@@ -381,26 +391,26 @@ const endSession = async () => {
     font-size: 14px;
   }
 
-  .previously-played {
+  .song-feature-dialog {
     padding: 10px;
     max-height: 300px;
   }
 
-  .previously-played .table-header-container {
+  .song-feature-dialog .table-header-container {
     padding-bottom: 0;
     margin-bottom: 0;
   }
 
-  .previously-played h3 {
+  .song-feature-dialog h3 {
     font-size: 14px;
   }
 
-  .previously-played button {
+  .song-feature-dialog button {
     font-size: 12px;
     padding: 4px 8px;
   }
 
-  .previously-played .table-scroll {
+  .song-feature-dialog .table-scroll {
     max-height: 300px;
     margin-top: 0;
     padding-top: 0;

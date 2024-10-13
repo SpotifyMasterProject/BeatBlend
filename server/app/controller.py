@@ -1,16 +1,48 @@
+import os
+import time
+
+from contextlib import asynccontextmanager
+from databases import Database
 from fastapi import FastAPI, status, Depends, WebSocket
-from service import Service, lifespan
+from redis.asyncio import Redis
+from starlette.middleware.cors import CORSMiddleware
+from typing import Annotated
+
 from models.token import Token
 from models.user import User, SpotifyUser
 from models.session import Session
-from models.song import Song
-from models.song_list import SongList
-from starlette.middleware.cors import CORSMiddleware
-from typing import Annotated
-from recommender.songs_dataset import SongsDataset
+from models.song import Song, SongList, Playlist
+from models.recommendation import RecommendationList
+from repository import Repository
+from service import Service
+from websocket_service import WebSocketService
+from ws.websocket_manager import WebsocketManager
 
-service = Service()
-#songsDataset = SongsDataset("./recommender/dataset.csv")
+POSTGRES_USER = os.getenv("POSTGRES_USER")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+POSTGRES_DB = os.getenv("POSTGRES_DB")
+
+manager = WebsocketManager()
+postgres = Database(f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@postgres:5432/{POSTGRES_DB}")
+redis = Redis(host="redis", port=6379, decode_responses=True)
+repository = Repository(postgres, redis)
+service = Service(repository, manager)
+ws_service = WebSocketService(repository, manager)
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    await manager.connect()
+    for attempt in range(10):
+        try:
+            await postgres.connect()
+            break
+        except ConnectionRefusedError as e:
+            if attempt == 9:
+                raise e
+            time.sleep(6)
+    yield
+    await manager.disconnect()
+    await postgres.disconnect()
 
 app = FastAPI(lifespan=lifespan)
 app.add_middleware(
@@ -55,8 +87,9 @@ async def get_specific_session(session_id: str) -> Session:
 
 
 @app.delete("/sessions/{session_id}", status_code=status.HTTP_200_OK)
-async def end_existing_session(host_id: Annotated[str, Depends(service.verify_token)], session_id: str):
+async def end_existing_session(host_id: Annotated[str, Depends(service.verify_token)], session_id: str) -> None:
     await service.verify_instances(user_ids=host_id, session_id=session_id)
+    await ws_service.disconnect(session_id)
     return await service.end_session(host_id, session_id)
 
 
@@ -86,8 +119,8 @@ async def leave_session(guest_id: Annotated[str, Depends(service.verify_token)],
     await service.remove_guest_from_session("", guest_id, session_id)
 
 
-@app.patch("/sessions/{session_id}/songs", status_code=status.HTTP_200_OK, response_model=Session)
-async def add_song(user_id: Annotated[str, Depends(service.verify_token)], session_id: str, song_id: str) -> Session:
+@app.patch("/sessions/{session_id}/songs", status_code=status.HTTP_200_OK, response_model=Playlist)
+async def add_song(user_id: Annotated[str, Depends(service.verify_token)], session_id: str, song_id: str) -> Playlist:
     await service.verify_instances(user_ids=user_id, session_id=session_id)
     return await service.add_song_to_session(user_id, session_id, song_id)
 
@@ -98,8 +131,8 @@ async def remove_song(host_id: Annotated[str, Depends(service.verify_token)], se
     await service.remove_song_from_session(host_id, session_id, song_id)
 
 
-@app.patch("/sessions/{session_id}/recommendations", status_code=status.HTTP_200_OK, response_model=SongList)
-async def generate_and_get_recommendations(user_id: Annotated[str, Depends(service.verify_token)], session_id: str, limit: int = 3) -> SongList:
+@app.patch("/sessions/{session_id}/recommendations", status_code=status.HTTP_200_OK, response_model=RecommendationList)
+async def generate_and_get_recommendations(user_id: Annotated[str, Depends(service.verify_token)], session_id: str, limit: int = 3) -> RecommendationList:
     await service.verify_instances(user_ids=user_id, session_id=session_id)
     return await service.generate_and_get_recommendations_from_database(session_id, limit)
 
@@ -110,8 +143,8 @@ async def get_popular_recommendation(user_id: Annotated[str, Depends(service.ver
     return await service.get_most_popular_recommendation(session_id)
 
 
-@app.patch("/sessions/{session_id}/recommendations/{song_id}/vote", status_code=status.HTTP_200_OK, response_model=Session)
-async def add_vote(guest_id: Annotated[str, Depends(service.verify_token)], session_id: str, song_id: str) -> Session:
+@app.patch("/sessions/{session_id}/recommendations/{song_id}/vote", status_code=status.HTTP_200_OK, response_model=RecommendationList)
+async def add_vote(guest_id: Annotated[str, Depends(service.verify_token)], session_id: str, song_id: str) -> RecommendationList:
     await service.verify_instances(user_ids=guest_id, session_id=session_id)
     return await service.add_vote_to_recommendation(guest_id, session_id, song_id)
 
@@ -143,10 +176,23 @@ async def get_specific_song(song_id: str) -> Song:
 #     await service.delete_song_from_database(song_id)
 
 
-@app.websocket("/ws/{session_id}")
+@app.websocket("/sessions/{session_id}")
 async def websocket_session(websocket: WebSocket, session_id: str):
+    #TODO: check if session exists
     await websocket.accept()
-    await service.establish_ws_connection_to_channel_by_session_id(websocket, session_id)
+    await ws_service.connect(websocket, session_id, ws_type="session")
+
+
+@app.websocket("/playlist/{session_id}")
+async def websocket_playlist(websocket: WebSocket, session_id: str):
+    await websocket.accept()
+    await ws_service.connect(websocket, session_id, ws_type="playlist")
+
+
+@app.websocket("/recommendations/{session_id}")
+async def websocket_recommendations(websocket: WebSocket, session_id: str):
+    await websocket.accept()
+    await ws_service.connect(websocket, session_id, ws_type="recommendations")
 
 
 # This WS code is inspired by the encode/broadcaster package.

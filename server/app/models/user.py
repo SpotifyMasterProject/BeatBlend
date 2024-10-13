@@ -5,7 +5,6 @@ from pydantic import BaseModel
 class User(BaseModel):
     id: Optional[str] = None
     username: str
-    sessions: list[str] = []
 
 
 class SpotifyUser(User):
