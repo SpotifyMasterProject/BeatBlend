@@ -1,44 +1,55 @@
 <script setup lang="ts">
 import Flower from "@/components/Flower.vue";
+import {Session} from '@/types/Session';
 import {SongFeatureCategory} from '@/types/SongFeature';
-import {ref, onMounted, onUnmounted} from 'vue';
+import { getSongFeatures, sessionService } from "@/services/sessionService";
+import {ref, onMounted, onUnmounted, computed} from 'vue';
+import {useAuthStore} from "@/stores/auth";
+import {useSession} from "@/stores/session";
 
-const songList = ref([
-  { title: "Baby Powder", artist: "Jenevieve", features: [
-      { category: SongFeatureCategory.ENERGY, value: 0.4 },
-      { category: SongFeatureCategory.DANCEABILITY, value: 0.6 },
-      { category: SongFeatureCategory.SPEECHINESS, value: 0.5 },
-      { category: SongFeatureCategory.VALENCE, value: 0.3 },
-      { category: SongFeatureCategory.TEMPO, value: 0.7 }
-    ]},
-  { title: "Blue Moon", artist: "NIKI", features: [
-      { category: SongFeatureCategory.ENERGY, value: 0.5 },
-      { category: SongFeatureCategory.DANCEABILITY, value: 0.7 },
-      { category: SongFeatureCategory.SPEECHINESS, value: 0.4 },
-      { category: SongFeatureCategory.VALENCE, value: 0.7 },
-      { category: SongFeatureCategory.TEMPO, value: 0.5 }
-    ]},
-  { title: "Oscar Winning Tears", artist: "RAYE", features: [
-      { category: SongFeatureCategory.ENERGY, value: 0.4 },
-      { category: SongFeatureCategory.DANCEABILITY, value: 0.8 },
-      { category: SongFeatureCategory.SPEECHINESS, value: 0.6 },
-      { category: SongFeatureCategory.VALENCE, value: 0.4 },
-      { category: SongFeatureCategory.TEMPO, value: 0.7 }
-    ]}
-]);
+const props = defineProps<{
+  session: Session,
+}>();
 
-const selectedVote = ref<number | null>(null);
+
 const countdown = ref(90);
 const isTimeUp = ref(false);
 let timer: NodeJS.Timeout | null = null;
 
-const handleVote = (songIndex: number) => {
-  if (selectedVote.value === songIndex) {
-    selectedVote.value = null;
-  } else {
-    selectedVote.value = songIndex;
+const authStore = useAuthStore();
+const user = authStore.user;
+
+const selectedVote = computed(() => {
+  const index = props.session.recommendations.findIndex((recommendation) => recommendation.votes.includes(user.id));
+  if (index === -1) {
+    return null;
   }
-  console.log(`Voted for song ${songList.value[songIndex].title}`);
+
+  return index;
+})
+
+const removedFromSession = computed(() => {
+  return !Object.keys(props.session.guests).includes(user.id);
+});
+
+const songList = computed(() => {
+  return props.session.recommendations.map((song) => {
+    return {
+      id: song.id,
+      title: song.trackName,
+      artist: song.artists.join(', '),
+      features: getSongFeatures(song)
+    };
+  });
+});
+
+const handleVote = async (songIndex: number) => {
+  const songId = songList.value[songIndex].id;
+  if (selectedVote.value === songIndex) {
+    await sessionService.deleteVote(props.session.id, songId);
+  } else {
+    await sessionService.addVote(props.session.id, songId);
+  }
 };
 
 // Countdown logic
@@ -67,7 +78,10 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="mobile-visualization">
+  <div v-if="removedFromSession">
+    You were removed from this session.
+  </div>
+  <div class="mobile-visualization" v-else>
     <div class="sticky-header">
       <h2 class="header">Vote for the next song!</h2>
       <p class="countdown">Time remaining: {{ countdown }}s</p>
@@ -152,6 +166,7 @@ onUnmounted(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 150px;
 }
 
 .vote-controls {

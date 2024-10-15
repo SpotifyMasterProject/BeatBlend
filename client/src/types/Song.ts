@@ -23,7 +23,7 @@ export class Song {
         this.valence = data.valence
         this.tempo = data.tempo
         this.scaledTempo = data.scaledTempo
-        this.releaseDate = data.release_date
+        this.releaseDate = data.releaseDate
         this.popularity = data.popularity
     }
 }

@@ -1,5 +1,6 @@
 import jwt
 import os
+import asyncio
 import uuid
 
 from datetime import timedelta, datetime, timezone
@@ -9,7 +10,6 @@ from jwt import InvalidTokenError
 from spotipy import Spotify
 from spotipy.oauth2 import SpotifyOAuth, SpotifyOauthError
 from typing import Annotated
-
 from models.user import User, SpotifyUser
 from models.token import Token, SpotifyToken
 from models.session import SessionCore, Session
@@ -38,6 +38,13 @@ class Service:
             scope="user-library-read"  # scope defines functionalities
         )
         self.spotify_api_client = Spotify(auth_manager=self.spotify_oauth)
+        self.session_lock = asyncio.Lock()
+
+    def with_session_lock(func):
+        async def wrapper(self, *args):
+            async with self.session_lock:
+                return await func(self, *args)
+        return wrapper
 
     def get_spotify_token(self, host: SpotifyUser) -> SpotifyToken:
         try:
@@ -132,11 +139,13 @@ class Service:
         # TODO: create and return session artifact
         return
 
+    @with_session_lock
     async def add_guest_to_session(self, guest_id: str, session_id: str) -> Session:
+        guest = await self.get_user(guest_id)
         session = await self.get_session(session_id)
 
         if guest_id not in session.guests:
-            session.guests.append(guest_id)
+            session.guests[guest_id] = guest
             await self.repo.set_session(session)
             await self.manager.publish(channel=f"session:{session_id}", message=SessionCore(**session.model_dump()))
         return session
@@ -153,7 +162,7 @@ class Service:
             self.verify_host_of_session(host_id, session)
 
         self.verify_guest_of_session(guest_id, session)
-        session.guests.remove(guest_id)
+        del session.guests[guest_id]
         await self.repo.set_session(session)
         await self.manager.publish(channel=f"session:{session_id}", message=SessionCore(**session.model_dump()))
 
@@ -175,6 +184,7 @@ class Service:
         except HTTPException:
             return await self.add_song_to_database(song_id)
 
+    @with_session_lock
     async def add_song_to_session(self, user_id: str, session_id: str, song_id: str) -> Playlist:
         session = await self.get_session(session_id)
         if user_id not in session.guests and user_id != session.host_id:
@@ -187,6 +197,7 @@ class Service:
 
         return session.playlist
 
+    @with_session_lock
     async def remove_song_from_session(self, host_id: str, session_id: str, song_id: str) -> None:
         session = await self.get_session(session_id)
         self.verify_host_of_session(host_id, session)
@@ -199,6 +210,7 @@ class Service:
 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song not part of playlist")
 
+    @with_session_lock
     async def generate_and_get_recommendations_from_database(self, session_id: str, limit: int) -> RecommendationList:
         session = await self.get_session(session_id)
         session.recommendations.clear()
@@ -216,6 +228,7 @@ class Service:
         most_popular_recommendation = max(session.recommendations, key=lambda recommendation: len(recommendation.votes))
         return await self.get_song_from_database(most_popular_recommendation.id)
 
+    @with_session_lock
     async def add_vote_to_recommendation(self, guest_id: str, session_id: str, song_id: str) -> RecommendationList:
         session = await self.get_session(session_id)
         self.verify_guest_of_session(guest_id, session)
@@ -232,6 +245,7 @@ class Service:
         await self.manager.publish(channel=f"recommendations:{session_id}", message=RecommendationList(recommendations=session.recommendations))
         return RecommendationList(recommendations=session.recommendations)
 
+    @with_session_lock
     async def remove_vote_from_recommendation(self, guest_id: str, session_id: str, song_id: str) -> None:
         session = await self.get_session(session_id)
         self.verify_guest_of_session(guest_id, session)

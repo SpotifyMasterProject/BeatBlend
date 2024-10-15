@@ -8,7 +8,7 @@ export class Session {
     hostId: string
     hostName: string
     inviteLink: string
-    guests: User[]
+    guests: {[key: string]: User}
     playlist: Playlist
     creationDate: Date
     recommendations: Recommendation[]

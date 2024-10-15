@@ -5,6 +5,7 @@ import Button from 'primevue/button';
 import SongSelector from "@/components/SongSelector.vue";
 import { Song } from '@/types/Song';
 import { Session } from "@/types/Session";
+import { Playlist } from "@/types/Playlist";
 
 const title = ref('');
 const selectedSongs = ref([]);
@@ -19,7 +20,11 @@ const canStartSession = computed(() => {
 const startSession = async () => {
     emit('startSession', new Session({
         name: title.value,
-        playlist: selectedSongs.value,
+        playlist: new Playlist({
+            playedSongs: [],
+            currentSong: selectedSongs.value[0],
+            queuedSongs: selectedSongs.value.slice(1),
+        }),
     }));
 };
 

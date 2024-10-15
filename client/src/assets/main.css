@@ -115,6 +115,7 @@ a,
   min-height: 200px;
 }
 .type2 .info-box {
+  z-index: 99999;
   background-color: #D9D9D9;
   color: black;
   border-radius: 50%;

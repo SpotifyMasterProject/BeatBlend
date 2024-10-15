@@ -8,3 +8,11 @@ export class Recommendation extends Song {
         this.votes = data.votes;
     }
 }
+
+export class RecommendationList {
+    recommendations: Recommendation[];
+
+    constructor(data: RecommendationList) {
+        this.recommendations = data.recommendations;
+    }
+}

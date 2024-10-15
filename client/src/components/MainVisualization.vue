@@ -7,14 +7,15 @@ import type { CSSProperties } from 'vue';
 import Button from "primevue/button";
 import { SongFeatureCategory } from '@/types/SongFeature';
 import { Session } from '@/types/Session';
-import { getSongFeatures } from '@/services/sessionService';
+import { flattenPlaylist } from '@/types/Playlist';
+import { sessionService, getSongFeatures } from "@/services/sessionService";
 
 const props = defineProps<{
   session: Session,
 }>();
 
 const flowerData = computed(() => {
-  return props.session.playlist.map(getSongFeatures);
+  return flattenPlaylist(props.session.playlist).map(getSongFeatures);
 });
 
 //Zoom Function for the main visualization --> will be adapted at a later point
@@ -201,12 +202,6 @@ const flowerStyles = computed(() => {
   });
 });
 
-
-const scrollRecommendationsIntoView = async () => {
-  await nextTick();
-  recommendationsContainer.value?.firstChild.scrollIntoView({behavior: "smooth", block: "start"});
-};
-
 onMounted(() => {
   //Container Dimensions
   const container = document.querySelector('.visualization-container');
@@ -263,11 +258,10 @@ const onPetalClick = (index: number) => {
             />
           </div>
             <Recommendations
-              :sessionId="session.id"
-              :key="flowerData.length"
+              v-if="session.isRunning && session.recommendations"
+              :recommendations="session.recommendations"
               class="recommendations"
               :style="recommendationsStyle"
-              @recommendationsLoaded="scrollRecommendationsIntoView()"
             />
         </div>
       </div>

@@ -1,18 +1,28 @@
-export default class SessionWebsocketService {
+import { Session } from "@/types/Session";
+import { Playlist } from "@/types/Playlist";
+import { RecommendationList } from "@/types/Recommendation";
+
+
+class WebsocketService<Type> {
     socket: WebSocket | null
     reconnectTimeout: number;
     maxReconnectAttempts: number;
     reconnectAttempts: number;
+    typeAddress: string;
 
-    constructor() {
+    constructor(typeAddress: string) {
         this.reconnectTimeout = 2000;
         this.maxReconnectAttempts = 10;
         this.reconnectAttempts = 0;
         this.socket = null;
+        this.typeAddress = typeAddress;
     }
 
-    connect(sessionId: string, handler: ((message: any) => void)) {
-        this.socket = new WebSocket(`ws://localhost:8000/ws/${sessionId}`)
+    connect(
+        sessionId: string,
+        handler: ((message: Type) => void)
+    ) {
+        this.socket = new WebSocket(`ws://${import.meta.env.VITE_LOCAL_IP_ADDRESS}:8000/${this.typeAddress}/${sessionId}`)
 
         this.socket.onopen = () => {
             console.log('Websocket connection established!')
@@ -21,7 +31,7 @@ export default class SessionWebsocketService {
 
         this.socket.onmessage = (event) => {
             console.log('Message received:' + event.data);
-            handler(event.data);
+            handler(JSON.parse(event.data));
         }
 
         this.socket.onclose = (event) => {
@@ -37,7 +47,10 @@ export default class SessionWebsocketService {
         }
     }
 
-    attemptReconnect(sessionId: string, handler: ((message: any) => void)) {
+    attemptReconnect(
+        sessionId: string,
+        handler: ((message: Type) => void)
+    ) {
         if (this.reconnectAttempts < this.maxReconnectAttempts) {
             setTimeout(() => {
                 console.log('Attempting to reconnect to WebSocket...');
@@ -60,5 +73,23 @@ export default class SessionWebsocketService {
 
     close() {
         this.socket?.close(1000, 'Client closed connection.'); // Close with normal closure code 1000
+    }
+}
+
+export class SessionWebsocketService extends WebsocketService<Session> {
+    constructor() {
+        super("sessions");
+    }
+}
+
+export class PlaylistWebsocketService extends WebsocketService<Playlist> {
+    constructor() {
+        super("playlist");
+    }
+}
+
+export class RecommendationWebsocketService extends WebsocketService<RecommendationList> {
+    constructor() {
+        super("recommendations");
     }
 }

@@ -1,8 +1,7 @@
 from typing import Optional
-from pydantic import BaseModel
+from .camel_model import CamelModel
 
-
-class User(BaseModel):
+class User(CamelModel):
     id: Optional[str] = None
     username: str
 
