@@ -5,7 +5,6 @@ import { Session } from "@/types/Session";
 import { useAuthStore } from "@/stores/auth";
 import { useSession } from "@/stores/session";
 import { useRouter, useRoute } from 'vue-router';
-import Navigation from "@/components/Navigation.vue";
 import MainVisualization from "@/components/MainVisualization.vue";
 import VisualizationAid from '@/components/VisualizationAid.vue';
 import Button from 'primevue/button';
