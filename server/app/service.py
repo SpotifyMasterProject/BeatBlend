@@ -2,6 +2,7 @@ import jwt
 import os
 import asyncio
 import uuid
+import requests
 
 from datetime import timedelta, datetime, timezone
 from fastapi import Depends, HTTPException, status
@@ -25,6 +26,8 @@ SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 SPOTIFY_REDIRECT_URI = os.getenv("SPOTIFY_REDIRECT_URI")
 LOCAL_IP_ADDRESS = os.getenv("LOCAL_IP_ADDRESS")
+DISCOGS_API_URL = os.getenv("DISCOGS_API_URL")
+DISCOGS_API_TOKEN = os.getenv("DISCOGS_API_TOKEN")
 
 
 class Service:
@@ -184,12 +187,35 @@ class Service:
         except HTTPException:
             return await self.add_song_to_database(song_id)
 
+    @staticmethod
+    async def get_genre(song: Song) -> Song:
+        params = {
+            'release_title': song.album,
+            'artist': ', '.join(song.artists),
+            'type': 'release',  # album/single/EP
+            'token': DISCOGS_API_TOKEN
+        }
+
+        response = requests.get(DISCOGS_API_URL, params=params)
+        if response.status_code == 200:
+            data = response.json()
+            if 'results' in data and len(data['results']) > 0:
+                result = data['results'][0]  # first result is most relevant
+                genres = result.get('genre', [])
+                song.genre = genres
+                return song
+            else:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No matching results on Discogs")
+        else:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Discogs could not be reached")
+
     @with_session_lock
     async def add_song_to_session(self, user_id: str, session_id: str, song_id: str) -> Playlist:
         session = await self.get_session(session_id)
         if user_id not in session.guests and user_id != session.host_id:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User is not part of session")
         song = await self.get_song(song_id)
+        song = await self.get_genre(song)
 
         session.playlist.queued_songs.append(song)
         await self.repo.set_session(session)

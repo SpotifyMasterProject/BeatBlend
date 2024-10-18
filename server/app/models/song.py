@@ -25,6 +25,7 @@ class Song(CamelModel):
     duration_ms: Optional[int] = None
     release_date: Optional[datetime] = None
     popularity: Optional[float] = None
+    genre: list[str] = []
 
     @model_validator(mode='after')
     def set_scaled_tempo(self) -> 'Song':
