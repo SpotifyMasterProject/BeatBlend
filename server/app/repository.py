@@ -113,7 +113,9 @@ class Repository:
                     AVG(s.energy) AS avg_energy,
                     AVG(s.speechiness) AS avg_speechiness,
                     AVG(s.valence) AS avg_valence,
-                    AVG((s.tempo - ts.min_tempo) / (ts.max_tempo - ts.min_tempo)) AS avg_tempo  -- normalize tempo
+                    AVG(
+                        LEAST(GREATEST((s.tempo - ts.min_tempo) / (ts.max_tempo - ts.min_tempo), 0), 1)
+                    ) AS avg_tempo  -- normalize tempo
                 FROM songs s, tempo_stats ts
                 WHERE id = ANY(:song_ids)  -- match multiple song IDs
             ),
@@ -125,9 +127,17 @@ class Repository:
                     ABS(s.energy - t.avg_energy) AS diff_energy,
                     ABS(s.speechiness - t.avg_speechiness) AS diff_speechiness,
                     ABS(s.valence - t.avg_valence) AS diff_valence,
-                    ABS((s.tempo - ts.min_tempo) / (ts.max_tempo - ts.min_tempo) - t.avg_tempo) AS diff_tempo,
+                    ABS(
+                        LEAST(GREATEST((s.tempo - ts.min_tempo) / (ts.max_tempo - ts.min_tempo), 0), 1) - t.avg_tempo
+                    ) AS diff_tempo,
                     cube_distance(
-                        cube(array[s.danceability, s.energy, s.speechiness, s.valence, (s.tempo - ts.min_tempo) / (ts.max_tempo - ts.min_tempo)]),
+                        cube(array[
+                                s.danceability,
+                                s.energy,
+                                s.speechiness,
+                                s.valence,
+                                LEAST(GREATEST((s.tempo - ts.min_tempo) / (ts.max_tempo - ts.min_tempo), 0), 1)
+                        ]),
                         cube(array[t.avg_danceability, t.avg_energy, t.avg_speechiness, t.avg_valence, t.avg_tempo])
                     ) AS cosine_distance
                 FROM songs s, target_songs t, tempo_stats ts
