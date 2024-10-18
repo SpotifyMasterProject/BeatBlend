@@ -1,17 +1,24 @@
-from typing import Optional
 from datetime import datetime
 from pydantic import BaseModel
-from .song import Song
+from typing import Optional
+
+from .camel_model import CamelModel
+from .user import User
+from .recommendation import Recommendation
+from .song import Playlist
 
 
-class Session(BaseModel):
+class SessionCore(CamelModel):
     id: Optional[str] = None
     name: str
     host_id: Optional[str] = None
     host_name: Optional[str] = None
-    guests: list[str] = []
+    guests: dict[str, User] = {}
     invite_link: Optional[str] = None
-    playlist: list[Song] = []
     creation_date: Optional[datetime] = None
-    recommendations: dict[str, list[str]] = {}
     # is_running: bool = False
+
+
+class Session(SessionCore):
+    playlist: Playlist
+    recommendations: list[Recommendation] = []

@@ -1,12 +1,13 @@
 from databases import Database
 from databases.interfaces import Record
 from fastapi import HTTPException, status
-from models.session import Session
-from models.user import User
-from models.song import Song
 from redis.asyncio import Redis
 from sqlalchemy import Column, Table, MetaData, Integer, String, ARRAY, Float, Date, insert, select
 from typing import Optional
+
+from models.session import Session
+from models.user import User
+from models.song import Song
 
 metadata = MetaData()
 songs = Table(
@@ -30,8 +31,8 @@ songs = Table(
 
 
 class Repository:
-    def __init__(self, postgres: Database):
-        self.redis = Redis(host="redis", port=6379, decode_responses=True)
+    def __init__(self, postgres: Database, redis: Redis):
+        self.redis = redis
         self.postgres = postgres
 
     @staticmethod
@@ -100,31 +101,37 @@ class Repository:
         song_ids = [song.id for song in playlist]
 
         query = """
-            WITH target_songs AS (
-            SELECT 
-                AVG(danceability) AS avg_danceability, 
-                AVG(energy) AS avg_energy,
-                AVG(speechiness) AS avg_speechiness,
-                AVG(valence) AS avg_valence,
-                AVG(tempo) AS avg_tempo
-            FROM songs
-            WHERE id = ANY(:song_ids)  -- match multiple song IDs
-        ),
-        song_distances AS (
-            -- calculate cosine distance between the averaged vector and each song
-            SELECT 
-                s.id,
-                cube_distance(
-                    cube(array[s.danceability, s.energy, s.speechiness, s.valence, s.tempo]),
-                    cube(array[t.avg_danceability, t.avg_energy, t.avg_speechiness, t.avg_valence, t.avg_tempo])
-                ) AS cosine_distance
-            FROM songs s, target_songs t
-            WHERE s.id != ALL(:song_ids)  -- exclude the target songs
-        )
-        -- return the 3 closest songs
-        SELECT * FROM song_distances
-        ORDER BY cosine_distance
-        LIMIT :limit;
+            WITH tempo_stats AS (
+                SELECT 
+                    MIN(tempo) AS min_tempo,
+                    MAX(tempo) AS max_tempo
+                FROM songs
+            ),
+            target_songs AS (
+                SELECT 
+                    AVG(s.danceability) AS avg_danceability, 
+                    AVG(s.energy) AS avg_energy,
+                    AVG(s.speechiness) AS avg_speechiness,
+                    AVG(s.valence) AS avg_valence,
+                    AVG((s.tempo - ts.min_tempo) / (ts.max_tempo - ts.min_tempo)) AS avg_tempo  -- Normalize tempo
+                FROM songs s, tempo_stats ts
+                WHERE id = ANY(:song_ids)  -- match multiple song IDs
+            ),
+            song_distances AS (
+                -- calculate cosine distance between the averaged vector and each song
+                SELECT 
+                    s.id,
+                    cube_distance(
+                        cube(array[s.danceability, s.energy, s.speechiness, s.valence, (s.tempo - ts.min_tempo) / (ts.max_tempo - ts.min_tempo)]),
+                        cube(array[t.avg_danceability, t.avg_energy, t.avg_speechiness, t.avg_valence, t.avg_tempo])
+                    ) AS cosine_distance
+                FROM songs s, target_songs t, tempo_stats ts
+                WHERE s.id != ALL(:song_ids)  -- exclude the target songs
+            )
+            -- return the 3 closest songs
+            SELECT * FROM song_distances
+            ORDER BY cosine_distance
+            LIMIT :limit;
         """
 
         result = await self.postgres.fetch_all(query, {"song_ids": song_ids, "limit": limit})

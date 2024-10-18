@@ -1,12 +1,14 @@
-from pydantic import BaseModel, model_validator
+from pydantic import model_validator
 from datetime import datetime
 from typing import Optional
+from .camel_model import CamelModel
 
 # Approximate values for maximum and minimum values of tempo.
 MAX_TEMPO = 200
 MIN_TEMPO = 60
 
-class Song(BaseModel):
+
+class Song(CamelModel):
     id: Optional[str] = None
     track_name: Optional[str] = None
     album: Optional[str] = None
@@ -31,3 +33,20 @@ class Song(BaseModel):
         self.scaled_tempo = max(0, min(scaled_tempo, 1))
 
         return self
+
+
+class SongList(CamelModel):
+    songs: list[Song] = []
+
+
+class Playlist(CamelModel):
+    played_songs: list[Song] = []
+    current_song: Optional[Song] = None
+    queued_songs: list[Song] = []
+
+    def get_all_songs(self) -> list[Song]:
+        songs = self.played_songs.copy()
+        if self.current_song:
+            songs.append(self.current_song)
+        songs.extend(self.queued_songs)
+        return songs

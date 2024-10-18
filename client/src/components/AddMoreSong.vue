@@ -16,8 +16,6 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['songsSelected']);
-
 const selectedSongs = ref([]);
 const successMessageVisible = ref(false);
 
@@ -32,10 +30,6 @@ const addNewSongs = async () => {
         return sessionService.addSong(props.sessionId, song.id);
     })
   );
-
-  emit('songsSelected', selectedSongs.value.filter((unused, index) => {
-      return results[index].status === "fulfilled";
-  }));
 
   selectedSongs.value = selectedSongs.value.filter((unused, index) => {
       return results[index].status !== "fulfilled";

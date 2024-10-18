@@ -1,8 +1,9 @@
 import asyncio
-import typing
 
-from ws.event import Event
+from pydantic import BaseModel
+
 from redis.asyncio import Redis
+from ws.event import Event
 
 
 # This WS code is inspired by the encode/broadcaster package.
@@ -35,8 +36,9 @@ class DatabaseBroadcaster:
     async def unsubscribe(self, channel: str) -> None:
         await self._pubsub.unsubscribe(channel)
 
-    async def publish(self, channel: str, message: typing.Any) -> None:
-        await self._connection.publish(channel, message)
+    async def publish(self, channel: str, message: BaseModel) -> None:
+        serialized_message = message.model_dump_json(by_alias=True)
+        await self._connection.publish(channel, serialized_message)
 
     async def next_published(self) -> Event:
         return await self._queue.get()
@@ -50,7 +52,7 @@ class DatabaseBroadcaster:
                 if message["type"] == "message":
                     event = Event(
                         channel=message["channel"].decode(),
-                        message=message["data"].decode(),
+                        message=message["data"].decode()
                     )
                     await self._queue.put(event)
             self._ready.clear()
