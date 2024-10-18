@@ -12,7 +12,7 @@ const rotation = computed(() => ((props.feature.category ?? 0) * 360 / 5));
 
 const colorPalettes = {
   [SongFeatureCategory.DANCEABILITY]: ['#A1DBE8', '#A1DBE8', '#A1DBE8', '#A1DBE8', '#A1DBE8'],
-  [SongFeatureCategory.ENERGY]: ['#597738', '#597738', '#597738', '#597738', '#597738'],
+  [SongFeatureCategory.ENERGY]: ['#8AB15F', '#8AB15F', '#8AB15F', '#8AB15F', '#8AB15F'],
   [SongFeatureCategory.SPEECHINESS]: ['#DED9BA', '#EEE8C4', '#F4EEC8', '#F8F2CD', '#FEFAE1'],
   [SongFeatureCategory.TEMPO]: ['#F99945', '#F99945', '#F99945', '#F99945', '#F99945'],
   [SongFeatureCategory.VALENCE]: ['#E3CAF7', '#E3CAF7', '#E3CAF7', '#E3CAF7', '#E3CAF7'],

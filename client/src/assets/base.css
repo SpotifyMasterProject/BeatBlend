@@ -8,7 +8,7 @@
   --font-color: #FFFFFF;
   --font-color-soft: #848484;
   --audio-color1: #A1DBE8;
-  --audio-color2: #597738;
+  --audio-color2: #8AB15F;
   --audio-color3: #DED9BA;
   --audio-color4: #F99945;
   --audio-color5: #E3CAF7;
@@ -16,7 +16,7 @@
   --tempo-color: #F99945;
   --valence-color: #E3CAF7;
   --speechiness-color: #DED9BA;
-  --energy-color: #597738;
+  --energy-color: #8AB15F;
   --danceability-color: #A1DBE8;
 
   --button-disabled-font-color: #c4c4c4;
