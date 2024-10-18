@@ -72,6 +72,7 @@ const chartData = (songFeatureCategory: SongFeatureCategory | null) => {
         fill: false,
         borderColor: colorPalettes[category],
         backgroundColor: colorPalettes[category],
+        pointRadius: pointRadius,
         tension: 0.4
       };
     });
