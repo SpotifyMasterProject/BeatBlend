@@ -81,9 +81,11 @@ class Repository:
         return result
 
     async def get_songs_by_pattern(self, pattern: str, limit: int) -> list[Record]:
+        regex_pattern = f'\\m{pattern}'
+
         query = select(songs).where(
-            songs.c.track_name.ilike(f'%{pattern}%') |
-            func.array_to_string(songs.c.artists, ' ').ilike(f'%{pattern}%')
+            songs.c.track_name.op('~*')(regex_pattern) |
+            func.array_to_string(songs.c.artists, ' ').op('~*')(regex_pattern)
         ).limit(limit)
         result = await self.postgres.fetch_all(query, {'pattern': f'%{pattern}%'})
         if result is None:
