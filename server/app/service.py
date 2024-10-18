@@ -145,7 +145,7 @@ class Service:
         session = await self.get_session(session_id)
 
         if guest_id not in session.guests:
-            session.guests[guest_id] = guest.username
+            session.guests[guest_id] = guest
             await self.repo.set_session(session)
             await self.manager.publish(channel=f"session:{session_id}", message=SessionCore(**session.model_dump()))
         return session

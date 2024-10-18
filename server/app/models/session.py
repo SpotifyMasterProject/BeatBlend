@@ -13,7 +13,7 @@ class SessionCore(CamelModel):
     name: str
     host_id: Optional[str] = None
     host_name: Optional[str] = None
-    guests: dict[str, str] = {}
+    guests: dict[str, User] = {}
     invite_link: Optional[str] = None
     creation_date: Optional[datetime] = None
     # is_running: bool = False
