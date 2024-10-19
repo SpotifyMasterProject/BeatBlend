@@ -222,7 +222,7 @@ class Service:
             return await self.add_song_to_database(song_id)
 
     @staticmethod
-    async def get_genre(song: Song) -> Song:
+    async def get_genre(song: Song) -> None:
         params = {
             'release_title': song.album,
             'artist': ', '.join(song.artists),
@@ -237,9 +237,6 @@ class Service:
                 result = data['results'][0]  # first result is most relevant
                 genres = result.get('genre', [])
                 song.genre = genres
-                return song
-            else:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No matching results on Discogs")
         else:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Discogs could not be reached")
 
@@ -251,7 +248,7 @@ class Service:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User is not part of session")
         song = await self.get_song(song_id)
         song.added_by = user
-        song = await self.get_genre(song)
+        await self.get_genre(song)
 
         session.playlist.queued_songs.append(song)
         await self.repo.set_session(session)
@@ -280,7 +277,7 @@ class Service:
         result = await self.repo.get_recommendations_by_songs(session.playlist.get_all_songs(), limit)
         for row in result:
             song = await self.get_song_from_database(row['id'])
-            song = await self.get_genre(song)
+            await self.get_genre(song)
             diffs = {
                 'danceability': row['diff_danceability'],
                 'energy': row['diff_energy'],
