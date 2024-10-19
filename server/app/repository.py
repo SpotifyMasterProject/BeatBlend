@@ -120,7 +120,7 @@ class Repository:
                 WHERE id = ANY(:song_ids)  -- match multiple song IDs
             ),
             song_distances AS (
-                -- calculate cosine distance and individual feature differences
+                -- approximate cosine distance and individual feature differences
                 SELECT 
                     s.id,
                     ABS(s.danceability - t.avg_danceability) AS diff_danceability,
