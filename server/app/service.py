@@ -227,6 +227,7 @@ class Service:
             }
             most_significant_feature = max(diffs, key=diffs.get)
             song.most_significant_feature = most_significant_feature
+            song.similarity_score = row['cosine_distance']
             session.recommendations.append(Recommendation(**song.model_dump()))
         await self.repo.set_session(session)
         await self.manager.publish(channel=f"recommendations:{session_id}", message=RecommendationList(recommendations=session.recommendations))
