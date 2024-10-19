@@ -2,7 +2,7 @@ from databases import Database
 from databases.interfaces import Record
 from fastapi import HTTPException, status
 from redis.asyncio import Redis
-from sqlalchemy import Column, Table, MetaData, Integer, String, ARRAY, Float, Date, insert, select
+from sqlalchemy import Column, Table, MetaData, Integer, String, ARRAY, Float, Date, insert, select, func
 from typing import Optional
 
 from models.session import Session
@@ -81,8 +81,13 @@ class Repository:
         return result
 
     async def get_songs_by_pattern(self, pattern: str, limit: int) -> list[Record]:
-        query = select(songs).where(songs.c.track_name.ilike(f'%{pattern}%') | songs.c.artists.any(pattern)).limit(limit)
-        result = await self.postgres.fetch_all(query)
+        regex_pattern = f'\\m{pattern}'
+
+        query = select(songs).where(
+            songs.c.track_name.op('~*')(regex_pattern) |
+            func.array_to_string(songs.c.artists, ' ').op('~*')(regex_pattern)
+        ).limit(limit)
+        result = await self.postgres.fetch_all(query, {'pattern': f'%{pattern}%'})
         if result is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No matching songs found")
         return result
@@ -91,7 +96,7 @@ class Repository:
     #     query = delete(songs).where(songs.c.id == song_id)
     #     await self.postgres.execute(query)
 
-    async def get_recommendations_by_song_id(self, playlist: list[Song], limit: int = 3) -> list[Record]:
+    async def get_recommendations_by_songs(self, playlist: list[Song], limit: int = 3) -> list[Record]:
         if not playlist:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Playlist is empty")
 
@@ -113,23 +118,39 @@ class Repository:
                     AVG(s.energy) AS avg_energy,
                     AVG(s.speechiness) AS avg_speechiness,
                     AVG(s.valence) AS avg_valence,
-                    AVG((s.tempo - ts.min_tempo) / (ts.max_tempo - ts.min_tempo)) AS avg_tempo  -- Normalize tempo
+                    AVG(
+                        LEAST(GREATEST((s.tempo - ts.min_tempo) / (ts.max_tempo - ts.min_tempo), 0), 1)
+                    ) AS avg_tempo  -- normalize tempo
                 FROM songs s, tempo_stats ts
                 WHERE id = ANY(:song_ids)  -- match multiple song IDs
             ),
             song_distances AS (
-                -- calculate cosine distance between the averaged vector and each song
+                -- approximate cosine distance and individual feature differences
                 SELECT 
                     s.id,
+                    ABS(s.danceability - t.avg_danceability) AS diff_danceability,
+                    ABS(s.energy - t.avg_energy) AS diff_energy,
+                    ABS(s.speechiness - t.avg_speechiness) AS diff_speechiness,
+                    ABS(s.valence - t.avg_valence) AS diff_valence,
+                    ABS(
+                        LEAST(GREATEST((s.tempo - ts.min_tempo) / (ts.max_tempo - ts.min_tempo), 0), 1) - t.avg_tempo
+                    ) AS diff_tempo,
                     cube_distance(
-                        cube(array[s.danceability, s.energy, s.speechiness, s.valence, (s.tempo - ts.min_tempo) / (ts.max_tempo - ts.min_tempo)]),
+                        cube(array[
+                                s.danceability,
+                                s.energy,
+                                s.speechiness,
+                                s.valence,
+                                LEAST(GREATEST((s.tempo - ts.min_tempo) / (ts.max_tempo - ts.min_tempo), 0), 1)
+                        ]),
                         cube(array[t.avg_danceability, t.avg_energy, t.avg_speechiness, t.avg_valence, t.avg_tempo])
                     ) AS cosine_distance
                 FROM songs s, target_songs t, tempo_stats ts
                 WHERE s.id != ALL(:song_ids)  -- exclude the target songs
             )
-            -- return the 3 closest songs
-            SELECT * FROM song_distances
+            -- return the 3 closest songs and the feature differences
+            SELECT id, diff_danceability, diff_energy, diff_speechiness, diff_valence, diff_tempo, cosine_distance
+            FROM song_distances
             ORDER BY cosine_distance
             LIMIT :limit;
         """
