@@ -22,7 +22,7 @@ class WebSocketService:
                     # result in redundant serialization as it was done so before publishing to redis.
                     await websocket.send_text(event.message)
             except WebSocketDisconnect:
-                #TODO: remove user from session
+                #TODO: remove user from session?
                 self._active_connections[session_id].remove(websocket)
                 if not self._active_connections[session_id]:
                     del self._active_connections[session_id]
@@ -33,5 +33,8 @@ class WebSocketService:
             return
 
         for websocket in self._active_connections[session_id]:
-            await websocket.close(code=1001, reason='Session ended.')
+            try:
+                await websocket.close(code=1001, reason='Session ended.')
+            except WebSocketDisconnect as e:
+                print(f"WebSocket for session {session_id} already disconnected: {e}")
         del self._active_connections[session_id]
