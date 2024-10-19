@@ -87,7 +87,7 @@ class Repository:
             songs.c.track_name.op('~*')(regex_pattern) |
             func.array_to_string(songs.c.artists, ' ').op('~*')(regex_pattern)
         ).limit(limit)
-        result = await self.postgres.fetch_all(query, {'pattern': f'%{pattern}%'})
+        result = await self.postgres.fetch_all(query)
         if result is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No matching songs found")
         return result
