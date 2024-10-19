@@ -2,6 +2,7 @@ import jwt
 import os
 import asyncio
 import uuid
+import math
 
 from datetime import timedelta, datetime, timezone
 from fastapi import Depends, HTTPException, status
@@ -227,7 +228,7 @@ class Service:
             }
             most_significant_feature = max(diffs, key=diffs.get)
             song.most_significant_feature = most_significant_feature
-            song.similarity_score = row['cosine_distance']
+            song.similarity_score = (1 - (row['cosine_distance'] / math.sqrt(5)))
             session.recommendations.append(Recommendation(**song.model_dump()))
         await self.repo.set_session(session)
         await self.manager.publish(channel=f"recommendations:{session_id}", message=RecommendationList(recommendations=session.recommendations))
