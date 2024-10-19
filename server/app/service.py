@@ -2,6 +2,7 @@ import jwt
 import os
 import asyncio
 import uuid
+import math
 import requests
 
 from datetime import timedelta, datetime, timezone
@@ -174,9 +175,42 @@ class Service:
         return Song.model_validate(dict(result))
 
     async def add_song_to_database(self, song_id: str) -> Song:
-        song_info = self.spotify_api_client.track(song_id)
-        await self.repo.add_song_by_info(song_info)
-        return Song(**song_info)
+        try:
+            song_info = self.spotify_api_client.track(song_id)
+            audio_features = self.spotify_api_client.audio_features(song_id)[0]
+            combined_info = {**song_info, **audio_features}
+
+            album_info = combined_info.get('album', {})
+            artists_info = combined_info.get('artists', [])
+            release_date_str = album_info.get('release_date')
+            release_date = None
+            if release_date_str:
+                try:
+                    release_date = datetime.strptime(release_date_str, "%Y-%m-%d").date()
+                except ValueError:
+                    release_date = None
+
+            filtered_song_info = {
+                "id": str(combined_info.get('id', '')),
+                "track_name": str(combined_info.get('name', '')),
+                "album": str(album_info.get('name', '')),
+                "album_id": str(album_info.get('id', '')),
+                "artists": [str(artist['name']) for artist in artists_info],
+                "artist_ids": [str(artist['id']) for artist in artists_info],
+                "danceability": float(combined_info.get('danceability', 0.0)),
+                "energy": float(combined_info.get('energy', 0.0)),
+                "speechiness": float(combined_info.get('speechiness', 0.0)),
+                "valence": float(combined_info.get('valence', 0.0)),
+                "tempo": float(combined_info.get('tempo', 0.0)),
+                "duration_ms": int(combined_info.get('duration_ms', 0)),
+                "release_date": release_date,
+                "popularity": float(combined_info.get('popularity', 0.0))
+            }
+
+            await self.repo.add_song_by_info(filtered_song_info)
+            return Song(**filtered_song_info)
+        except Exception as e:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Spotify not reached: {repr(e)}")
 
     # async def delete_song_from_database(self, song_id: str) -> None:
     #     await self.repo.delete_song_by_id(song_id)
@@ -211,10 +245,12 @@ class Service:
 
     @with_session_lock
     async def add_song_to_session(self, user_id: str, session_id: str, song_id: str) -> Playlist:
+        user = await self.get_user(user_id)
         session = await self.get_session(session_id)
-        if user_id not in session.guests and user_id != session.host_id:
+        if user.id not in session.guests and user.id != session.host_id:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User is not part of session")
         song = await self.get_song(song_id)
+        song.added_by = user
         song = await self.get_genre(song)
 
         session.playlist.queued_songs.append(song)
@@ -241,9 +277,19 @@ class Service:
         session = await self.get_session(session_id)
         session.recommendations.clear()
         await self.repo.set_session(session)
-        result = await self.repo.get_recommendations_by_song_id(session.playlist.get_all_songs(), limit)
-        songs = [await self.get_song_from_database(row['id']) for row in result]
-        for song in songs:
+        result = await self.repo.get_recommendations_by_songs(session.playlist.get_all_songs(), limit)
+        for row in result:
+            song = await self.get_song_from_database(row['id'])
+            diffs = {
+                'danceability': row['diff_danceability'],
+                'energy': row['diff_energy'],
+                'speechiness': row['diff_speechiness'],
+                'valence': row['diff_valence'],
+                'tempo': row['diff_tempo']
+            }
+            most_significant_feature = max(diffs, key=diffs.get)
+            song.most_significant_feature = most_significant_feature
+            song.similarity_score = (1 - (row['cosine_distance'] / math.sqrt(5)))
             session.recommendations.append(Recommendation(**song.model_dump()))
         await self.repo.set_session(session)
         await self.manager.publish(channel=f"recommendations:{session_id}", message=RecommendationList(recommendations=session.recommendations))
