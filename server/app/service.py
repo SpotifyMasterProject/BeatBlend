@@ -59,9 +59,12 @@ class Service:
 
     @staticmethod
     def get_display_name(token: SpotifyToken) -> str:
-        spotify_host_client = Spotify(auth=token.access_token)
-        user_info = spotify_host_client.current_user()
-        return user_info['display_name']
+        try:
+            spotify_host_client = Spotify(auth=token.access_token)
+            user_info = spotify_host_client.current_user()
+            return user_info['display_name']
+        except Exception as e:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Request unsuccessful: {repr(e)}")
 
     async def create_user(self, user: User) -> User:
         user.id = str(uuid.uuid4())
@@ -174,8 +177,11 @@ class Service:
         result = await self.repo.get_song_by_id(song_id)
         song = Song.model_validate(dict(result))
         if not song.preview_url:
-            song_info = self.spotify_api_client.track(song_id)
-            song.preview_url = song_info.get('preview_url')
+            try:
+                song_info = self.spotify_api_client.track(song_id)
+                song.preview_url = song_info.get('preview_url')
+            except Exception as e:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Request unsuccessful: {repr(e)}")
         return song
 
     async def add_song_to_database(self, song_id: str) -> Song:
@@ -215,7 +221,7 @@ class Service:
             filtered_song_info["preview_url"] = combined_info.get('preview_url')
             return Song(**filtered_song_info)
         except Exception as e:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Spotify not reached: {repr(e)}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Request unsuccessful: {repr(e)}")
 
     # async def delete_song_from_database(self, song_id: str) -> None:
     #     await self.repo.delete_song_by_id(song_id)
