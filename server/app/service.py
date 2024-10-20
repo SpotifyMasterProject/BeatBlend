@@ -178,7 +178,7 @@ class Service:
         song = Song.model_validate(dict(result))
         if not song.preview_url:
             try:
-                song_info = self.spotify_api_client.track(song_id)
+                song_info = self.spotify_api_client.track(song.id)
                 song.preview_url = song_info.get('preview_url')
             except Exception as e:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Request unsuccessful: {repr(e)}")
