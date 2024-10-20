@@ -172,7 +172,11 @@ class Service:
 
     async def get_song_from_database(self, song_id: str) -> Song:
         result = await self.repo.get_song_by_id(song_id)
-        return Song.model_validate(dict(result))
+        song = Song.model_validate(dict(result))
+        if not song.preview_url:
+            song_info = self.spotify_api_client.track(song_id)
+            song.preview_url = song_info.get('preview_url')
+        return song
 
     async def add_song_to_database(self, song_id: str) -> Song:
         try:
@@ -208,6 +212,7 @@ class Service:
             }
 
             await self.repo.add_song_by_info(filtered_song_info)
+            filtered_song_info["preview_url"] = combined_info.get('preview_url')
             return Song(**filtered_song_info)
         except Exception as e:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Spotify not reached: {repr(e)}")
