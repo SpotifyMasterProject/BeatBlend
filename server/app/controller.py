@@ -178,53 +178,29 @@ async def get_specific_song(song_id: str) -> Song:
 
 @app.websocket("/sessions/{session_id}")
 async def websocket_session(websocket: WebSocket, session_id: str):
-    #TODO: check if session exists
-    await websocket.accept()
+    try:
+        await service.verify_instances(session_id=session_id)
+        await websocket.accept()
+    except:
+        await websocket.close(1001, "Session does not exist.")
     await ws_service.connect(websocket, session_id, ws_type="session")
 
 
 @app.websocket("/playlist/{session_id}")
 async def websocket_playlist(websocket: WebSocket, session_id: str):
-    await websocket.accept()
+    try:
+        await service.verify_instances(session_id=session_id)
+        await websocket.accept()
+    except:
+        await websocket.close(1001, "Session does not exist.")
     await ws_service.connect(websocket, session_id, ws_type="playlist")
 
 
 @app.websocket("/recommendations/{session_id}")
 async def websocket_recommendations(websocket: WebSocket, session_id: str):
-    await websocket.accept()
+    try:
+        await service.verify_instances(session_id=session_id)
+        await websocket.accept()
+    except:
+        await websocket.close(1001, "Session does not exist.")
     await ws_service.connect(websocket, session_id, ws_type="recommendations")
-
-
-# This WS code is inspired by the encode/broadcaster package.
-# If something needs to be fixed or changed, look at their GitHub repo.
-# @app.websocket("/ws")
-# async def websocket_endpoint(websocket: WebSocket):
-#     # This endpoint only serves a simplex operation.
-#     # If the future desires duplex operations, look at the encode/broadcaster example.
-#     await websocket.accept()
-#
-#     async with manager.subscribe(channel="test") as subscriber:
-#         try:
-#             async for event in subscriber:
-#                 await websocket.send_text(event.message)
-#         except WebSocketDisconnect:
-#             pass
-#
-#
-# async def test_websocket():
-#     event = asyncio.Event()
-#     asyncio.create_task(set_websocket_test_task(event))
-#     await handle_test_event(event)
-#
-#
-# async def set_websocket_test_task(event):
-#     while True:
-#         await asyncio.sleep(2)
-#         event.set()
-#         event.clear()
-#
-#
-# async def handle_test_event(event):
-#     while True:
-#         await event.wait()
-#         await manager.publish(channel="test", message="WEBSOCKET TEST MESSAGE")
