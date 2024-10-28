@@ -25,6 +25,10 @@ const rotation = computed(() => {
   return (maxFeatureIndex * 360) / props.features.length;
 });
 
+function handleHover(feature) {
+  emit('hover', feature);
+}
+
 </script>
 
 <template>
@@ -46,6 +50,8 @@ const rotation = computed(() => {
         :center="maxPetalLength"
         :circleRadius="circleRadius"
         @click="() => emit('onPetalClick', feature.category)"
+        @mouseenter="() => handleHover(feature)"
+        @mouseleave="() => emit('leave')"
     />
   </svg>
 </template>

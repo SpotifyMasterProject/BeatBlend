@@ -19,6 +19,14 @@ import { Playlist, flattenPlaylist } from "@/types/Playlist";
 import {getSongFeatures, sessionService} from "@/services/sessionService";
 import SongFeatureDialog from "@/components/SongFeatureDialog.vue";
 import {SongFeatureCategory} from "@/types/SongFeature";
+import SessionArtifact from "@/components/SessionArtifact.vue";
+
+const showArtifactPopup = ref(false);
+
+const toggleArtifactPopup = () => {
+  showArtifactPopup.value = !showArtifactPopup.value;
+  console.log("Artifact Popup Toggled:", showArtifactPopup.value);
+};
 
 const showSongFeatureDialog = ref(false);
 const showAddMoreSongPopup = ref(false);
@@ -113,6 +121,19 @@ function handleFlowerSelected(index, featureCategory) {
   selectedFeature.value = {index, featureCategory};
   showSongFeatureDialog.value = true;
 }
+
+const dummyArtifactData = ref({
+  audioFeatures: [
+    { category: 'SPEECHABILITY', value: 0.6 },
+    { category: 'DANCEABILITY', value: 0.8 },
+    { category: 'TEMPO', value: 0.7 },
+    { category: 'VALENCE', value: 0.5 },
+    { category: 'ENERGY', value: 0.9 },
+  ],
+  songCount: 20,
+  startGenre: 'Pop',
+  endGenre: 'Rock',
+});
 </script>
 
 <template>
@@ -125,7 +146,12 @@ function handleFlowerSelected(index, featureCategory) {
         <logo-intro-screen/>
       </div>
       <i v-if="isHost && session?.isRunning" class="settings-icon pi pi-cog" @click="showSettings()"></i>
+      <div>
+        <Button icon="pi pi-info-circle" severity="secondary" text rounded aria-label="Artifact" @click="toggleArtifactPopup" />
+      </div>
+
     </header>
+    <!-- Constant Overview: SessionArtifact component with dummy data -->
     <div class="middle" v-if="!loading">
       <div v-if="errorMessage" class="error">
           {{errorMessage}}
@@ -164,6 +190,7 @@ function handleFlowerSelected(index, featureCategory) {
         </div>
       </div>
     </div>
+
     <!-- Conditionally render VisualizationAid component -->
     <VisualizationAid v-if="showVisualizationAid" @close-popup="closeVisualizationAid" />
     <!-- Popup Overlay -->
@@ -174,6 +201,7 @@ function handleFlowerSelected(index, featureCategory) {
           :sessionId="session.id" />
       </div>
     </div>
+    <SessionArtifact v-if="showArtifactPopup" @close="toggleArtifactPopup" :artifactData="dummyArtifactData" />
     <Sidebar v-model:visible="settingsVisible" header="Session Settings" :unstyled="false">
       <div v-if="session && session.isRunning">
         <h3> Join the Session </h3>
@@ -397,5 +425,12 @@ function handleFlowerSelected(index, featureCategory) {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+.settings-icon {
+  position: absolute;
+  right: 60px;
+  color: var(--logo-highlight-color);
+  font-size: 30px;
+  cursor: pointer;
 }
 </style>
