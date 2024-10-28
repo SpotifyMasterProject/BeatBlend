@@ -6,16 +6,26 @@
       </div>
       <p><strong>Artist: </strong> {{ song.artists.join(', ') }}</p>
       <p><strong>Album: </strong> {{ song.album }}</p>
+      <p><strong>Album Genres: </strong> {{ formattedGenres }}</p>
       <p><strong>Release Date: </strong> {{ formattedReleaseDate }}</p>
       <p><strong>Duration: </strong> {{ formattedDuration }}</p>
-      <p><strong>Genre: </strong> {{ song.genre }}</p>
       <p><strong>Popularity: </strong> {{ song.popularity }}/100 </p>
+      <div class="add-by">
+        <p><strong>Added By: </strong>
+          <span v-if="addedByUser">
+            {{ addedByUser.username }}
+            <span id="avatar" class="avatar" v-html="addedByUser.avatar"></span>
+          </span>
+          <span v-else>Recommendation</span>
+        </p>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { Song } from '@/types/Song.ts';
+import { computed } from "vue"
+import { useUserStore } from "@/stores/user.ts";
 
 const props = defineProps({
   song: {
@@ -41,13 +51,38 @@ const formatDate = (dateString) => {
 const formattedDuration = formatDuration(props.song.durationMs);
 const formattedReleaseDate = formatDate(props.song.releaseDate);
 
+const formattedGenres = computed(() => {
+  return props.song.genre && props.song.genre.length > 0 ? props.song.genre.join(', ') : 'Unknown';
+});
+
 console.log("song info", props.song)
+
+const userStore = useUserStore();
+
+// Find the user who added the song based on their ID
+const addedByUser = computed(() => {
+  if (props.song.addedBy && props.song.addedBy.id) {
+    console.log(props.song.addedBy);
+    console.log("user id: ", props.song.addedBy.id);
+    console.log("userStore: ", userStore.allUsers);
+    console.log("store: ", userStore.users);
+    console.log("id: ", userStore.findUser(props.song.addedBy.id));
+    return userStore.findUser(props.song.addedBy.id);
+  } else {
+    console.log("props.song.addedBy is null or undefined");
+    return null;
+  }
+});
+
+
+
+
 </script>
 
 <style scoped>
 .song-detail-modal {
   position: fixed;
-  top: 25%;
+  top: 30%;
   left: 85%;
   transform: translate(-50%, -50%);
   background-color: #272525;
@@ -55,7 +90,7 @@ console.log("song info", props.song)
   padding: 10px;
   z-index: 1001;
   width: 70%;
-  max-width: 250px;
+  max-width: 300px;
   color: #D9D9D9;
   border: 2px solid #6AA834;
 }
@@ -78,6 +113,20 @@ console.log("song info", props.song)
   font-size: 16px;
   font-weight: bold;
   word-wrap: break-word;
+}
+
+.add-by {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+.avatar {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-left: 10px;
 }
 
 p {
