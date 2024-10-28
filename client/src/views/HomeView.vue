@@ -5,7 +5,6 @@ import { Session } from "@/types/Session";
 import { useAuthStore } from "@/stores/auth";
 import { useSession } from "@/stores/session";
 import { useRouter, useRoute } from 'vue-router';
-import Navigation from "@/components/Navigation.vue";
 import MainVisualization from "@/components/MainVisualization.vue";
 import VisualizationAid from '@/components/VisualizationAid.vue';
 import Button from 'primevue/button';
@@ -164,7 +163,6 @@ function handleFlowerSelected(index, featureCategory) {
           />
         </div>
       </div>
-      <qrcode-vue v-if="isHost" :value="session.inviteLink" />
     </div>
     <!-- Conditionally render VisualizationAid component -->
     <VisualizationAid v-if="showVisualizationAid" @close-popup="closeVisualizationAid" />
@@ -176,7 +174,11 @@ function handleFlowerSelected(index, featureCategory) {
           :sessionId="session.id" />
       </div>
     </div>
-    <Sidebar v-model:visible="settingsVisible" header="Settings" :unstyled="false">
+    <Sidebar v-model:visible="settingsVisible" header="Session Settings" :unstyled="false">
+      <div v-if="session && session.isRunning">
+        <h3> Join the Session </h3>
+          <qrcode-vue v-if="isHost" :value="session.inviteLink" />
+      </div>
        <h3>Guests</h3>
        <div class="guests-container">
         <div v-for="guest in session.guests" class="guest" :key="session.guests.length">
@@ -184,7 +186,6 @@ function handleFlowerSelected(index, featureCategory) {
           <i class="delete-guest-icon pi pi-trash" @click="removeGuest(guest.id)"/>
         </div>
       </div>
-
        <button class="end-session-button" @click="endCurrentSession()">
         End Session
        </button>
