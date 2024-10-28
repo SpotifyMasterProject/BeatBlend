@@ -7,7 +7,6 @@ import type { CSSProperties } from 'vue';
 import Button from "primevue/button";
 import { SongFeatureCategory } from '@/types/SongFeature';
 import { Session } from '@/types/Session';
-import { getSongFeatures } from '@/services/sessionService';
 import SongDetailsPopUp from "@/components/SongDetailsPopUp.vue";
 import { flattenPlaylist } from '@/types/Playlist';
 import { sessionService, getSongFeatures } from "@/services/sessionService";
