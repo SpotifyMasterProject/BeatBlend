@@ -8,6 +8,7 @@ from redis.asyncio import Redis
 from starlette.middleware.cors import CORSMiddleware
 from typing import Annotated
 
+from models.artifact import Artifact, AverageFeatures
 from models.token import Token
 from models.user import User, SpotifyUser
 from models.session import Session
@@ -86,11 +87,29 @@ async def get_specific_session(session_id: str) -> Session:
     return await service.get_session(session_id)
 
 
-@app.delete("/sessions/{session_id}", status_code=status.HTTP_200_OK)
-async def end_existing_session(host_id: Annotated[str, Depends(service.verify_token)], session_id: str) -> None:
+@app.delete("/sessions/{session_id}", status_code=status.HTTP_200_OK, response_model=Artifact)
+async def end_existing_session(host_id: Annotated[str, Depends(service.verify_token)], session_id: str) -> Artifact:
     await service.verify_instances(user_ids=host_id, session_id=session_id)
     await ws_service.disconnect(session_id)
-    return await service.end_session(host_id, session_id)
+    await service.end_session(host_id, session_id)
+    # TODO: change/remove temporary return
+    return Artifact(
+    songs_played=69,
+    songs_added_manually=42,
+    most_songs_added_by="de_gueggeli_maa",
+    most_votes_by="haudrauf_hans",
+    most_significant_feature_overall="energy",
+    first_recommendation_vote_percentage=75.5,
+    average_features=AverageFeatures(
+        danceability=0.567568,
+        energy=0.8956756,
+        speechiness=0.0564,
+        valence=0.755,
+        tempo=120.0
+    ),
+    genre_start=["pop", "hip-hop"],
+    genre_end=["jazz", "rock"]
+)
 
 
 # TODO: used for getting all artifacts
