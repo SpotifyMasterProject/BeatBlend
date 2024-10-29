@@ -302,7 +302,7 @@ class Service:
             session.recommendations.append(Recommendation(**song.model_dump()))
         await self.repo.set_session(session)
         await self.manager.publish(channel=f"recommendations:{session_id}", message=RecommendationList(recommendations=session.recommendations))
-        return RecommendationList(recommendations=session.recommendations)
+        return RecommendationList(recommendations=session.recommendations, creation_date=datetime.now())
 
     async def get_most_popular_recommendation(self, session_id: str) -> Song:
         session = await self.get_session(session_id)
