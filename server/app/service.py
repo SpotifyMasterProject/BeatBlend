@@ -303,9 +303,11 @@ class Service:
             song.most_significant_feature = most_significant_feature
             song.similarity_score = (1 - (row['cosine_distance'] / math.sqrt(5)))
             session.recommendations.append(Recommendation(**song.model_dump()))
+        session.recommendations_creation_date = datetime.now()
         await self.repo.set_session(session)
-        await self.manager.publish(channel=f"recommendations:{session_id}", message=RecommendationList(recommendations=session.recommendations))
-        return RecommendationList(recommendations=session.recommendations, creation_date=datetime.now())
+        response = RecommendationList(recommendations=session.recommendations, creation_date=session.recommendations_creation_date)
+        await self.manager.publish(channel=f"recommendations:{session_id}", message=response)
+        return response
 
     async def get_most_popular_recommendation(self, session_id: str) -> Song:
         session = await self.get_session(session_id)
@@ -326,8 +328,9 @@ class Service:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Vote already added.")
         curr_rec.votes.append(guest_id)
         await self.repo.set_session(session)
-        await self.manager.publish(channel=f"recommendations:{session_id}", message=RecommendationList(recommendations=session.recommendations))
-        return RecommendationList(recommendations=session.recommendations)
+        response = RecommendationList(recommendations=session.recommendations, creation_date=session.recommendations_creation_date)
+        await self.manager.publish(channel=f"recommendations:{session_id}", message=response)
+        return response
 
     @with_session_lock
     async def remove_vote_from_recommendation(self, guest_id: str, session_id: str, song_id: str) -> None:
@@ -340,7 +343,7 @@ class Service:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No vote added prior.")
         curr_rec.votes.remove(guest_id)
         await self.repo.set_session(session)
-        await self.manager.publish(channel=f"recommendations:{session_id}", message=RecommendationList(recommendations=session.recommendations))
+        await self.manager.publish(channel=f"recommendations:{session_id}", message=RecommendationList(recommendations=session.recommendations, creation_date=session.recommendations_creation_date))
 
     async def get_matching_songs_from_database(self, pattern: str, limit: int) -> SongList:
         result = await self.repo.get_songs_by_pattern(pattern, limit)
