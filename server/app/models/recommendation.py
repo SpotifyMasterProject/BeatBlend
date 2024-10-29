@@ -1,3 +1,4 @@
+from datetime import datetime
 from .camel_model import CamelModel
 from .song import Song
 
@@ -8,3 +9,4 @@ class Recommendation(Song):
 
 class RecommendationList(CamelModel):
     recommendations: list[Recommendation] = []
+    creation_date: datetime
