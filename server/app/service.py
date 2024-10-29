@@ -127,6 +127,9 @@ class Service:
         # TODO: adjust URL
         session.invite_link = f'http://{LOCAL_IP_ADDRESS}:8080/{session.id}/join'
         # session.playlist = Playlist()
+        for song in session.playlist.queued_songs:
+            song.added_by = host
+            await self.get_genre(song)
         await self.repo.set_session(session)
         return session
 
