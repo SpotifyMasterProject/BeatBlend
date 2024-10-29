@@ -52,7 +52,7 @@ const closePopup = () => {
         <div class="overview-content">
           <!-- Left Column -->
           <div class="overview-left">
-            <p><strong>Audio Features Ranked</strong></p>
+            <strong>Audio Features Ranked</strong>
             <ol>
               <li>Speechability</li>
               <li>Danceability</li>
@@ -65,11 +65,11 @@ const closePopup = () => {
             </p>
           </div>
           <div class="overview-right">
-            <p>You played <span class="highlight">XXX</span> songs</p>
-            <p>Of those, you added <span class="highlight">XXX</span> manually</p>
-            <p>You started with genre <span class="highlight">XXX</span> and ended with <span class="highlight">XXX</span></p>
-            <p><span class="highlight">XXX</span> added the most songs</p>
-            <p><span class="highlight">XXX</span> voted most</p>
+            <p>You played <span class="highlight">{{ artifactDetails.songsPlayed }}</span> songs</p>
+            <p>Of those, you added <span class="highlight">{{ artifactDetails.songsAddedManually }}</span> manually</p>
+            <p>You started with genre <span class="highlight">{{ artifactDetails.genreStart }}</span> and ended with <span class="highlight">{{ artifactDetails.genreEnd }}</span></p>
+            <p><span class="highlight">{{ artifactDetails.mostSongsAddedBy }}</span> added the most songs</p>
+            <p><span class="highlight">{{ artifactDetails.mostVotesBy }}</span> voted most</p>
           </div>
         </div>
       </div>
