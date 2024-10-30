@@ -12,7 +12,7 @@ class AverageFeatures(CamelModel):
 class Artifact(CamelModel):
     songs_played: int
     songs_added_manually: int
-    most_songs_added_by: int
+    most_songs_added_by: str
     most_votes_by: str
     most_significant_feature_overall: str
     first_recommendation_vote_percentage: float

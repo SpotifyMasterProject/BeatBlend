@@ -21,3 +21,4 @@ class SessionCore(CamelModel):
 class Session(SessionCore):
     playlist: Playlist
     recommendations: list[Recommendation] = []
+    recommendations_creation_date: Optional[datetime] = None
