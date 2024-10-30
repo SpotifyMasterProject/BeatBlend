@@ -1,5 +1,5 @@
 <script setup lang ="ts">
-import { computed, defineProps} from 'vue';
+import { computed, defineProps, defineEmits} from 'vue';
 import Petal from './Petal.vue';
 import { SongFeature } from '@/types/SongFeature';
 
@@ -25,7 +25,7 @@ const rotation = computed(() => {
   return (maxFeatureIndex * 360) / props.features.length;
 });
 
-function handleHover(feature) {
+function handleHover(feature: SongFeature) {
   emit('hover', feature);
 }
 
@@ -43,7 +43,7 @@ function handleHover(feature) {
     <circle :cx="maxPetalLength" :cy="maxPetalLength" :r="circleRadius" fill="none" stroke="#CCCCCC" stroke-width="1" />
     <Petal
         class="petal"
-        v-for="(feature, index) in features"
+        v-for="(feature, index) in props.features"
         :key="index"
         :index="index"
         :feature="feature"

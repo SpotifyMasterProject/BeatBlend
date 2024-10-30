@@ -4,11 +4,12 @@ import {sessionService} from '@/services/sessionService'
 import {Session} from '@/types/Session'
 import {Playlist} from '@/types/Playlist'
 import {RecommendationList} from '@/types/Recommendation'
+import { Artifacts } from '@/types/Artifact'
 import { SessionWebsocketService, PlaylistWebsocketService, RecommendationWebsocketService } from "@/services/websocketService";
 
 export const useSession = defineStore('session', () => {
 
-    const session = ref<Session>();
+    const session = ref<Session | null>(null);
 
     const sessionSocket = new SessionWebsocketService();
     const playlistSocket = new PlaylistWebsocketService();
@@ -57,8 +58,6 @@ export const useSession = defineStore('session', () => {
         recommendationsSocket.connect(session.value.id, handleRecommendationMessages);
     }
 
-
-
     const fetchSession = async (sessionId: string | null) => {
         const id = sessionId || storedSessionId;
         if (!id) {
@@ -66,6 +65,7 @@ export const useSession = defineStore('session', () => {
         }
         try {
             session.value = await sessionService.getSessionById(id);
+            session.value.artifacts = session.value.artifacts || null;
             return initialize();
         } catch (error) {
             localStorage.removeItem('sessionId');
@@ -78,16 +78,25 @@ export const useSession = defineStore('session', () => {
     }
 
     const endSession = async () => {
-        await sessionService.endSession(session.value.id);
+        if (!session.value) return;
 
-        session.value.isRunning = false;
-        session.value.guests = {};
+        try {
+            const artifactData = await sessionService.endSession(session.value.id);
 
-        sessionSocket.close;
-        playlistSocket.close();
-        recommendationsSocket.close();
-    }
+            if (artifactData) {
+                session.value.artifacts = new Artifacts(artifactData);
+            }
 
+            session.value.isRunning = false;
+            session.value.guests = {};
+
+            sessionSocket.close;
+            playlistSocket.close();
+            recommendationsSocket.close();
+        } catch (error) {
+            console.error ("Failed to end session or fetch artifacts", error);
+        }
+    };
     return {session, fetchSession, createSession, endSession};
 });
 

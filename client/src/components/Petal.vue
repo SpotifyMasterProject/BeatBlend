@@ -3,12 +3,14 @@ import { computed, defineProps } from 'vue';
 import { SongFeature, SongFeatureCategory } from '@/types/SongFeature';
 
 const props = defineProps<{
-  feature: SongFeature;
+  feature: SongFeature | undefined;
   center: number;
   circleRadius: number;
 }>();
 
-const rotation = computed(() => ((props.feature.category ?? 0) * 360 / 5));
+const rotation = computed(() => {
+  return props.feature ? ((props.feature.category ?? 0) * 360 / 5) : 0;
+});
 
 const colorPalettes = {
   [SongFeatureCategory.DANCEABILITY]: ['#A1DBE8', '#A1DBE8', '#A1DBE8', '#A1DBE8', '#A1DBE8'],
@@ -84,7 +86,7 @@ const petalColors = computed(() => {
         :d="path"
         :fill="petalColors[i]"
         stroke="rgba(255, 255, 255, 0.3)"
-        :stroke-width="props.feature.category !== undefined ? 0.5 : 2.0"
+        :stroke-width="props.feature && props.feature.category !== undefined ? 0.5 : 2.0"
     />
   </g>
 </template>

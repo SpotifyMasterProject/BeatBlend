@@ -122,18 +122,6 @@ function handleFlowerSelected(index, featureCategory) {
   showSongFeatureDialog.value = true;
 }
 
-const dummyArtifactData = ref({
-  audioFeatures: [
-    { category: 'SPEECHABILITY', value: 0.6 },
-    { category: 'DANCEABILITY', value: 0.8 },
-    { category: 'TEMPO', value: 0.7 },
-    { category: 'VALENCE', value: 0.5 },
-    { category: 'ENERGY', value: 0.9 },
-  ],
-  songCount: 20,
-  startGenre: 'Pop',
-  endGenre: 'Rock',
-});
 </script>
 
 <template>
@@ -201,7 +189,11 @@ const dummyArtifactData = ref({
           :sessionId="session.id" />
       </div>
     </div>
-    <SessionArtifact v-if="showArtifactPopup" @close="toggleArtifactPopup" :artifactData="dummyArtifactData" />
+    <SessionArtifact
+        v-if="showArtifactPopup"
+        @close="toggleArtifactPopup"
+        :artifactData="sessionStore.session?.artifacts"
+    />
     <Sidebar v-model:visible="settingsVisible" header="Session Settings" :unstyled="false">
       <div v-if="session && session.isRunning">
         <h3> Join the Session </h3>

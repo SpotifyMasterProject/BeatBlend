@@ -1,29 +1,37 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import {ref, computed, defineProps, defineEmits} from 'vue';
 import Flower from '@/components/Flower.vue';
 import Button from 'primevue/button';
+import { useSession } from '@/stores/session';
+import { SongFeature, SongFeatureCategory } from '@/types/SongFeature';
 
-const defaultFlowerData = [
-  { category: 'SPEECHINESS', value: 0.6 },
-  { category: 'DANCEABILITY', value: 0.8 },
-  { category: 'TEMPO', value: 0.7 },
-  { category: 'VALENCE', value: 0.5 },
-  { category: 'ENERGY', value: 0.75 },
-];
 
-const artifactDetails = {
-  songsPlayed: 120,
-  songsAddedManually: 30,
-  genreStart: 'Pop',
-  genreEnd: 'Rock',
-  mostSongsAddedBy: 'User123',
-  mostVotesBy: 'User456',
-  firstRecommendationVotePercentage: 70,
-  mostSignificantFeatureOverall: 'Danceability'
-};
+const sessionStore = useSession();
+
+const artifactDetails = computed(() => sessionStore.session?.artifacts || {});
+
+const props = defineProps({
+  artifactData: {
+    type: Object,
+    required: true,
+  }
+});
+const flowerData = computed<SongFeature[]>(() => {
+  if (props.artifactData?.averageFeatures) {
+    const data = [
+      { category: SongFeatureCategory.SPEECHINESS, value: props.artifactData.averageFeatures.speechiness },
+      { category: SongFeatureCategory.DANCEABILITY, value: props.artifactData.averageFeatures.danceability },
+      { category: SongFeatureCategory.TEMPO, value: props.artifactData.averageFeatures.tempo },
+      { category: SongFeatureCategory.VALENCE, value: props.artifactData.averageFeatures.valence },
+      { category: SongFeatureCategory.ENERGY, value: props.artifactData.averageFeatures.energy },
+    ];
+    console.log("Computed flowerData:", data);  // Debugging line
+    return data;
+  }
+  return [];
+});
 
 const hoverFeature = ref(null);
-
 const handleHover = (feature) => {
   hoverFeature.value = feature;
 };
@@ -44,7 +52,8 @@ const closePopup = () => {
       </header>
       <div class="middle-box">
         <div class="flower-placeholder">
-          <p>Flower Visualization Placeholder</p>
+          <Flower :features="flowerData" />
+          <div v-if="flowerData.length === 0">No flower data to display</div>
         </div>
       </div>
       <div class="overview-section">
