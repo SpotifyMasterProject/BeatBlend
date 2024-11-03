@@ -27,6 +27,7 @@ class Song(CamelModel):
     release_date: Optional[datetime] = None
     popularity: Optional[float] = None
     genre: list[str] = []
+    preview_url: Optional[str] = None
     added_by: Optional[User] = None
     most_significant_feature: Optional[str] = None
     similarity_score: Optional[float] = -1.0

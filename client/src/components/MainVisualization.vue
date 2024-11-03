@@ -7,6 +7,7 @@ import type { CSSProperties } from 'vue';
 import Button from "primevue/button";
 import { SongFeatureCategory } from '@/types/SongFeature';
 import { Session } from '@/types/Session';
+import SongDetailsPopUp from "@/components/SongDetailsPopUp.vue";
 import { flattenPlaylist } from '@/types/Playlist';
 import { sessionService, getSongFeatures } from "@/services/sessionService";
 
@@ -219,9 +220,9 @@ onMounted(() => {
 
 const currentSelectedFeature = ref(null);
 const emit = defineEmits(['flowerSelected']);
-const onPetalClick = (index: number) => {
-  currentSelectedFeature.value = {index};
-  emit('flowerSelected', index);
+const onPetalClick = (index: number, featureCategory: SongFeatureCategory) => {
+  currentSelectedFeature.value = {index, featureCategory};
+  emit('flowerSelected', index, featureCategory);
 };
 
 const flowerLines = ref([]);
@@ -294,6 +295,16 @@ watch(localCenterPositions.value, () => {
   console.log(flowerLines.value);
 })
 
+
+const showSongDetails = ref(false);
+const hoverIndex = ref(null);
+const onHoverFlower = (index: number) => {
+  hoverIndex.value = index
+  showSongDetails.value = true;
+}
+const onLeaveFlower = () => {
+  showSongDetails.value = false;
+}
 </script>
 
 <template>
@@ -316,6 +327,8 @@ watch(localCenterPositions.value, () => {
                   :circleRadius="40"
                   :position="flowerPositions[index]"
                   @onPetalClick="() => onPetalClick(index)"
+                  @hover="() => onHoverFlower(index)"
+                  @leave="onLeaveFlower"
                   @centerPosition="(position) => storeFlowerCenter(position, index)"
               />
               <path
@@ -325,6 +338,7 @@ watch(localCenterPositions.value, () => {
           </svg>
         </div>
       </div>
+      <SongDetailsPopUp v-if="showSongDetails && hoverIndex !== null" :song="session.playlist[hoverIndex]" />
     </div>
   </div>
 </template>

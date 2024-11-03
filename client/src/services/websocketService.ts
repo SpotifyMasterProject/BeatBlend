@@ -35,8 +35,8 @@ class WebsocketService<Type> {
         }
 
         this.socket.onclose = (event) => {
-            console.log('Websocket disconnected! Attempting to reconnect.')
-            if (event.code !== 1000) { // Do not attempt to reconnect if the connection was closed normally (code 1000)
+            console.log('Websocket disconnected!')
+            if (event.code !== 1001) { // Do not attempt to reconnect if the connection was closed normally from serverside (code 1001)
                 this.attemptReconnect(sessionId, handler);
             }
         }

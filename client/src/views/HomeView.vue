@@ -5,7 +5,6 @@ import { Session } from "@/types/Session";
 import { useAuthStore } from "@/stores/auth";
 import { useSession } from "@/stores/session";
 import { useRouter, useRoute } from 'vue-router';
-import Navigation from "@/components/Navigation.vue";
 import MainVisualization from "@/components/MainVisualization.vue";
 import VisualizationAid from '@/components/VisualizationAid.vue';
 import Button from 'primevue/button';
@@ -24,15 +23,13 @@ import {SongFeatureCategory} from "@/types/SongFeature";
 const showSongFeatureDialog = ref(false);
 const showAddMoreSongPopup = ref(false);
 
-const showSongDetailPopup = ref(false);
-const selectedSong = ref(null);
-
 const showVisualizationAid = ref(false);
 
 const LOCAL_IP_ADDRESS = import.meta.env.VITE_LOCAL_IP_ADDRESS;
 
 const toggleVisibility = () => {
   showSongFeatureDialog.value = !showSongFeatureDialog.value;
+  selectedFeature.value = null;
 };
 
 
@@ -75,6 +72,9 @@ const runningSession = ref();
 const startSession = async (newSession) => {
   await sessionStore.createSession(newSession);
   createNewSessionFlow.value = false;
+  selectedSessionIndex.value = 0;
+
+  showVisualizationAid.value = true;
 };
 
 //Information Button to read more about how the visualization can be read
@@ -106,12 +106,12 @@ const flowerData = computed(() => {
   }
   return [];
 });
-const currentSelectedFeature = ref({ index: 2, featureCategory: 'ALL' });
 
-const selectedFlowerIndex = ref(null);
-function handleFlowerSelected(index) {
-  console.log("flower index received", index)
-  selectedFlowerIndex.value = index;
+const selectedFeature = ref(null);
+function handleFlowerSelected(index, featureCategory) {
+  console.log("flower index received", index, featureCategory)
+  selectedFeature.value = {index, featureCategory};
+  showSongFeatureDialog.value = true;
 }
 </script>
 
@@ -159,11 +159,10 @@ function handleFlowerSelected(index) {
         <div v-show="showSongFeatureDialog" class="song-feature">
           <SongFeatureDialog
               :flowerData="flowerData"
-              :selectedFlowerIndex="selectedFlowerIndex"
+              :selectedFeature="selectedFeature"
           />
         </div>
       </div>
-      <qrcode-vue v-if="isHost" :value="session.inviteLink" />
     </div>
     <!-- Conditionally render VisualizationAid component -->
     <VisualizationAid v-if="showVisualizationAid" @close-popup="closeVisualizationAid" />
@@ -175,7 +174,11 @@ function handleFlowerSelected(index) {
           :sessionId="session.id" />
       </div>
     </div>
-    <Sidebar v-model:visible="settingsVisible" header="Settings" :unstyled="false">
+    <Sidebar v-model:visible="settingsVisible" header="Session Settings" :unstyled="false">
+      <div v-if="session && session.isRunning">
+        <h3> Join the Session </h3>
+          <qrcode-vue v-if="isHost" :value="session.inviteLink" />
+      </div>
        <h3>Guests</h3>
        <div class="guests-container">
         <div v-for="guest in session.guests" class="guest" :key="session.guests.length">
@@ -183,7 +186,6 @@ function handleFlowerSelected(index) {
           <i class="delete-guest-icon pi pi-trash" @click="removeGuest(guest.id)"/>
         </div>
       </div>
-
        <button class="end-session-button" @click="endCurrentSession()">
         End Session
        </button>

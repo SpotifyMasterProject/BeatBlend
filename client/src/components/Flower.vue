@@ -11,7 +11,7 @@ const props = defineProps<{
   mostSignificantFeature?: SongFeatureCategory
 }>();
 
-const emit = defineEmits(['onPetalClick', 'centerPosition', 'significantFeaturePosition']);
+const emit = defineEmits(['onPetalClick', 'centerPosition', 'significantFeaturePosition', 'hover', 'leave']);
 
 const size = props.size ?? 80;
 const circleRadius = props.circleRadius ?? 40;
@@ -43,7 +43,15 @@ onMounted(() => {
 </script>
 
 <template>
-  <svg ref="flower" :x="position?.x" :y="position?.y" :width="maxPetalLength * 2" :height="maxPetalLength * 2" :style="{ transform: `rotate(${rotation}deg)` }">
+  <svg
+    ref="flower"
+    :x="position?.x"
+    :y="position?.y"
+    :width="maxPetalLength * 2"
+    :height="maxPetalLength * 2"
+    :style="{ transform: `rotate(${rotation}deg)` }"
+    @mouseenter="() => emit('hover')"
+    @mouseleave="() => emit('leave')">
     <circle :cx="maxPetalLength" :cy="maxPetalLength" :r="circleRadius" fill="none" stroke="#CCCCCC" stroke-width="1" />
     <Petal
         class="petal"

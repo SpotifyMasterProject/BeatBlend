@@ -59,9 +59,12 @@ class Service:
 
     @staticmethod
     def get_display_name(token: SpotifyToken) -> str:
-        spotify_host_client = Spotify(auth=token.access_token)
-        user_info = spotify_host_client.current_user()
-        return user_info['display_name']
+        try:
+            spotify_host_client = Spotify(auth=token.access_token)
+            user_info = spotify_host_client.current_user()
+            return user_info['display_name']
+        except Exception as e:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Request unsuccessful: {repr(e)}")
 
     async def create_user(self, user: User) -> User:
         user.id = str(uuid.uuid4())
@@ -124,6 +127,9 @@ class Service:
         # TODO: adjust URL
         session.invite_link = f'http://{LOCAL_IP_ADDRESS}:8080/{session.id}/join'
         # session.playlist = Playlist()
+        for song in session.playlist.queued_songs:
+            song.added_by = host
+            await self.get_genre(song)
         await self.repo.set_session(session)
         return session
 
@@ -172,7 +178,14 @@ class Service:
 
     async def get_song_from_database(self, song_id: str) -> Song:
         result = await self.repo.get_song_by_id(song_id)
-        return Song.model_validate(dict(result))
+        song = Song.model_validate(dict(result))
+        if not song.preview_url:
+            try:
+                song_info = self.spotify_api_client.track(song.id)
+                song.preview_url = song_info.get('preview_url')
+            except Exception as e:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Request unsuccessful: {repr(e)}")
+        return song
 
     async def add_song_to_database(self, song_id: str) -> Song:
         try:
@@ -208,9 +221,10 @@ class Service:
             }
 
             await self.repo.add_song_by_info(filtered_song_info)
+            filtered_song_info["preview_url"] = combined_info.get('preview_url')
             return Song(**filtered_song_info)
         except Exception as e:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Spotify not reached: {repr(e)}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Request unsuccessful: {repr(e)}")
 
     # async def delete_song_from_database(self, song_id: str) -> None:
     #     await self.repo.delete_song_by_id(song_id)
@@ -289,9 +303,11 @@ class Service:
             song.most_significant_feature = most_significant_feature
             song.similarity_score = (1 - (row['cosine_distance'] / math.sqrt(5)))
             session.recommendations.append(Recommendation(**song.model_dump()))
+        session.recommendations_creation_date = datetime.now()
         await self.repo.set_session(session)
-        await self.manager.publish(channel=f"recommendations:{session_id}", message=RecommendationList(recommendations=session.recommendations))
-        return RecommendationList(recommendations=session.recommendations)
+        response = RecommendationList(recommendations=session.recommendations, creation_date=session.recommendations_creation_date)
+        await self.manager.publish(channel=f"recommendations:{session_id}", message=response)
+        return response
 
     async def get_most_popular_recommendation(self, session_id: str) -> Song:
         session = await self.get_session(session_id)
@@ -312,8 +328,9 @@ class Service:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Vote already added.")
         curr_rec.votes.append(guest_id)
         await self.repo.set_session(session)
-        await self.manager.publish(channel=f"recommendations:{session_id}", message=RecommendationList(recommendations=session.recommendations))
-        return RecommendationList(recommendations=session.recommendations)
+        response = RecommendationList(recommendations=session.recommendations, creation_date=session.recommendations_creation_date)
+        await self.manager.publish(channel=f"recommendations:{session_id}", message=response)
+        return response
 
     @with_session_lock
     async def remove_vote_from_recommendation(self, guest_id: str, session_id: str, song_id: str) -> None:
@@ -326,7 +343,7 @@ class Service:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No vote added prior.")
         curr_rec.votes.remove(guest_id)
         await self.repo.set_session(session)
-        await self.manager.publish(channel=f"recommendations:{session_id}", message=RecommendationList(recommendations=session.recommendations))
+        await self.manager.publish(channel=f"recommendations:{session_id}", message=RecommendationList(recommendations=session.recommendations, creation_date=session.recommendations_creation_date))
 
     async def get_matching_songs_from_database(self, pattern: str, limit: int) -> SongList:
         result = await self.repo.get_songs_by_pattern(pattern, limit)
