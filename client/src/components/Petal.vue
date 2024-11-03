@@ -8,6 +8,8 @@ const props = defineProps<{
   circleRadius: number;
 }>();
 
+const emit = defineEmits(['emitEndPosition']);
+
 const rotation = computed(() => ((props.feature.category ?? 0) * 360 / 5));
 
 const colorPalettes = {
@@ -44,12 +46,14 @@ const generatePetalPath = (totalLength: number, totalWidth: number) => {
     const endX = props.center;
     const endY = props.center - sectionHeight;
 
+    emit('emitEndPosition', {x: endX, y: endY});
+
     const path = `
       M ${props.center} ${props.center}
       Q ${controlPoint1X} ${controlPoint1Y},
         ${endX} ${endY}
       Q ${controlPoint2X} ${controlPoint2Y},
-        ${props.center} ${props.center}
+         
     `;
     pathData.push(path);
   });

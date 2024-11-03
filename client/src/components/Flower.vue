@@ -1,15 +1,17 @@
 <script setup lang ="ts">
-import { computed, defineProps} from 'vue';
+import { computed, defineProps, useTemplateRef, onMounted } from 'vue';
 import Petal from './Petal.vue';
-import { SongFeature } from '@/types/SongFeature';
+import { SongFeature, SongFeatureCategory } from '@/types/SongFeature';
 
 const props = defineProps<{
   features: SongFeature[];
+  position?: {x: number, y: number};
   size?: number;
   circleRadius?: number;
+  mostSignificantFeature?: SongFeatureCategory
 }>();
 
-const emit = defineEmits(['onPetalClick']);
+const emit = defineEmits(['onPetalClick', 'centerPosition', 'significantFeaturePosition']);
 
 const size = props.size ?? 80;
 const circleRadius = props.circleRadius ?? 40;
@@ -25,10 +27,23 @@ const rotation = computed(() => {
   return (maxFeatureIndex * 360) / props.features.length;
 });
 
+const flower = useTemplateRef('flower');
+
+const onPetalEndPositionComputed = (position, songFeatureCategory) => {
+  if (songFeatureCategory === props.mostSignificantFeature) {
+    emit('significantFeaturePosition', position);
+  }
+};
+
+onMounted(() => {
+  emit('centerPosition', {x: maxPetalLength.value, y: maxPetalLength.value});
+  console.log(props.position);
+});
+
 </script>
 
 <template>
-  <svg :width="maxPetalLength * 2" :height="maxPetalLength * 2" :viewBox="`0 0 ${maxPetalLength * 2} ${maxPetalLength * 2}`" :style="{ transform: `rotate(${rotation}deg)` }">
+  <svg ref="flower" :x="position?.x" :y="position?.y" :width="maxPetalLength * 2" :height="maxPetalLength * 2" :style="{ transform: `rotate(${rotation}deg)` }">
     <circle :cx="maxPetalLength" :cy="maxPetalLength" :r="circleRadius" fill="none" stroke="#CCCCCC" stroke-width="1" />
     <Petal
         class="petal"
@@ -39,6 +54,7 @@ const rotation = computed(() => {
         :center="maxPetalLength"
         :circleRadius="circleRadius"
         @click="() => emit('onPetalClick', feature.category)"
+        @emitEndPosition="(position) => onPetalEndPositionComputed(position, feature.category)"
     />
   </svg>
 </template>

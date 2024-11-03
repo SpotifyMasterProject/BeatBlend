@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {ref, watch, onMounted, computed, nextTick} from 'vue';
+import {ref, watch, onMounted, computed, nextTick, useTemplateRef} from 'vue';
 import Flower from "@/components/Flower.vue";
 import Recommendations from "@/components/Recommendations.vue";
 import SongFeatureDialog from "@/components/SongFeatureDialog.vue";
@@ -105,33 +105,31 @@ let verticalNrFlowers = 1; //Nr of flowers vertically
 
 
 const generateNextRandomGridPosition = () => {
-  const stayInColumn = Math.random() > 0.5; //Decide whether to stay in same column or move to right
-  const maxStack = (currentY <= gridSize || currentY >= gridSize * (maxVerticalMoves-1)) ? 3 : 2; // Determine maximum vertical based on currentY position
-
-  if (stayInColumn && verticalNrFlowers < maxStack) {
-    let verticalDirection = lastVerticalDirection;
-
-    if (lastVerticalDirection === 1) {
+  let stayInColumn = (Math.random() > 0.5) && verticalNrFlowers <= maxVerticalMoves;
+  let verticalDirection = 0;
+  if (lastVerticalDirection === 1) {
       verticalDirection = 1;
-    } else if (lastVerticalDirection === -1) {
-      verticalDirection = -1;
-    } else {
-      if (currentY <= gridSize) { // If currentY too close to top, next flower will be placed down
-        verticalDirection = 1;
-      } else if (currentY >= gridSize * maxVerticalMoves) { // If currentY too close to bottom, next flower will be placed up
-        verticalDirection = -1;;
-      } else {
-        verticalDirection = Math.random() > 0.5 ? 1 : -1;
-      }
-    }
+  } else if (lastVerticalDirection === -1) {
+    verticalDirection = -1;
+  } else {
+    verticalDirection = Math.random() > 0.5 ? 1 : -1;
+  }
+  
+  if (verticalDirection === -1 && currentY <= gridSize * 2) {
+    stayInColumn = false;
+  }
+
+  if (verticalDirection === 1 && currentY >= gridSize * maxVerticalMoves) {
+    stayInColumn = false;
+  }
+
+  if (stayInColumn) {
     lastVerticalDirection = verticalDirection
     const verticalMove = verticalDirection * gridSize * (Math.random() > 0.5 ? 1.5 : 2);
     currentY += verticalMove;
     verticalNrFlowers++;
     return {x: currentX, y: currentY};
-
   } else {
-    verticalNrFlowers = 0;
     const horizontalMove = gridSize * (Math.random() > 0.5 ? 1.5 : 2);
     currentX += horizontalMove;
     verticalNrFlowers = 1;
@@ -186,20 +184,12 @@ const recommendationsStyle = computed(() => {
 
 });
 
-const flowerStyles = computed(() => {
+const flowerPositions = computed(() => {
   for (let i = gridPositions.value.length; i < flowerData.value.length; i++) {
     gridPositions.value = [...gridPositions.value, generateNextRandomGridPosition()];
   }
 
-  return gridPositions.value.map((position) => {
-    const { x, y } = position;
-
-    return {
-      position: 'absolute',
-      left: `${x + gridPositionToScreenPositionDeltaX}px`,
-      top: `${y + gridPositionToScreenPositionDeltaY}px`,
-    };
-  });
+  return gridPositions.value;
 });
 
 onMounted(() => {
@@ -233,36 +223,106 @@ const onPetalClick = (index: number) => {
   currentSelectedFeature.value = {index};
   emit('flowerSelected', index);
 };
+
+const flowerLines = ref([]);
+const localCenterPositions = ref({});
+
+const storeFlowerCenter = (position, index) => {
+  localCenterPositions.value[index] = position;
+};
+
+const globalCenterPosition = (index) => {
+  if (localCenterPositions.value[index] === undefined) {
+    return null;
+  }
+
+  return {
+    x: localCenterPositions.value[index].x + gridPositions.value[index].x,
+    y: localCenterPositions.value[index].y + gridPositions.value[index].y,
+  }; 
+};
+
+const curvatureRelativeIntensity = 50.0;
+
+const shiftPoint = (a, b, p, distance) => {
+    let dx = b.x - a.x;
+    let dy = b.y - a.y;
+
+    let perpendicularDx = -dy;
+    let perpendicularDy = dx;
+
+    let length = Math.sqrt(perpendicularDx * perpendicularDx + perpendicularDy * perpendicularDy);
+    let unitPerpendicularDx = perpendicularDx / length;
+    let unitPerpendicularDy = perpendicularDy / length;
+
+    let newPx = p.x + unitPerpendicularDx * distance;
+    let newPy = p.y + unitPerpendicularDy * distance;
+
+    return { x: newPx, y: newPy };
+};
+
+watch(localCenterPositions.value, () => { 
+
+  flowerLines.value = []
+  for (let i = 0; i < flowerData.value.length - 1; i++) {
+    const currentCenter = globalCenterPosition(i);
+    const nextCenter = globalCenterPosition(i + 1);
+
+    if (!currentCenter || !nextCenter) {
+      return [];
+    }
+
+    const convex = Math.random() > 0.5 ? 1 : -1;
+
+    const firstCurvature = {
+      x: (nextCenter.x + currentCenter.x) / 2,
+      y: (nextCenter.y + currentCenter.y) / 2,
+    };
+
+    const distance = Math.abs(nextCenter.x - currentCenter.x) + Math.abs(nextCenter.y - currentCenter.y);
+    const curvatureIntensity = distance * curvatureRelativeIntensity;
+
+    const firstCurvatureShifted = shiftPoint(currentCenter, nextCenter, firstCurvature, curvatureRelativeIntensity);
+    flowerLines.value.push(
+      `M ${currentCenter.x} ${currentCenter.y}
+       Q ${firstCurvatureShifted.x}
+         ${firstCurvatureShifted.y},
+         ${nextCenter.x} ${nextCenter.y}`
+        );
+  }
+
+  console.log(flowerLines.value);
+})
+
 </script>
 
 <template>
+  <div id="test"></div>
   <div class = main-visualization>
     <div class="zoom-controls">
       <button @click="zoomIn">+</button>
       <button @click="zoomOut">-</button>
     </div>
     <div class= visualization-container>
+      <canvas class="canvas" id="canvas" ref="canvas"></canvas>
       <div class="scroll-wrapper">
         <div class="visualization" :style="visualizationStyle">
           <!-- Loop through each flower and apply the styles -->
-          <div
-              v-for="(flower, index) in flowerData"
-              :key="index"
-              :style="flowerStyles[index]"
-              class="flower-wrapper"
-          >
-            <Flower
-                :features="flower"
-                :circleRadius="40"
-                @onPetalClick="() => onPetalClick(index)"
-            />
-          </div>
-            <Recommendations
-              v-if="session.isRunning && session.recommendations"
-              :recommendations="session.recommendations"
-              class="recommendations"
-              :style="recommendationsStyle"
-            />
+          <svg class="svg-container" width="100%" height="100%">
+              <Flower
+                  v-for="(flower, index) in flowerData"
+                  :key="index"
+                  :features="flower"
+                  :circleRadius="40"
+                  :position="flowerPositions[index]"
+                  @onPetalClick="() => onPetalClick(index)"
+                  @centerPosition="(position) => storeFlowerCenter(position, index)"
+              />
+              <path
+                v-for="line in flowerLines"
+                :d="line" stroke="white" fill="transparent"
+              />
+          </svg>
         </div>
       </div>
     </div>
@@ -363,5 +423,8 @@ const onPetalClick = (index: number) => {
   transform: translate(0%, -50%);
   transition: all 0.3s ease;
   margin: auto;
+}
+.svg-container {
+  position: absolute;
 }
 </style>
