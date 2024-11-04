@@ -223,4 +223,32 @@ const closePopup = () => {
   color: #6BA149;
   font-weight: bold;
 }
+
+@media (max-height: 780px) {
+  .popup-content {
+    transform: scale(0.9);
+    max-width: 100%;
+    max-height: 100%;
+    padding: 15px;
+  }
+
+  .popup-header h2 {
+    font-size: 22px;
+    transition: font-size 0.5s ease;
+  }
+
+  .overview-content {
+    overflow-y: scroll;
+  }
+  .overview-left,
+  .overview-right {
+    font-size: 13px;
+    transition: font-size 0.5s ease;
+  }
+
+  .overview-comment {
+    font-size: 12px;
+    transition: font-size 0.5s ease;
+  }
+}
 </style>
