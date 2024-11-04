@@ -12,6 +12,10 @@ const rotation = computed(() => {
   return props.feature ? ((props.feature.category ?? 0) * 360 / 5) : 0;
 });
 
+if (!props.feature) {
+  console.warn('Feature is undefined in Petal.vue:', props.feature);
+}
+
 const colorPalettes = {
   [SongFeatureCategory.DANCEABILITY]: ['#A1DBE8', '#A1DBE8', '#A1DBE8', '#A1DBE8', '#A1DBE8'],
   [SongFeatureCategory.ENERGY]: ['#8AB15F', '#8AB15F', '#8AB15F', '#8AB15F', '#8AB15F'],

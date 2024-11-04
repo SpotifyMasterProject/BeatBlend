@@ -16,6 +16,7 @@ const props = defineProps({
     required: true,
   }
 });
+
 const flowerData = computed<SongFeature[]>(() => {
   if (props.artifactData?.averageFeatures) {
     const data = [
@@ -25,10 +26,28 @@ const flowerData = computed<SongFeature[]>(() => {
       { category: SongFeatureCategory.VALENCE, value: props.artifactData.averageFeatures.valence },
       { category: SongFeatureCategory.ENERGY, value: props.artifactData.averageFeatures.energy },
     ];
-    console.log("Computed flowerData:", data);  // Debugging line
+    console.log("Computed flowerData for Session Artifact:", data);  // Debugging line
     return data;
   }
   return [];
+});
+
+const categoryMap: Record<SongFeatureCategory, string> = {
+  [SongFeatureCategory.SPEECHINESS]: 'Speechability',
+  [SongFeatureCategory.DANCEABILITY]: 'Danceability',
+  [SongFeatureCategory.TEMPO]: 'Tempo',
+  [SongFeatureCategory.VALENCE]: 'Valence',
+  [SongFeatureCategory.ENERGY]: 'Energy',
+};
+
+//Sort ranking audio features
+const sortedFeatures = computed(() => {
+  return flowerData.value
+      .map(feature => ({
+        ...feature,
+        category: categoryMap[feature.category] || feature.category // Map category to readable name
+      }))
+      .sort((a, b) => b.value - a.value);
 });
 
 const hoverFeature = ref(null);
@@ -52,8 +71,12 @@ const closePopup = () => {
       </header>
       <div class="middle-box">
         <div class="flower-placeholder">
-          <Flower :features="flowerData" />
-          <div v-if="flowerData.length === 0">No flower data to display</div>
+          <div v-if="flowerData && flowerData.length > 0">
+            <Flower :features="flowerData" />
+          </div>
+          <div v-else>
+            <p>No data available for the flower visualization.</p>
+          </div>
         </div>
       </div>
       <div class="overview-section">
@@ -63,11 +86,9 @@ const closePopup = () => {
           <div class="overview-left">
             <strong>Audio Features Ranked</strong>
             <ol>
-              <li>Speechability</li>
-              <li>Danceability</li>
-              <li>Tempo</li>
-              <li>Valence</li>
-              <li>Energy</li>
+              <li v-for="feature in sortedFeatures" :key="feature.category">
+                {{ feature.category }} ({{ feature.value.toFixed(2) }})
+              </li>
             </ol>
             <p class="overview-comment">
               You agreed <span class="highlight">XYZ</span> with the recommendation model by choosing the first recommendation
