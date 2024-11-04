@@ -37,6 +37,7 @@ export const useSession = defineStore('session', () => {
       
     const handleRecommendationMessages = (recommendationMessage: RecommendationList) => {
        session.value.recommendations = recommendationMessage.recommendations;
+       session.value.recommendationsCreationDate = recommendationMessage.recommendationsCreationDate;
     };
 
     const fetchRecommendations = () => {
@@ -46,6 +47,7 @@ export const useSession = defineStore('session', () => {
 
     const initialize = async () => {
         session.value.isRunning = true;
+        console.log(session.value);
         if (session.value.recommendations.length === 0) {
             fetchRecommendations();
         }

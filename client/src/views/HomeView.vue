@@ -72,7 +72,6 @@ const runningSession = ref();
 const startSession = async (newSession) => {
   await sessionStore.createSession(newSession);
   createNewSessionFlow.value = false;
-  selectedSessionIndex.value = 0;
 
   showVisualizationAid.value = true;
 };

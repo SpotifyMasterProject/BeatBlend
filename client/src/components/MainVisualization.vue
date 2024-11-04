@@ -9,14 +9,23 @@ import { SongFeatureCategory } from '@/types/SongFeature';
 import { Session } from '@/types/Session';
 import SongDetailsPopUp from "@/components/SongDetailsPopUp.vue";
 import { flattenPlaylist } from '@/types/Playlist';
-import { sessionService, getSongFeatures } from "@/services/sessionService";
+import { sessionService, getSongFeatures, getSongFeatureCategory } from "@/services/sessionService";
 
 const props = defineProps<{
   session: Session,
 }>();
 
+const playlist = computed(() => {
+  return flattenPlaylist(props.session.playlist);
+})
+
 const flowerData = computed(() => {
-  return flattenPlaylist(props.session.playlist).map(getSongFeatures);
+  return playlist.value.map((song) => {
+    return {
+      features: getSongFeatures(song),
+      mostSignificantFeature: getSongFeatureCategory(song.mostSignificantFeature)
+    };
+  });
 });
 
 //Zoom Function for the main visualization --> will be adapted at a later point
@@ -30,6 +39,8 @@ const visualizationStyle = ref({
 });
 
 const isScrollEnabled = ref(false);
+const flowerRefs = useTemplateRef('flowers');
+const recommendationsStyle = ref({});
 
 function zoomIn() {
   zoomLevel.value = Math.min(zoomLevel.value + 0.1, maxZoom)
@@ -91,14 +102,13 @@ watch(flowerData, () => {
 }, { immediate: true });
 
 // Define a grid size and positions for flowers
-const gridSize = 80;
+const gridSize = 90;
 const maxVerticalMoves = 3;
+const minY = 70;
 
 let containerWidth = 0;
 let containerHeight = 0;
 
-const gridPositionToScreenPositionDeltaX = 100;
-const gridPositionToScreenPositionDeltaY = 150;
 let lastVerticalDirection = 0;
 let currentX = 0;
 let currentY = Math.floor(Math.random() * gridSize * maxVerticalMoves); //Random vertical placement for the first flower
@@ -129,7 +139,7 @@ const generateNextRandomGridPosition = () => {
     const verticalMove = verticalDirection * gridSize * (Math.random() > 0.5 ? 1.5 : 2);
     currentY += verticalMove;
     verticalNrFlowers++;
-    return {x: currentX, y: currentY};
+    return {x: currentX, y: Math.max(currentY, minY)};
   } else {
     const horizontalMove = gridSize * (Math.random() > 0.5 ? 1.5 : 2);
     currentX += horizontalMove;
@@ -141,7 +151,7 @@ const generateNextRandomGridPosition = () => {
     const randomStartPositions = [0, gridSize * maxVerticalMoves, gridSize * Math.floor(maxVerticalMoves / 2)];
     currentY = randomStartPositions[Math.floor(Math.random() * randomStartPositions.length)];
 
-    return { x: currentX, y: currentY };
+    return { x: currentX, y: Math.max(currentY, minY)};
   }
 }
 
@@ -161,29 +171,6 @@ const generateRandomGridPositions = (flowerCount: number) => {
 };
 
 const gridPositions = ref(generateRandomGridPositions(flowerData.value.length));
-
-const recommendationsContainer = ref(null);
-
-// Position the next recommendations close to the last song
-const recommendationsStyle = computed(() => {
-
-  const distanceToLastSong = 50;
-
-  let x = 0;
-  let y = 0;
-
-  if (gridPositions.value.length !== 0) {
-    const lastSongPosition = gridPositions.value[gridPositions.value.length - 1];
-    x = lastSongPosition.x + distanceToLastSong;
-    y = lastSongPosition.y;
-  }
-
-  return {
-    left: `${x + gridPositionToScreenPositionDeltaX}px`,
-    top: `${y + gridPositionToScreenPositionDeltaY}px`,
-  };
-
-});
 
 const flowerPositions = computed(() => {
   for (let i = gridPositions.value.length; i < flowerData.value.length; i++) {
@@ -216,6 +203,17 @@ onMounted(() => {
     // Set the scroll position to the left
     scrollWrapper.scrollLeft = 0;
   }
+
+  if (flowerRefs.value.length > 0) {
+    console.log(flowerRefs.value);
+    const lastFlowerPosition = flowerRefs.value[flowerRefs.value.length - 1].$el.getBoundingClientRect();
+    recommendationsStyle.value = {
+      top: `${lastFlowerPosition.y + gridSize + minY}px`,
+      left: `${lastFlowerPosition.x + 70}px`,
+      position: 'absolute',
+    };
+  }
+
 });
 
 const currentSelectedFeature = ref(null);
@@ -226,20 +224,19 @@ const onPetalClick = (index: number, featureCategory: SongFeatureCategory) => {
 };
 
 const flowerLines = ref([]);
-const localCenterPositions = ref({});
+const localFlowerLinePositions = ref({});
 
-const storeFlowerCenter = (position, index) => {
-  localCenterPositions.value[index] = position;
+const storeFlowerLinePosition = (position, index) => {
+  localFlowerLinePositions.value[index] = position;
 };
 
-const globalCenterPosition = (index) => {
-  if (localCenterPositions.value[index] === undefined) {
+const globalFlowerLinePositions = (localPosition, gridPosition) => {
+  if (!localPosition  || !gridPosition) {
     return null;
   }
-
   return {
-    x: localCenterPositions.value[index].x + gridPositions.value[index].x,
-    y: localCenterPositions.value[index].y + gridPositions.value[index].y,
+    x: localPosition.x + gridPosition.x,
+    y: localPosition.y + gridPosition.y,
   }; 
 };
 
@@ -262,39 +259,36 @@ const shiftPoint = (a, b, p, distance) => {
     return { x: newPx, y: newPy };
 };
 
-watch(localCenterPositions.value, () => { 
+const computeLineBetweenFlowers = (flowerA, flowerB) => {
+  const convex = Math.random() > 0.5 ? 1 : -1;
+
+  const firstCurvature = {
+    x: (flowerB.x + flowerA.x) / 2,
+    y: (flowerB.y + flowerA.y) / 2,
+  };
+
+  const distance = Math.abs(flowerB.x - flowerA.x) + Math.abs(flowerB.y - flowerA.y);
+  const curvatureIntensity = distance * curvatureRelativeIntensity;
+
+  const firstCurvatureShifted = shiftPoint(flowerA, flowerB, firstCurvature, curvatureRelativeIntensity);
+  return `M ${flowerA.x} ${flowerA.y}
+      Q ${firstCurvatureShifted.x}
+        ${firstCurvatureShifted.y},
+        ${flowerB.x} ${flowerB.y}`;
+};
+
+watch(localFlowerLinePositions.value, () => { 
 
   flowerLines.value = []
   for (let i = 0; i < flowerData.value.length - 1; i++) {
-    const currentCenter = globalCenterPosition(i);
-    const nextCenter = globalCenterPosition(i + 1);
-
-    if (!currentCenter || !nextCenter) {
+    const currentFlower = globalFlowerLinePositions(localFlowerLinePositions.value[i], gridPositions.value[i]);
+    const nextFlower = globalFlowerLinePositions(localFlowerLinePositions.value[i + 1], gridPositions.value[i + 1]);
+    if (!currentFlower || !nextFlower) {
       return [];
     }
-
-    const convex = Math.random() > 0.5 ? 1 : -1;
-
-    const firstCurvature = {
-      x: (nextCenter.x + currentCenter.x) / 2,
-      y: (nextCenter.y + currentCenter.y) / 2,
-    };
-
-    const distance = Math.abs(nextCenter.x - currentCenter.x) + Math.abs(nextCenter.y - currentCenter.y);
-    const curvatureIntensity = distance * curvatureRelativeIntensity;
-
-    const firstCurvatureShifted = shiftPoint(currentCenter, nextCenter, firstCurvature, curvatureRelativeIntensity);
-    flowerLines.value.push(
-      `M ${currentCenter.x} ${currentCenter.y}
-       Q ${firstCurvatureShifted.x}
-         ${firstCurvatureShifted.y},
-         ${nextCenter.x} ${nextCenter.y}`
-        );
+    flowerLines.value.push(computeLineBetweenFlowers(currentFlower, nextFlower));
   }
-
-  console.log(flowerLines.value);
-})
-
+});
 
 const showSongDetails = ref(false);
 const hoverIndex = ref(null);
@@ -319,26 +313,35 @@ const onLeaveFlower = () => {
       <div class="scroll-wrapper">
         <div class="visualization" :style="visualizationStyle">
           <!-- Loop through each flower and apply the styles -->
-          <svg class="svg-container" width="100%" height="100%">
+          <svg class="svg-container" width="100vw" height="100vh">
               <Flower
+                  ref="flowers"
                   v-for="(flower, index) in flowerData"
                   :key="index"
-                  :features="flower"
+                  :features="flower.features"
+                  :mostSignificantFeature="flower.mostSignificantFeature"
                   :circleRadius="40"
                   :position="flowerPositions[index]"
-                  @onPetalClick="() => onPetalClick(index)"
+                  @onPetalClick="(category) => onPetalClick(index, category)"
                   @hover="() => onHoverFlower(index)"
                   @leave="onLeaveFlower"
-                  @centerPosition="(position) => storeFlowerCenter(position, index)"
+                  @significantFeaturePosition="(position) => storeFlowerLinePosition(position, index)"
               />
               <path
                 v-for="line in flowerLines"
+                class="connecting-path"
                 :d="line" stroke="white" fill="transparent"
               />
           </svg>
+          <Recommendations
+            v-if="session.isRunning && session.recommendations"
+            :recommendations="session.recommendations"
+            class="recommendations"
+            :style="recommendationsStyle"
+          />
         </div>
       </div>
-      <SongDetailsPopUp v-if="showSongDetails && hoverIndex !== null" :song="session.playlist[hoverIndex]" />
+      <SongDetailsPopUp v-if="showSongDetails && hoverIndex !== null" :song="playlist[hoverIndex]" />
     </div>
   </div>
 </template>
@@ -440,5 +443,8 @@ const onLeaveFlower = () => {
 }
 .svg-container {
   position: absolute;
+}
+.connecting-path {
+  pointer-events: none;
 }
 </style>

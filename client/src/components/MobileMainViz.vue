@@ -12,7 +12,13 @@ const props = defineProps<{
 }>();
 
 
-const countdown = ref(90);
+const countdown = computed(() => {
+  console.log(props.session);
+  const millis = Date.now() - new Date(props.session.recommendationsCreationDate);
+  console.log(millis);
+  return Math.max(90 - millis / 1000, 0);
+});
+
 const isTimeUp = ref(false);
 let timer: NodeJS.Timeout | null = null;
 

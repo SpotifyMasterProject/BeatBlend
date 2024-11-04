@@ -11,7 +11,8 @@ const props = defineProps<{
   mostSignificantFeature?: SongFeatureCategory
 }>();
 
-const emit = defineEmits(['onPetalClick', 'centerPosition', 'significantFeaturePosition', 'hover', 'leave']);
+const emit = defineEmits(['onPetalClick', 'significantFeaturePosition', 'hover', 'leave']);
+
 
 const size = props.size ?? 80;
 const circleRadius = props.circleRadius ?? 40;
@@ -36,7 +37,9 @@ const onPetalEndPositionComputed = (position, songFeatureCategory) => {
 };
 
 onMounted(() => {
-  emit('centerPosition', {x: maxPetalLength.value, y: maxPetalLength.value});
+  if (props.mostSignificantFeature === null) {
+    emit('significantFeaturePosition', {x: maxPetalLength.value, y: maxPetalLength.value});
+  }
   console.log(props.position);
 });
 
@@ -49,21 +52,21 @@ onMounted(() => {
     :y="position?.y"
     :width="maxPetalLength * 2"
     :height="maxPetalLength * 2"
-    :style="{ transform: `rotate(${rotation}deg)` }"
     @mouseenter="() => emit('hover')"
     @mouseleave="() => emit('leave')">
-    <circle :cx="maxPetalLength" :cy="maxPetalLength" :r="circleRadius" fill="none" stroke="#CCCCCC" stroke-width="1" />
-    <Petal
-        class="petal"
-        v-for="(feature, index) in features"
-        :key="index"
-        :index="index"
-        :feature="feature"
-        :center="maxPetalLength"
-        :circleRadius="circleRadius"
-        @click="() => emit('onPetalClick', feature.category)"
-        @emitEndPosition="(position) => onPetalEndPositionComputed(position, feature.category)"
-    />
+      <circle :cx="maxPetalLength" :cy="maxPetalLength" :r="circleRadius" fill="none" stroke="#CCCCCC" stroke-width="1" />
+      <Petal
+          class="petal"
+          v-for="(feature, index) in features"
+          :key="index"
+          :index="index"
+          :feature="feature"
+          :center="maxPetalLength"
+          :circleRadius="circleRadius"
+          :rotation="rotation"
+          @click="() => emit('onPetalClick', feature.category)"
+          @emitEndPosition="(position) => onPetalEndPositionComputed(position, feature.category)"
+      />
   </svg>
 </template>
 
