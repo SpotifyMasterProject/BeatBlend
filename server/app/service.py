@@ -118,6 +118,16 @@ class Service:
         result = await self.repo.get_user_by_id(user_id)
         return User.model_validate_json(result)
 
+    async def advance_playlist(self, session: Session) -> None:
+        if session.playlist.current_song:
+            session.playlist.played_songs.append(session.playlist.current_song)
+            session.playlist.current_song = None
+        if session.playlist.queued_songs:
+            session.playlist.current_song = session.playlist.queued_songs.pop(0)
+        else:
+            session.playlist.current_song = await self.get_most_popular_recommendation(session.id)
+
+
     async def create_session(self, host_id: str, session: Session) -> Session:
         host = await self.get_user(host_id)
         session.id = str(uuid.uuid4())
@@ -126,10 +136,11 @@ class Service:
         session.creation_date = datetime.now()
         # TODO: adjust URL
         session.invite_link = f'http://{LOCAL_IP_ADDRESS}:8080/{session.id}/join'
-        # session.playlist = Playlist()
         for song in session.playlist.queued_songs:
             song.added_by = host
             await self.get_genre(song)
+            await self.get_preview_url(song)
+
         await self.repo.set_session(session)
         return session
 
@@ -176,15 +187,17 @@ class Service:
         await self.repo.set_session(session)
         await self.manager.publish(channel=f"session:{session_id}", message=SessionCore(**session.model_dump()))
 
+    async def get_preview_url(self, song: Song) -> None:
+        try:
+            song_info = self.spotify_api_client.track(song.id)
+            song.preview_url = song_info.get('preview_url')
+        except Exception as e:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Request unsuccessful: {repr(e)}")
+
     async def get_song_from_database(self, song_id: str) -> Song:
         result = await self.repo.get_song_by_id(song_id)
         song = Song.model_validate(dict(result))
-        if not song.preview_url:
-            try:
-                song_info = self.spotify_api_client.track(song.id)
-                song.preview_url = song_info.get('preview_url')
-            except Exception as e:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Request unsuccessful: {repr(e)}")
+        await self.get_preview_url(song)
         return song
 
     async def add_song_to_database(self, song_id: str) -> Song:
@@ -303,9 +316,8 @@ class Service:
             song.most_significant_feature = most_significant_feature
             song.similarity_score = (1 - (row['cosine_distance'] / math.sqrt(5)))
             session.recommendations.append(Recommendation(**song.model_dump()))
-        session.recommendations_creation_date = datetime.now()
         await self.repo.set_session(session)
-        response = RecommendationList(recommendations=session.recommendations, creation_date=session.recommendations_creation_date)
+        response = RecommendationList(recommendations=session.recommendations)
         await self.manager.publish(channel=f"recommendations:{session_id}", message=response)
         return response
 
@@ -328,7 +340,7 @@ class Service:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Vote already added.")
         curr_rec.votes.append(guest_id)
         await self.repo.set_session(session)
-        response = RecommendationList(recommendations=session.recommendations, creation_date=session.recommendations_creation_date)
+        response = RecommendationList(recommendations=session.recommendations)
         await self.manager.publish(channel=f"recommendations:{session_id}", message=response)
         return response
 
@@ -343,7 +355,7 @@ class Service:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No vote added prior.")
         curr_rec.votes.remove(guest_id)
         await self.repo.set_session(session)
-        await self.manager.publish(channel=f"recommendations:{session_id}", message=RecommendationList(recommendations=session.recommendations, creation_date=session.recommendations_creation_date))
+        await self.manager.publish(channel=f"recommendations:{session_id}", message=RecommendationList(recommendations=session.recommendations))
 
     async def get_matching_songs_from_database(self, pattern: str, limit: int) -> SongList:
         result = await self.repo.get_songs_by_pattern(pattern, limit)
