@@ -127,6 +127,10 @@ class Service:
         else:
             session.playlist.current_song = await self.get_most_popular_recommendation(session.id)
 
+    async def start_automation(self, session: Session):
+        if not session.playlist.queued_songs:
+            session.voting_start_date = datetime.now()
+        await asyncio.sleep(30)
 
     async def create_session(self, host_id: str, session: Session) -> Session:
         host = await self.get_user(host_id)
@@ -140,8 +144,9 @@ class Service:
             song.added_by = host
             await self.get_genre(song)
             await self.get_preview_url(song)
-
         await self.repo.set_session(session)
+        await self.advance_playlist(session)
+        _ = await self.generate_and_get_recommendations_from_database()
         return session
 
     async def get_session(self, session_id: str) -> Session:
