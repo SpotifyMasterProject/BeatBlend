@@ -119,18 +119,28 @@ class Service:
         return User.model_validate_json(result)
 
     async def advance_playlist(self, session: Session) -> None:
+        print("advancing playlist")
         if session.playlist.current_song:
+            print("current song detected")
             session.playlist.played_songs.append(session.playlist.current_song)
             session.playlist.current_song = None
         if session.playlist.queued_songs:
+            print("song taken from queue")
             session.playlist.current_song = session.playlist.queued_songs.pop(0)
         else:
+            print("song taken from recommendations")
             session.playlist.current_song = await self.get_most_popular_recommendation(session.id)
+            _ = await self.generate_and_get_recommendations_from_database(session.id)
+        await self.repo.set_session(session)
 
-    async def start_automation(self, session: Session):
+    async def automate(self, session: Session):
         if not session.playlist.queued_songs:
             session.voting_start_date = datetime.now()
+            await self.manager.publish(channel=f"session:{session.id}", message=SessionCore(**session.model_dump()))
         await asyncio.sleep(30)
+        await self.advance_playlist(session)
+        await self.manager.publish(channel=f"playlist:{session.id}", message=session.playlist)
+        await self.automate(session)
 
     async def create_session(self, host_id: str, session: Session) -> Session:
         host = await self.get_user(host_id)
@@ -146,7 +156,8 @@ class Service:
             await self.get_preview_url(song)
         await self.repo.set_session(session)
         await self.advance_playlist(session)
-        _ = await self.generate_and_get_recommendations_from_database()
+        _ = await self.generate_and_get_recommendations_from_database(session.id)
+        asyncio.create_task(self.automate(session))
         return session
 
     async def get_session(self, session_id: str) -> Session:
@@ -302,10 +313,9 @@ class Service:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song not part of playlist")
 
     @with_session_lock
-    async def generate_and_get_recommendations_from_database(self, session_id: str, limit: int) -> RecommendationList:
+    async def generate_and_get_recommendations_from_database(self, session_id: str, limit: int = 3) -> RecommendationList:
         session = await self.get_session(session_id)
         session.recommendations.clear()
-        await self.repo.set_session(session)
         result = await self.repo.get_recommendations_by_songs(session.playlist.get_all_songs(), limit)
         for row in result:
             song = await self.get_song_from_database(row['id'])
