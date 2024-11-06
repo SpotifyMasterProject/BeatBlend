@@ -127,11 +127,11 @@ class Service:
         if session.playlist.queued_songs:
             print("song taken from queue")
             session.playlist.current_song = session.playlist.queued_songs.pop(0)
+            await self.repo.set_session(session)
         else:
             print("song taken from recommendations")
             session.playlist.current_song = await self.get_most_popular_recommendation(session.id)
             _ = await self.generate_and_get_recommendations_from_database(session.id)
-        await self.repo.set_session(session)
 
     async def automate(self, session: Session):
         if not session.playlist.queued_songs:
