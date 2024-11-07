@@ -1,3 +1,4 @@
+from asyncio import Task
 from datetime import datetime
 from typing import Optional
 
@@ -17,9 +18,9 @@ class SessionCore(CamelModel):
     creation_date: Optional[datetime] = None
     voting_start_date: Optional[datetime] = None
     voting_end_date: Optional[datetime] = None
-    # is_running: bool = False
 
 
 class Session(SessionCore):
     playlist: Playlist
     recommendations: list[Recommendation] = []
+    is_running: bool = True

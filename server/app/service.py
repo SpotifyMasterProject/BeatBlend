@@ -43,6 +43,7 @@ class Service:
         )
         self.spotify_api_client = Spotify(auth_manager=self.spotify_oauth)
         self.session_lock = asyncio.Lock()
+        self.automation_tasks = {}
 
     def with_session_lock(func):
         async def wrapper(self, *args):
@@ -132,15 +133,16 @@ class Service:
 
     async def automate(self, session_id: str):
         session = await self.get_session(session_id)
-        if not session.playlist.queued_songs:
-            session.voting_start_date = datetime.now()
-            session.voting_end_date = session.voting_start_date + timedelta(seconds=20)
-            await self.repo.set_session(session)
-            await self.manager.publish(channel=f"session:{session.id}", message=SessionCore(**session.model_dump()))
-        await asyncio.sleep(30)
-        await self.advance_playlist(session.id)
-        await self.manager.publish(channel=f"playlist:{session.id}", message=session.playlist)
-        await self.automate(session.id)
+        while session.is_running:
+            session = await self.get_session(session.id)
+            if not session.playlist.queued_songs:
+                session.voting_start_date = datetime.now()
+                session.voting_end_date = session.voting_start_date + timedelta(seconds=20)
+                await self.repo.set_session(session)
+                await self.manager.publish(channel=f"session:{session.id}", message=SessionCore(**session.model_dump()))
+            await asyncio.sleep(30)
+            await self.advance_playlist(session.id)
+            await self.manager.publish(channel=f"playlist:{session.id}", message=session.playlist)
 
     async def create_session(self, host_id: str, session: Session) -> Session:
         host = await self.get_user(host_id)
@@ -157,7 +159,7 @@ class Service:
         await self.repo.set_session(session)
         await self.advance_playlist(session.id)
         await self.generate_session_recommendations(session)
-        asyncio.create_task(self.automate(session.id))
+        self.automation_tasks[session.id] = asyncio.create_task(self.automate(session.id))
         return session
 
     async def get_session(self, session_id: str) -> Session:
@@ -172,7 +174,13 @@ class Service:
     async def end_session(self, host_id: str, session_id: str):
         session = await self.get_session(session_id)
         self.verify_host_of_session(host_id, session)
-        await self.repo.delete_session_by_id(session_id)
+        session.is_running = False
+        await self.repo.set_session(session)
+        automation_task = self.automation_tasks.get(session.id)
+        if automation_task:
+            await automation_task
+        await self.repo.delete_session_by_id(session.id)
+        del self.automation_tasks[session.id]
         # TODO: create and return session artifact
         return
 
