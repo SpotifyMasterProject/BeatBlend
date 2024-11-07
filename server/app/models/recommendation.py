@@ -1,3 +1,6 @@
+from datetime import datetime
+from typing import Optional
+
 from .camel_model import CamelModel
 from .song import Song
 
@@ -8,3 +11,4 @@ class Recommendation(Song):
 
 class RecommendationList(CamelModel):
     recommendations: list[Recommendation] = []
+    voting_ending_date: Optional[datetime] = None
