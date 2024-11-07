@@ -118,6 +118,7 @@ class Service:
         result = await self.repo.get_user_by_id(user_id)
         return User.model_validate_json(result)
 
+    @with_session_lock
     async def advance_playlist(self, session_id: str) -> None:
         session = await self.get_session(session_id)
         if session.playlist.current_song:
@@ -192,6 +193,7 @@ class Service:
         if guest_id not in session.guests:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Guest not part of session.")
 
+    @with_session_lock
     async def remove_guest_from_session(self, host_id: str, guest_id: str, session_id: str) -> None:
         session = await self.get_session(session_id)
 
@@ -312,6 +314,7 @@ class Service:
 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song not part of playlist")
 
+    @with_session_lock
     async def generate_session_recommendations(self, session: Session, limit: int = 3) -> None:
         session.recommendations.clear()
         result = await self.repo.get_recommendations_by_songs(session.playlist.get_all_songs(), limit)
@@ -332,7 +335,6 @@ class Service:
         await self.repo.set_session(session)
         await self.manager.publish(channel=f"recommendations:{session.id}", message=RecommendationList(recommendations=session.recommendations))
 
-    @with_session_lock
     async def get_session_recommendations(self, session_id: str) -> RecommendationList:
         session = await self.get_session(session_id)
         return RecommendationList(recommendations=session.recommendations)
