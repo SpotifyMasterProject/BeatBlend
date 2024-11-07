@@ -118,7 +118,6 @@ class Service:
         result = await self.repo.get_user_by_id(user_id)
         return User.model_validate_json(result)
 
-    @with_session_lock
     async def advance_playlist(self, session_id: str) -> None:
         session = await self.get_session(session_id)
         if session.playlist.current_song:
@@ -314,7 +313,6 @@ class Service:
 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song not part of playlist")
 
-    @with_session_lock
     async def generate_session_recommendations(self, session: Session, limit: int = 3) -> None:
         session.recommendations.clear()
         result = await self.repo.get_recommendations_by_songs(session.playlist.get_all_songs(), limit)
