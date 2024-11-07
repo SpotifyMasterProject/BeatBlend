@@ -16,6 +16,7 @@ class SessionCore(CamelModel):
     invite_link: Optional[str] = None
     creation_date: Optional[datetime] = None
     voting_start_date: Optional[datetime] = None
+    voting_end_date: Optional[datetime] = None
     # is_running: bool = False
 
 
