@@ -118,7 +118,8 @@ class Service:
         result = await self.repo.get_user_by_id(user_id)
         return User.model_validate_json(result)
 
-    async def advance_playlist(self, session: Session) -> None:
+    async def advance_playlist(self, session_id: str) -> None:
+        session = await self.get_session(session_id)
         if session.playlist.current_song:
             session.playlist.played_songs.append(session.playlist.current_song)
             session.playlist.current_song = None
@@ -126,19 +127,20 @@ class Service:
             session.playlist.current_song = session.playlist.queued_songs.pop(0)
             await self.repo.set_session(session)
         else:
-            session.playlist.current_song = await self.get_most_popular_recommendation(session.id)
-            await self.generate_recommendations_from_database(session)
+            session.playlist.current_song = await self.get_most_popular_recommendation(session)
+            await self.generate_session_recommendations(session)
 
-    async def automate(self, session: Session):
+    async def automate(self, session_id: str):
+        session = await self.get_session(session_id)
         if not session.playlist.queued_songs:
             session.voting_start_date = datetime.now()
-            session.voting_end_date = session.voting_start_date + timedelta(seconds=30)
+            session.voting_end_date = session.voting_start_date + timedelta(seconds=20)
             await self.repo.set_session(session)
             await self.manager.publish(channel=f"session:{session.id}", message=SessionCore(**session.model_dump()))
         await asyncio.sleep(30)
-        await self.advance_playlist(session)
+        await self.advance_playlist(session.id)
         await self.manager.publish(channel=f"playlist:{session.id}", message=session.playlist)
-        await self.automate(session)
+        await self.automate(session.id)
 
     async def create_session(self, host_id: str, session: Session) -> Session:
         host = await self.get_user(host_id)
@@ -153,9 +155,9 @@ class Service:
             await self.get_genre(song)
             await self.get_preview_url(song)
         await self.repo.set_session(session)
-        await self.advance_playlist(session)
-        await self.generate_recommendations_from_database(session)
-        asyncio.create_task(self.automate(session))
+        await self.advance_playlist(session.id)
+        await self.generate_session_recommendations(session)
+        asyncio.create_task(self.automate(session.id))
         return session
 
     async def get_session(self, session_id: str) -> Session:
@@ -310,7 +312,7 @@ class Service:
 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song not part of playlist")
 
-    async def generate_recommendations_from_database(self, session: Session, limit: int = 3) -> None:
+    async def generate_session_recommendations(self, session: Session, limit: int = 3) -> None:
         session.recommendations.clear()
         result = await self.repo.get_recommendations_by_songs(session.playlist.get_all_songs(), limit)
         for row in result:
@@ -331,36 +333,16 @@ class Service:
         await self.manager.publish(channel=f"recommendations:{session.id}", message=RecommendationList(recommendations=session.recommendations))
 
     @with_session_lock
-    async def generate_and_get_recommendations_from_database(self, session_id: str, limit: int = 3) -> RecommendationList:
+    async def get_session_recommendations(self, session_id: str) -> RecommendationList:
         session = await self.get_session(session_id)
-        session.recommendations.clear()
-        result = await self.repo.get_recommendations_by_songs(session.playlist.get_all_songs(), limit)
-        for row in result:
-            song = await self.get_song_from_database(row['id'])
-            await self.get_genre(song)
-            diffs = {
-                'danceability': row['diff_danceability'],
-                'energy': row['diff_energy'],
-                'speechiness': row['diff_speechiness'],
-                'valence': row['diff_valence'],
-                'tempo': row['diff_tempo']
-            }
-            most_significant_feature = max(diffs, key=diffs.get)
-            song.most_significant_feature = most_significant_feature
-            song.similarity_score = (1 - (row['cosine_distance'] / math.sqrt(5)))
-            session.recommendations.append(Recommendation(**song.model_dump()))
-        await self.repo.set_session(session)
-        response = RecommendationList(recommendations=session.recommendations)
-        await self.manager.publish(channel=f"recommendations:{session_id}", message=response)
-        return response
+        return RecommendationList(recommendations=session.recommendations)
 
-    async def get_most_popular_recommendation(self, session_id: str) -> Song:
-        session = await self.get_session(session_id)
+    async def get_most_popular_recommendation(self, session: Session) -> Song:
         most_popular_recommendation = max(session.recommendations, key=lambda recommendation: len(recommendation.votes))
         return await self.get_song_from_database(most_popular_recommendation.id)
 
     @with_session_lock
-    async def add_vote_to_recommendation(self, guest_id: str, session_id: str, song_id: str) -> RecommendationList:
+    async def add_or_change_vote_to_recommendation(self, guest_id: str, session_id: str, song_id: str) -> RecommendationList:
         session = await self.get_session(session_id)
         self.verify_guest_of_session(guest_id, session)
         curr_rec = next((rec for rec in session.recommendations if rec.id == song_id), None)
