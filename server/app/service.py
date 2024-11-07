@@ -17,6 +17,7 @@ from models.token import Token, SpotifyToken
 from models.session import SessionCore, Session
 from models.song import Song, SongList, Playlist
 from models.recommendation import Recommendation, RecommendationList
+from models.artifact import Artifact, AverageFeatures
 from repository import Repository
 from ws.websocket_manager import WebsocketManager
 
@@ -142,12 +143,47 @@ class Service:
         if session.host_id != host_id:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not host of session.")
 
-    async def end_session(self, host_id: str, session_id: str):
+    @staticmethod
+    def get_songs_added_manually(played_songs: list[Song]) -> int:
+        return sum(1 for song in played_songs if song.added_by)
+
+    def get_most_songs_added_by(self, played_songs: list[Song]) -> str:
+        user_song_count = {}
+        for song in played_songs:
+            if song.added_by:
+                user_id = song.added_by.id
+                if user_id in user_song_count:
+                    user_song_count[user_id] += 1
+                else:
+                    user_song_count[user_id] = 1
+
+        top_user_id = max(user_song_count, key=user_song_count.get)
+        user = await self.get_user(top_user_id)
+        return user.username
+
+    async def end_session(self, host_id: str, session_id: str) -> Artifact:
         session = await self.get_session(session_id)
         self.verify_host_of_session(host_id, session)
+        session_artifact = Artifact(
+            songs_played=len(session.playlist.played_songs),
+            songs_added_manually=self.get_songs_added_manually(session.playlist.played_songs),
+            most_songs_added_by="de_gueggeli_maa",
+            most_votes_by="haudrauf_hans",
+            most_significant_feature_overall="energy",
+            first_recommendation_vote_percentage=75.5,
+            average_features=AverageFeatures(
+                danceability=0.567568,
+                energy=0.8956756,
+                speechiness=0.0564,
+                valence=0.755,
+                tempo=120.0
+            ),
+            genre_start=["pop", "hip-hop"],
+            genre_end=["jazz", "rock"]
+        )
         await self.repo.delete_session_by_id(session_id)
         # TODO: create and return session artifact
-        return
+        return session_artifact
 
     @with_session_lock
     async def add_guest_to_session(self, guest_id: str, session_id: str) -> Session:
