@@ -23,7 +23,8 @@
     "primevue": "^4.0.5",
     "qrcode.vue": "^3.4.1",
     "vue": "^3.4.29",
-    "vue-router": "^4.3.3"
+    "vue-router": "^4.3.3",
+    "animal-avatar-generator": "1.2.0"
   },
   "devDependencies": {
     "@rushstack/eslint-patch": "^1.8.0",

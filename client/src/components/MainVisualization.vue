@@ -19,6 +19,16 @@ const flowerData = computed(() => {
   return flattenPlaylist(props.session.playlist).map(getSongFeatures);
 });
 
+const combinedPlaylist = computed(() => {
+  console.log("session: ", props.session)
+  const playedSongs = props.session.playlist.playedSongs || [];
+  const queuedSongs = props.session.playlist.queuedSongs || [];
+  const currentSong = props.session.playlist.currentSong ? [props.session.playlist.currentSong] : [];
+
+  // Combine all arrays into one
+  return [...playedSongs, ...currentSong, ...queuedSongs];
+});
+
 //Zoom Function for the main visualization --> will be adapted at a later point
 const zoomLevel = ref(1);
 const minZoom = 0.3;
@@ -278,7 +288,7 @@ const onLeaveFlower = () => {
             />
         </div>
       </div>
-      <SongDetailsPopUp v-if="showSongDetails && hoverIndex !== null" :song="session.playlist[hoverIndex]" />
+      <SongDetailsPopUp v-if="showSongDetails && hoverIndex !== null && combinedPlaylist[hoverIndex]" :song="combinedPlaylist[hoverIndex]" />
     </div>
   </div>
 </template>
