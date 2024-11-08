@@ -15,8 +15,6 @@ class SessionCore(CamelModel):
     guests: dict[str, User] = {}
     invite_link: Optional[str] = None
     creation_date: Optional[datetime] = None
-    voting_start_date: Optional[datetime] = None
-    voting_end_date: Optional[datetime] = None
 
 
 class Session(SessionCore):
