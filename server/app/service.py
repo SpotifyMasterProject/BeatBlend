@@ -137,7 +137,7 @@ class Service:
                 channel=f"recommendations:{session.id}",
                 message=RecommendationList(
                     recommendations=session.recommendations,
-                    voting_ending_date=datetime.now() + timedelta(seconds=20)
+                    voting_start_time=datetime.now()
                 )
             )
         await asyncio.sleep(30)

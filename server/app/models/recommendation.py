@@ -11,4 +11,4 @@ class Recommendation(Song):
 
 class RecommendationList(CamelModel):
     recommendations: list[Recommendation] = []
-    voting_ending_date: Optional[datetime] = None
+    voting_start_time: Optional[datetime] = None
