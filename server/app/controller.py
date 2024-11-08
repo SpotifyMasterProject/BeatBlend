@@ -30,6 +30,7 @@ repository = Repository(postgres, redis)
 service = Service(repository, manager)
 ws_service = WebSocketService(repository, manager)
 
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     await manager.connect()
@@ -44,6 +45,7 @@ async def lifespan(_: FastAPI):
     yield
     await manager.disconnect()
     await postgres.disconnect()
+
 
 app = FastAPI(lifespan=lifespan)
 app.add_middleware(
@@ -94,22 +96,22 @@ async def end_existing_session(host_id: Annotated[str, Depends(service.verify_to
     await service.end_session(host_id, session_id)
     # TODO: change/remove temporary return
     return Artifact(
-    songs_played=69,
-    songs_added_manually=42,
-    most_songs_added_by="de_gueggeli_maa",
-    most_votes_by="haudrauf_hans",
-    most_significant_feature_overall="energy",
-    first_recommendation_vote_percentage=75.5,
-    average_features=AverageFeatures(
-        danceability=0.567568,
-        energy=0.8956756,
-        speechiness=0.0564,
-        valence=0.755,
-        tempo=120.0
-    ),
-    genre_start=["pop", "hip-hop"],
-    genre_end=["jazz", "rock"]
-)
+        songs_played=69,
+        songs_added_manually=42,
+        most_songs_added_by="de_gueggeli_maa",
+        most_votes_by="haudrauf_hans",
+        most_significant_feature_overall="energy",
+        first_recommendation_vote_percentage=75.5,
+        average_features=AverageFeatures(
+            danceability=0.567568,
+            energy=0.8956756,
+            speechiness=0.0564,
+            valence=0.755,
+            tempo=120.0
+        ),
+        genre_start=["pop", "hip-hop"],
+        genre_end=["jazz", "rock"]
+    )
 
 
 # TODO: used for getting all artifacts
@@ -151,13 +153,16 @@ async def remove_song(host_id: Annotated[str, Depends(service.verify_token)], se
 
 
 @app.get("/sessions/{session_id}/recommendations", status_code=status.HTTP_200_OK, response_model=RecommendationList)
-async def get_recommendations(user_id: Annotated[str, Depends(service.verify_token)], session_id: str) -> RecommendationList:
+async def get_recommendations(user_id: Annotated[str, Depends(service.verify_token)],
+                              session_id: str) -> RecommendationList:
     await service.verify_instances(user_ids=user_id, session_id=session_id)
     return await service.get_session_recommendations(session_id)
 
 
-@app.patch("/sessions/{session_id}/recommendations/{song_id}/vote", status_code=status.HTTP_200_OK, response_model=RecommendationList)
-async def add_or_change_vote(guest_id: Annotated[str, Depends(service.verify_token)], session_id: str, song_id: str) -> RecommendationList:
+@app.patch("/sessions/{session_id}/recommendations/{song_id}/vote", status_code=status.HTTP_200_OK,
+           response_model=RecommendationList)
+async def add_or_change_vote(guest_id: Annotated[str, Depends(service.verify_token)], session_id: str,
+                             song_id: str) -> RecommendationList:
     await service.verify_instances(user_ids=guest_id, session_id=session_id)
     return await service.add_or_change_vote_to_recommendation(guest_id, session_id, song_id)
 
@@ -169,7 +174,8 @@ async def remove_vote(guest_id: Annotated[str, Depends(service.verify_token)], s
 
 
 @app.get("/songs", status_code=status.HTTP_200_OK, response_model=SongList)
-async def get_matching_songs(user_id: Annotated[str, Depends(service.verify_token)], pattern: str, limit: int = 10) -> SongList:
+async def get_matching_songs(user_id: Annotated[str, Depends(service.verify_token)], pattern: str,
+                             limit: int = 10) -> SongList:
     await service.verify_instances(user_ids=user_id)
     return await service.get_matching_songs_from_database(pattern, limit)
 

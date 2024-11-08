@@ -12,6 +12,7 @@ from jwt import InvalidTokenError
 from spotipy import Spotify
 from spotipy.oauth2 import SpotifyOAuth, SpotifyOauthError
 from typing import Annotated
+
 from models.user import User, SpotifyUser
 from models.token import Token, SpotifyToken
 from models.session import SessionCore, Session
@@ -120,6 +121,55 @@ class Service:
         result = await self.repo.get_user_by_id(user_id)
         return User.model_validate_json(result)
 
+    @staticmethod
+    async def get_genre(song: Song) -> None:
+        params = {
+            'release_title': song.album,
+            'artist': ', '.join(song.artists),
+            'type': 'release',  # album/single/EP
+            'token': DISCOGS_API_TOKEN
+        }
+
+        response = requests.get(DISCOGS_API_URL, params=params)
+        if response.status_code == 200:
+            data = response.json()
+            if 'results' in data and len(data['results']) > 0:
+                result = data['results'][0]  # first result is most relevant
+                genres = result.get('genre', [])
+                song.genre = genres
+        else:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Discogs could not be reached")
+
+    async def get_preview_url(self, song: Song) -> None:
+        try:
+            song_info = self.spotify_api_client.track(song.id)
+            song.preview_url = song_info.get('preview_url')
+        except Exception as e:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Request unsuccessful: {repr(e)}")
+
+    async def get_most_popular_recommendation(self, session: Session) -> Song:
+        most_popular_recommendation = max(session.recommendations, key=lambda recommendation: len(recommendation.votes))
+        return await self.get_song_from_database(most_popular_recommendation.id)
+
+    async def generate_session_recommendations(self, session: Session, limit: int = 3) -> None:
+        session.recommendations.clear()
+        result = await self.repo.get_recommendations_by_songs(session.playlist.get_all_songs(), limit)
+        for row in result:
+            song = await self.get_song_from_database(row['id'])
+            await self.get_genre(song)
+            diffs = {
+                'danceability': row['diff_danceability'],
+                'energy': row['diff_energy'],
+                'speechiness': row['diff_speechiness'],
+                'valence': row['diff_valence'],
+                'tempo': row['diff_tempo']
+            }
+            most_significant_feature = max(diffs, key=diffs.get)
+            song.most_significant_feature = most_significant_feature
+            song.similarity_score = (1 - (row['cosine_distance'] / math.sqrt(5)))
+            session.recommendations.append(Recommendation(**song.model_dump()))
+        await self.repo.set_session(session)
+
     async def advance_playlist(self, session: Session) -> None:
         if session.playlist.current_song:
             session.playlist.played_songs.append(session.playlist.current_song)
@@ -203,40 +253,12 @@ class Service:
     @with_session_lock
     async def remove_guest_from_session(self, host_id: str, guest_id: str, session_id: str) -> None:
         session = await self.get_session(session_id)
-
         if host_id:
             self.verify_host_of_session(host_id, session)
-
         self.verify_guest_of_session(guest_id, session)
         del session.guests[guest_id]
         await self.repo.set_session(session)
         await self.manager.publish(channel=f"session:{session_id}", message=SessionCore(**session.model_dump()))
-
-    @staticmethod
-    async def get_genre(song: Song) -> None:
-        params = {
-            'release_title': song.album,
-            'artist': ', '.join(song.artists),
-            'type': 'release',  # album/single/EP
-            'token': DISCOGS_API_TOKEN
-        }
-
-        response = requests.get(DISCOGS_API_URL, params=params)
-        if response.status_code == 200:
-            data = response.json()
-            if 'results' in data and len(data['results']) > 0:
-                result = data['results'][0]  # first result is most relevant
-                genres = result.get('genre', [])
-                song.genre = genres
-        else:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Discogs could not be reached")
-
-    async def get_preview_url(self, song: Song) -> None:
-        try:
-            song_info = self.spotify_api_client.track(song.id)
-            song.preview_url = song_info.get('preview_url')
-        except Exception as e:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Request unsuccessful: {repr(e)}")
 
     async def get_song_from_database(self, song_id: str) -> Song:
         result = await self.repo.get_song_by_id(song_id)
@@ -280,7 +302,9 @@ class Service:
 
             await self.repo.add_song_by_info(filtered_song_info)
             filtered_song_info["preview_url"] = combined_info.get('preview_url')
-            return Song(**filtered_song_info)
+            song = Song(**filtered_song_info)
+            await self.get_genre(song)
+            return song
         except Exception as e:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Request unsuccessful: {repr(e)}")
 
@@ -323,32 +347,9 @@ class Service:
 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song not part of playlist")
 
-    async def generate_session_recommendations(self, session: Session, limit: int = 3) -> None:
-        session.recommendations.clear()
-        result = await self.repo.get_recommendations_by_songs(session.playlist.get_all_songs(), limit)
-        for row in result:
-            song = await self.get_song_from_database(row['id'])
-            await self.get_genre(song)
-            diffs = {
-                'danceability': row['diff_danceability'],
-                'energy': row['diff_energy'],
-                'speechiness': row['diff_speechiness'],
-                'valence': row['diff_valence'],
-                'tempo': row['diff_tempo']
-            }
-            most_significant_feature = max(diffs, key=diffs.get)
-            song.most_significant_feature = most_significant_feature
-            song.similarity_score = (1 - (row['cosine_distance'] / math.sqrt(5)))
-            session.recommendations.append(Recommendation(**song.model_dump()))
-        await self.repo.set_session(session)
-
     async def get_session_recommendations(self, session_id: str) -> RecommendationList:
         session = await self.get_session(session_id)
         return RecommendationList(recommendations=session.recommendations)
-
-    async def get_most_popular_recommendation(self, session: Session) -> Song:
-        most_popular_recommendation = max(session.recommendations, key=lambda recommendation: len(recommendation.votes))
-        return await self.get_song_from_database(most_popular_recommendation.id)
 
     @with_session_lock
     async def add_or_change_vote_to_recommendation(self, guest_id: str, session_id: str, song_id: str) -> RecommendationList:
