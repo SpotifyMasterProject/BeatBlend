@@ -45,6 +45,7 @@ class Service:
         self.session_lock = asyncio.Lock()
         self.automation_tasks = {}
 
+    @staticmethod
     def with_session_lock(func):
         async def wrapper(self, *args):
             async with self.session_lock:
