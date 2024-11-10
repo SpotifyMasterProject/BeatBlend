@@ -341,7 +341,7 @@ const onLeaveFlower = () => {
           />
         </div>
       </div>
-      <SongDetailsPopUp v-if="showSongDetails && hoverIndex !== null" :song="playlist[hoverIndex]" />
+      <SongDetailsPopUp v-if="showSongDetails && hoverIndex !== null && playlist[hoverIndex]" :song="playlist[hoverIndex]" />
     </div>
   </div>
 </template>
