@@ -7,6 +7,7 @@ const props = defineProps<{
   features: SongFeature[];
   size?: number;
   circleRadius?: number;
+  bloom?: boolean;
 }>();
 
 const emit = defineEmits(['onPetalClick', 'hover', 'leave']);
@@ -36,7 +37,29 @@ const rotation = computed(() => {
       @mouseenter="() => emit('hover')"
       @mouseleave="() => emit('leave')"
   >
-    <circle :cx="maxPetalLength" :cy="maxPetalLength" :r="circleRadius" fill="none" stroke="#CCCCCC" stroke-width="1" />
+
+    <!-- Define the glowing effect -->
+    <defs>
+      <filter id="circle-bloom">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="7" result="blur" />
+        <feColorMatrix type="matrix" values="3 0 0 0 0  0 3 0 0 0  0 0 3 0 0  0 0 0 1 0" result="brightBlur" />
+        <feMerge>
+          <feMergeNode in="brightBlur" />
+          <feMergeNode in="SourceGraphic" />
+        </feMerge>
+      </filter>
+    </defs>
+
+    <circle
+        :cx="maxPetalLength"
+        :cy="maxPetalLength"
+        :r="circleRadius"
+        fill="none"
+        stroke="#CCCCCC"
+        stroke-width="1"
+        :filter="props.bloom ? 'url(#circle-bloom)' : null"
+        :class="{ 'bloom-circle': props.bloom }"
+    />
     <Petal
         class="petal"
         v-for="(feature, index) in features"
@@ -59,5 +82,18 @@ svg {
 
 .petal {
   cursor: pointer;
+}
+
+@keyframes bloom {
+  0%, 100% {
+    filter: url(#circle-bloom);
+  }
+  50% {
+    filter: url(#circle-bloom-strong);
+  }
+}
+
+.bloom-circle {
+  animation: bloom 1s infinite ease-in-out;
 }
 </style>
