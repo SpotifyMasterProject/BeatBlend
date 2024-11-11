@@ -23,7 +23,8 @@ const flowerData = computed(() => {
   return playlist.value.map((song) => {
     return {
       features: getSongFeatures(song),
-      mostSignificantFeature: getSongFeatureCategory(song.mostSignificantFeature)
+      mostSignificantFeature: getSongFeatureCategory(song.mostSignificantFeature),
+      isQueued: song.isQueued
     };
   });
 });
@@ -40,7 +41,7 @@ const visualizationStyle = ref({
 
 const isScrollEnabled = ref(false);
 const flowerRefs = useTemplateRef('flowers');
-const recommendationsStyle = ref({});
+const lastSongPosition = ref({});
 
 function zoomIn() {
   zoomLevel.value = Math.min(zoomLevel.value + 0.1, maxZoom)
@@ -203,17 +204,6 @@ onMounted(() => {
     // Set the scroll position to the left
     scrollWrapper.scrollLeft = 0;
   }
-
-  if (flowerRefs.value.length > 0) {
-    console.log(flowerRefs.value);
-    const lastFlowerPosition = flowerRefs.value[flowerRefs.value.length - 1].$el.getBoundingClientRect();
-    recommendationsStyle.value = {
-      top: `${lastFlowerPosition.y + gridSize + minY}px`,
-      left: `${lastFlowerPosition.x + 70}px`,
-      position: 'absolute',
-    };
-  }
-
 });
 
 const currentSelectedFeature = ref(null);
@@ -277,6 +267,7 @@ const computeLineBetweenFlowers = (flowerA, flowerB) => {
         ${flowerB.x} ${flowerB.y}`;
 };
 
+const lastFlowerPosition = ref(null);
 watch(localFlowerLinePositions.value, () => { 
 
   flowerLines.value = []
@@ -284,16 +275,23 @@ watch(localFlowerLinePositions.value, () => {
     const currentFlower = globalFlowerLinePositions(localFlowerLinePositions.value[i], gridPositions.value[i]);
     const nextFlower = globalFlowerLinePositions(localFlowerLinePositions.value[i + 1], gridPositions.value[i + 1]);
     if (!currentFlower || !nextFlower) {
-      return [];
+      return;
     }
     flowerLines.value.push(computeLineBetweenFlowers(currentFlower, nextFlower));
   }
+
+  const lastPosition = localFlowerLinePositions.value[gridPositions.value.length - 1];
+  if (!lastPosition) {
+    return undefined;
+  }
+
+  lastFlowerPosition.value = globalFlowerLinePositions(lastPosition, gridPositions.value[gridPositions.value.length - 1]);
 });
 
 const showSongDetails = ref(false);
-const hoverIndex = ref(null);
-const onHoverFlower = (index: number) => {
-  hoverIndex.value = index
+const hoverSong = ref(null);
+const onHoverSong = (song) => {
+  hoverSong.value = song;
   showSongDetails.value = true;
 }
 const onLeaveFlower = () => {
@@ -322,8 +320,9 @@ const onLeaveFlower = () => {
                   :mostSignificantFeature="flower.mostSignificantFeature"
                   :circleRadius="40"
                   :position="flowerPositions[index]"
+                  :class="{queued: flower.isQueued}"
                   @onPetalClick="(category) => onPetalClick(index, category)"
-                  @hover="() => onHoverFlower(index)"
+                  @hover="() => onHoverSong(playlist[index])"
                   @leave="onLeaveFlower"
                   @significantFeaturePosition="(position) => storeFlowerLinePosition(position, index)"
               />
@@ -332,16 +331,18 @@ const onLeaveFlower = () => {
                 class="connecting-path"
                 :d="line" stroke="white" fill="transparent"
               />
+               <Recommendations
+                v-if="session.isRunning && session.recommendations && session.playlist.queuedSongs.length === 0"
+                :recommendations="session.recommendations"
+                :lastFlowerPosition="lastFlowerPosition"
+                @hover="(song) => onHoverSong(song)"
+                @leave="onLeaveFlower"
+              />
           </svg>
-          <Recommendations
-            v-if="session.isRunning && session.recommendations"
-            :recommendations="session.recommendations"
-            class="recommendations"
-            :style="recommendationsStyle"
-          />
+         
         </div>
       </div>
-      <SongDetailsPopUp v-if="showSongDetails && hoverIndex !== null && playlist[hoverIndex]" :song="playlist[hoverIndex]" />
+      <SongDetailsPopUp v-if="showSongDetails && hoverSong" :song="hoverSong" />
     </div>
   </div>
 </template>
@@ -446,5 +447,8 @@ const onLeaveFlower = () => {
 }
 .connecting-path {
   pointer-events: none;
+}
+.queued {
+  opacity: 0.3;
 }
 </style>
