@@ -275,10 +275,12 @@ const currentSongPreviewUrl = computed(() => {
 const audioPlayer = ref<HTMLAudioElement | null>(null);
 
 watch(currentSongPreviewUrl, async (newUrl) => {
-  if (audioPlayer.value && newUrl) {
-    audioPlayer.value.src = newUrl;  // Update the audio source
+  if (newUrl && newUrl !== oldUrl && audioPlayer.value) {
+    audioPlayer.value.pause();
+    audioPlayer.value.src = newUrl;
+
     try {
-      await audioPlayer.value.play(); // Attempt to play the audio
+      await audioPlayer.value.play();
     } catch (error) {
       console.warn('Autoplay failed:', error);
     }
