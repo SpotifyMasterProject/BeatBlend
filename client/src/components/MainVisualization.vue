@@ -254,6 +254,42 @@ const onHoverFlower = (index: number) => {
 const onLeaveFlower = () => {
   showSongDetails.value = false;
 }
+
+const currentSongIndex = computed(() => {
+  const currentId = props.session.playlist.currentSong.id
+  console.log("current song: ", currentId)
+  const currentIndex = props.session.playlist.currentSong
+    ? combinedPlaylist.value.findIndex(
+        song => song.id === props.session.playlist.currentSong.id
+      )
+    : -1;
+  console.log("current index: ", currentIndex)
+
+  return currentIndex
+});
+
+const currentSongPreviewUrl = computed(() => {
+  return props.session.playlist.currentSong?.previewUrl || '';
+});
+
+const audioPlayer = ref<HTMLAudioElement | null>(null);
+
+watch(currentSongPreviewUrl, async (newUrl) => {
+  if (audioPlayer.value && newUrl) {
+    audioPlayer.value.src = newUrl;  // Update the audio source
+    try {
+      await audioPlayer.value.play(); // Attempt to play the audio
+    } catch (error) {
+      console.warn('Autoplay failed:', error);
+    }
+  }
+});
+
+onMounted(() => {
+  if (audioPlayer.value) {
+    audioPlayer.value.autoplay = true;
+  }
+});
 </script>
 
 <template>
@@ -264,6 +300,9 @@ const onLeaveFlower = () => {
     </div>
     <div class= visualization-container>
       <div class="scroll-wrapper">
+        <div v-if="!currentSongPreviewUrl" class="audio-unavailable-message">
+          Current song audio not available
+        </div>
         <div class="visualization" :style="visualizationStyle">
           <!-- Loop through each flower and apply the styles -->
           <div
@@ -275,6 +314,7 @@ const onLeaveFlower = () => {
             <Flower
                 :features="flower"
                 :circleRadius="40"
+                :bloom="index === currentSongIndex"
                 @onPetalClick="(featureCategory) => onPetalClick(index, featureCategory)"
                 @hover="() => onHoverFlower(index)"
                 @leave="onLeaveFlower"
@@ -289,6 +329,7 @@ const onLeaveFlower = () => {
         </div>
       </div>
       <SongDetailsPopUp v-if="showSongDetails && hoverIndex !== null && combinedPlaylist[hoverIndex]" :song="combinedPlaylist[hoverIndex]" />
+      <audio ref="audioPlayer" :src="currentSongPreviewUrl" autoplay />
     </div>
   </div>
 </template>
@@ -387,5 +428,15 @@ const onLeaveFlower = () => {
   transform: translate(0%, -50%);
   transition: all 0.3s ease;
   margin: auto;
+}
+.audio-unavailable-message {
+  position: absolute;
+  top: 10px;
+  color: red;
+  font-size: 1.2em;
+  font-weight: bold;
+  text-align: left;
+  width: 100%;
+  z-index: 1000;
 }
 </style>
