@@ -59,11 +59,6 @@ const sortedFeatures = computed(() => {
       .sort((a, b) => b.value - a.value);
 });
 
-const hoverFeature = ref(null);
-const handleHover = (feature) => {
-  hoverFeature.value = feature;
-};
-
 const emit= defineEmits(['close']);
 const showPopup = ref(true);
 const closePopup = () => {
