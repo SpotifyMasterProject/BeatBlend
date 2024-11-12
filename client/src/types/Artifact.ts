@@ -3,14 +3,14 @@ export class AverageFeatures {
     energy: number;
     speechiness: number;
     valence: number;
-    tempo: number;
+    scaledTempo: number;
 
     constructor(data: AverageFeatures) {
         this.danceability = data.danceability;
         this.energy = data.energy;
         this.speechiness = data.speechiness;
         this.valence = data.valence;
-        this.tempo = data.tempo;
+        this.scaledTempo = data.scaledTempo;
     }
 }
 

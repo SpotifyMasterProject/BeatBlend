@@ -6,7 +6,7 @@ class AverageFeatures(CamelModel):
     energy: float
     speechiness: float
     valence: float
-    tempo: float
+    scaled_tempo: float
 
 
 class Artifact(CamelModel):

@@ -105,7 +105,7 @@ async def end_existing_session(host_id: Annotated[str, Depends(service.verify_to
         energy=0.8956756,
         speechiness=0.0564,
         valence=0.755,
-        tempo=120.0
+        scaled_tempo=0.67
     ),
     genre_start=["pop", "hip-hop"],
     genre_end=["jazz", "rock"]

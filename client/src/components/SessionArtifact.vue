@@ -17,12 +17,21 @@ const props = defineProps({
   }
 });
 
+const formatGenres = (genres) => {
+  if (!genres || genres.length === 0) return '';
+  if (genres.length === 1) return genres[0];
+  return `${genres.slice(0, -1).join(', ')} & ${genres[genres.length - 1]}`;
+};
+
+const formattedGenreStart = computed(() => formatGenres(artifactDetails.value.genreStart));
+const formattedGenreEnd = computed(() => formatGenres(artifactDetails.value.genreEnd));
+
 const flowerData = computed<SongFeature[]>(() => {
   if (props.artifactData?.averageFeatures) {
     const data = [
       { category: SongFeatureCategory.SPEECHINESS, value: props.artifactData.averageFeatures.speechiness },
       { category: SongFeatureCategory.DANCEABILITY, value: props.artifactData.averageFeatures.danceability },
-      { category: SongFeatureCategory.TEMPO, value: props.artifactData.averageFeatures.tempo },
+      { category: SongFeatureCategory.TEMPO, value: props.artifactData.averageFeatures.scaledTempo },
       { category: SongFeatureCategory.VALENCE, value: props.artifactData.averageFeatures.valence },
       { category: SongFeatureCategory.ENERGY, value: props.artifactData.averageFeatures.energy },
     ];
@@ -71,7 +80,7 @@ const closePopup = () => {
       </header>
       <div class="middle-box">
         <div class="flower-placeholder">
-          <div v-if="flowerData && flowerData.length > 0">
+          <div v-if="flowerData && flowerData.length > 0" style="transform: scale(2.2);">
             <Flower :features="flowerData" />
           </div>
           <div v-else>
@@ -87,17 +96,17 @@ const closePopup = () => {
             <strong>Audio Features Ranked</strong>
             <ol>
               <li v-for="feature in sortedFeatures" :key="feature.category">
-                {{ feature.category }} ({{ feature.value.toFixed(2) }})
+                {{ feature.category }}
               </li>
             </ol>
             <p class="overview-comment">
-              You agreed <span class="highlight">XYZ</span> with the recommendation model by choosing the first recommendation
+              You agreed <span class="highlight">{{ artifactDetails.firstRecommendationVotePercentage}}%</span> with the recommendation model by choosing the first recommendation
             </p>
           </div>
           <div class="overview-right">
             <p>You played <span class="highlight">{{ artifactDetails.songsPlayed }}</span> songs</p>
             <p>Of those, you added <span class="highlight">{{ artifactDetails.songsAddedManually }}</span> manually</p>
-            <p>You started with genre <span class="highlight">{{ artifactDetails.genreStart }}</span> and ended with <span class="highlight">{{ artifactDetails.genreEnd }}</span></p>
+            <p>You started with genre <span class="highlight">{{ formattedGenreStart }}</span> and ended with <span class="highlight">{{ formattedGenreEnd }}</span></p>
             <p><span class="highlight">{{ artifactDetails.mostSongsAddedBy }}</span> added the most songs</p>
             <p><span class="highlight">{{ artifactDetails.mostVotesBy }}</span> voted most</p>
           </div>
@@ -117,6 +126,7 @@ const closePopup = () => {
   width: 600px;
   text-align: left;
   position: relative;
+  overflow-y: auto;
 }
 
 .popup-header {
@@ -144,17 +154,27 @@ const closePopup = () => {
 }
 
 .middle-box {
-  background-color: #444;
+  background-color: var(--backcore-color1);
   border-radius: 10px;
   padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  margin-bottom: 20px;
   height: 250px;
 }
 
 .flower-placeholder {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
   font-size: 14px;
   color: #888;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateY(30px);
+
 }
 
 
