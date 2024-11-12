@@ -106,6 +106,8 @@ const removeGuest = async (guestId) => {
 const endCurrentSession = async () => {
   await sessionStore.endSession();
   settingsVisible.value = false;
+  sessionEnded.value = true;
+  showArtifactPopup.value = true;
 };
 
 const flowerData = computed(() => {
@@ -134,10 +136,15 @@ function handleFlowerSelected(index, featureCategory) {
         <logo-intro-screen/>
       </div>
       <i v-if="isHost && session?.isRunning" class="settings-icon pi pi-cog" @click="showSettings()"></i>
-      <div>
-        <Button icon="pi pi-info-circle" severity="secondary" text rounded aria-label="Artifact" @click="toggleArtifactPopup" />
-      </div>
-
+      <i
+          v-if="isHost && sessionEnded"
+          class="artifact-button"
+          :class="{ active: showArtifactPopup }"
+          @click="toggleArtifactPopup"
+          aria-label="Artifact"
+      >
+        Artifact
+      </i>
     </header>
     <!-- Constant Overview: SessionArtifact component with dummy data -->
     <div class="middle" v-if="!loading">
@@ -424,5 +431,27 @@ function handleFlowerSelected(index, featureCategory) {
   color: var(--logo-highlight-color);
   font-size: 30px;
   cursor: pointer;
+}
+
+.artifact-button {
+  position: absolute;
+  top: 10px;
+  right: 20px;
+  font-size: 14px;
+  background-color: #363636;
+  border-radius: 12px;
+  border: none;
+  padding: 8px 20px;
+  cursor: pointer;
+  font-weight: bold;
+  color: white;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+.artifact-button:hover {
+  background-color: var(--logo-highlight-color)
+}
+
+.artifact-button.active {
+  background-color: var(--logo-highlight-color)
 }
 </style>
