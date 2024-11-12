@@ -53,6 +53,7 @@ const errorMessage = ref();
 const loading = ref(true);
 const sessionStore = useSession();
 const {session} = storeToRefs(sessionStore);
+const selectedSessionIndex = ref(null);
 
 onMounted(async () => {
   await router.isReady();

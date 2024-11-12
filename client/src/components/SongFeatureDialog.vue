@@ -330,7 +330,7 @@ onMounted(() => {
 }
 
 .text-container {
-  width: 85vw;
+  width: 95vw;
   text-align: left;
 }
 

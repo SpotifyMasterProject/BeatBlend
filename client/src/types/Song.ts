@@ -1,3 +1,5 @@
+import {User} from "@/types/User";
+
 export class Song {
     id: string
     trackName: string
@@ -12,7 +14,9 @@ export class Song {
     releaseDate: string
     popularity: number
     durationMs: number
-    genre: string
+    genre: string[]
+    previewUrl: string
+    addedBy: User
 
     constructor(data: Song) {
         this.id = data.id
@@ -29,5 +33,7 @@ export class Song {
         this.popularity = data.popularity
         this.durationMs = data.durationMs
         this.genre = data.genre
+        this.previewUrl = data.previewUrl
+        this.addedBy = data.addedBy
     }
 }
