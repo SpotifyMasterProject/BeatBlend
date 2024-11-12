@@ -381,8 +381,8 @@ onMounted(() => {
                 @leave="onLeaveFlower"
               />
           </svg>
-         
         </div>
+      </div>
       <audio ref="audioPlayer" :src="currentSongPreviewUrl" autoplay />
       <SongDetailsPopUp v-if="showSongDetails && hoverSong" :song="hoverSong" />
     </div>
