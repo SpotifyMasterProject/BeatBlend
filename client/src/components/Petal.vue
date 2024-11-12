@@ -6,9 +6,22 @@ const props = defineProps<{
   feature: SongFeature;
   center: number;
   circleRadius: number;
+  rotation?: number;
 }>();
 
-const rotation = computed(() => ((props.feature.category ?? 0) * 360 / 5));
+const emit = defineEmits(['emitEndPosition']);
+const rotation = computed(() => ((props.rotation || 0) + (props.feature.category ?? 0) * 360 / 5));
+
+const rotate = (center, point, angle) => {
+  const radians = - (Math.PI / 180) * angle;
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+
+  return {
+    x: cos * (point.x - center.x) + sin * (point.y - center.y) + center.x,
+    y: cos * (point.y - center.y) + sin * (point.x - center.x) + center.y
+  }
+}
 
 const colorPalettes = {
   [SongFeatureCategory.DANCEABILITY]: ['#A1DBE8', '#A1DBE8', '#A1DBE8', '#A1DBE8', '#A1DBE8'],
@@ -44,12 +57,14 @@ const generatePetalPath = (totalLength: number, totalWidth: number) => {
     const endX = props.center;
     const endY = props.center - sectionHeight;
 
+    emit('emitEndPosition', rotate({x: props.center, y: props.center}, {x: endX, y: endY}, rotation.value));
+
     const path = `
       M ${props.center} ${props.center}
       Q ${controlPoint1X} ${controlPoint1Y},
         ${endX} ${endY}
       Q ${controlPoint2X} ${controlPoint2Y},
-        ${props.center} ${props.center}
+      ${props.center} ${props.center}
     `;
     pathData.push(path);
   });
