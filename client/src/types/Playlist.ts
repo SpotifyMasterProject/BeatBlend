@@ -13,5 +13,10 @@ export class Playlist {
 }
 
 export function flattenPlaylist(playlist: Playlist) {
-    return playlist.playedSongs.concat(playlist.currentSong ? [playlist.currentSong] : []).concat(playlist.queuedSongs);
+    return playlist.playedSongs.concat(playlist.currentSong ? [playlist.currentSong] : []).concat(playlist.queuedSongs.map((song) => {
+        return {
+            ...song,
+            isQueued: true,
+        };
+    }));
 }

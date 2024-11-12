@@ -40,7 +40,7 @@ export const sessionService = {
         })
     },
     async getRecommendations(sessionId: string): Promise<Song[]> {
-        return apiClient.patch(`/sessions/${sessionId}/recommendations`).then((response) => {
+        return apiClient.get(`/sessions/${sessionId}/recommendations`).then((response) => {
             return response.data['songs'];
         })
     },
@@ -82,4 +82,21 @@ export const getSongFeatures = (song: Song): SongFeature[] => {
             value: song.speechiness
         },
     ];
+}
+
+export const getSongFeatureCategory = (feature: string) => {
+    switch (feature) {
+        case "tempo":
+            return SongFeatureCategory.TEMPO;
+        case "danceability":
+            return SongFeatureCategory.DANCEABILITY;
+        case "energy":
+            return SongFeatureCategory.ENERGY;
+        case "speechiness":
+            return SongFeatureCategory.SPEECHINESS;
+        case "valence":
+            return SongFeatureCategory.VALENCE;
+        default:
+            return null;
+    }
 }

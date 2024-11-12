@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {ref, watch, onMounted, computed, nextTick} from 'vue';
+import {ref, watch, onMounted, computed, nextTick, useTemplateRef} from 'vue';
 import Flower from "@/components/Flower.vue";
 import Recommendations from "@/components/Recommendations.vue";
 import SongFeatureDialog from "@/components/SongFeatureDialog.vue";
@@ -9,24 +9,24 @@ import { SongFeatureCategory } from '@/types/SongFeature';
 import { Session } from '@/types/Session';
 import SongDetailsPopUp from "@/components/SongDetailsPopUp.vue";
 import { flattenPlaylist } from '@/types/Playlist';
-import { sessionService, getSongFeatures } from "@/services/sessionService";
+import { sessionService, getSongFeatures, getSongFeatureCategory } from "@/services/sessionService";
 
 const props = defineProps<{
   session: Session,
 }>();
 
+const playlist = computed(() => {
+  return flattenPlaylist(props.session.playlist);
+})
+
 const flowerData = computed(() => {
-  return flattenPlaylist(props.session.playlist).map(getSongFeatures);
-});
-
-const combinedPlaylist = computed(() => {
-  console.log("session: ", props.session)
-  const playedSongs = props.session.playlist.playedSongs || [];
-  const queuedSongs = props.session.playlist.queuedSongs || [];
-  const currentSong = props.session.playlist.currentSong ? [props.session.playlist.currentSong] : [];
-
-  // Combine all arrays into one
-  return [...playedSongs, ...currentSong, ...queuedSongs];
+  return playlist.value.map((song) => {
+    return {
+      features: getSongFeatures(song),
+      mostSignificantFeature: getSongFeatureCategory(song.mostSignificantFeature),
+      isQueued: song.isQueued
+    };
+  });
 });
 
 //Zoom Function for the main visualization --> will be adapted at a later point
@@ -40,6 +40,8 @@ const visualizationStyle = ref({
 });
 
 const isScrollEnabled = ref(false);
+const flowerRefs = useTemplateRef('flowers');
+const lastSongPosition = ref({});
 
 function zoomIn() {
   zoomLevel.value = Math.min(zoomLevel.value + 0.1, maxZoom)
@@ -101,14 +103,13 @@ watch(flowerData, () => {
 }, { immediate: true });
 
 // Define a grid size and positions for flowers
-const gridSize = 80;
+const gridSize = 90;
 const maxVerticalMoves = 3;
+const minY = 70;
 
 let containerWidth = 0;
 let containerHeight = 0;
 
-const gridPositionToScreenPositionDeltaX = 100;
-const gridPositionToScreenPositionDeltaY = 150;
 let lastVerticalDirection = 0;
 let currentX = 0;
 let currentY = Math.floor(Math.random() * gridSize * maxVerticalMoves); //Random vertical placement for the first flower
@@ -116,33 +117,31 @@ let verticalNrFlowers = 1; //Nr of flowers vertically
 
 
 const generateNextRandomGridPosition = () => {
-  const stayInColumn = Math.random() > 0.5; //Decide whether to stay in same column or move to right
-  const maxStack = (currentY <= gridSize || currentY >= gridSize * (maxVerticalMoves-1)) ? 3 : 2; // Determine maximum vertical based on currentY position
-
-  if (stayInColumn && verticalNrFlowers < maxStack) {
-    let verticalDirection = lastVerticalDirection;
-
-    if (lastVerticalDirection === 1) {
+  let stayInColumn = (Math.random() > 0.5) && verticalNrFlowers <= maxVerticalMoves;
+  let verticalDirection = 0;
+  if (lastVerticalDirection === 1) {
       verticalDirection = 1;
-    } else if (lastVerticalDirection === -1) {
-      verticalDirection = -1;
-    } else {
-      if (currentY <= gridSize) { // If currentY too close to top, next flower will be placed down
-        verticalDirection = 1;
-      } else if (currentY >= gridSize * maxVerticalMoves) { // If currentY too close to bottom, next flower will be placed up
-        verticalDirection = -1;;
-      } else {
-        verticalDirection = Math.random() > 0.5 ? 1 : -1;
-      }
-    }
+  } else if (lastVerticalDirection === -1) {
+    verticalDirection = -1;
+  } else {
+    verticalDirection = Math.random() > 0.5 ? 1 : -1;
+  }
+  
+  if (verticalDirection === -1 && currentY <= gridSize * 2) {
+    stayInColumn = false;
+  }
+
+  if (verticalDirection === 1 && currentY >= gridSize * maxVerticalMoves) {
+    stayInColumn = false;
+  }
+
+  if (stayInColumn) {
     lastVerticalDirection = verticalDirection
     const verticalMove = verticalDirection * gridSize * (Math.random() > 0.5 ? 1.5 : 2);
     currentY += verticalMove;
     verticalNrFlowers++;
-    return {x: currentX, y: currentY};
-
+    return {x: currentX, y: Math.max(currentY, minY)};
   } else {
-    verticalNrFlowers = 0;
     const horizontalMove = gridSize * (Math.random() > 0.5 ? 1.5 : 2);
     currentX += horizontalMove;
     verticalNrFlowers = 1;
@@ -153,7 +152,7 @@ const generateNextRandomGridPosition = () => {
     const randomStartPositions = [0, gridSize * maxVerticalMoves, gridSize * Math.floor(maxVerticalMoves / 2)];
     currentY = randomStartPositions[Math.floor(Math.random() * randomStartPositions.length)];
 
-    return { x: currentX, y: currentY };
+    return { x: currentX, y: Math.max(currentY, minY)};
   }
 }
 
@@ -174,43 +173,12 @@ const generateRandomGridPositions = (flowerCount: number) => {
 
 const gridPositions = ref(generateRandomGridPositions(flowerData.value.length));
 
-const recommendationsContainer = ref(null);
-
-// Position the next recommendations close to the last song
-const recommendationsStyle = computed(() => {
-
-  const distanceToLastSong = 50;
-
-  let x = 0;
-  let y = 0;
-
-  if (gridPositions.value.length !== 0) {
-    const lastSongPosition = gridPositions.value[gridPositions.value.length - 1];
-    x = lastSongPosition.x + distanceToLastSong;
-    y = lastSongPosition.y;
-  }
-
-  return {
-    left: `${x + gridPositionToScreenPositionDeltaX}px`,
-    top: `${y + gridPositionToScreenPositionDeltaY}px`,
-  };
-
-});
-
-const flowerStyles = computed(() => {
+const flowerPositions = computed(() => {
   for (let i = gridPositions.value.length; i < flowerData.value.length; i++) {
     gridPositions.value = [...gridPositions.value, generateNextRandomGridPosition()];
   }
 
-  return gridPositions.value.map((position) => {
-    const { x, y } = position;
-
-    return {
-      position: 'absolute',
-      left: `${x + gridPositionToScreenPositionDeltaX}px`,
-      top: `${y + gridPositionToScreenPositionDeltaY}px`,
-    };
-  });
+  return gridPositions.value;
 });
 
 onMounted(() => {
@@ -245,10 +213,85 @@ const onPetalClick = (index: number, featureCategory: SongFeatureCategory) => {
   emit('flowerSelected', index, featureCategory);
 };
 
+const flowerLines = ref([]);
+const localFlowerLinePositions = ref({});
+
+const storeFlowerLinePosition = (position, index) => {
+  localFlowerLinePositions.value[index] = position;
+};
+
+const globalFlowerLinePositions = (localPosition, gridPosition) => {
+  if (!localPosition  || !gridPosition) {
+    return null;
+  }
+  return {
+    x: localPosition.x + gridPosition.x,
+    y: localPosition.y + gridPosition.y,
+  }; 
+};
+
+const curvatureRelativeIntensity = 50.0;
+
+const shiftPoint = (a, b, p, distance) => {
+    let dx = b.x - a.x;
+    let dy = b.y - a.y;
+
+    let perpendicularDx = -dy;
+    let perpendicularDy = dx;
+
+    let length = Math.sqrt(perpendicularDx * perpendicularDx + perpendicularDy * perpendicularDy);
+    let unitPerpendicularDx = perpendicularDx / length;
+    let unitPerpendicularDy = perpendicularDy / length;
+
+    let newPx = p.x + unitPerpendicularDx * distance;
+    let newPy = p.y + unitPerpendicularDy * distance;
+
+    return { x: newPx, y: newPy };
+};
+
+const computeLineBetweenFlowers = (flowerA, flowerB) => {
+  const convex = Math.random() > 0.5 ? 1 : -1;
+
+  const firstCurvature = {
+    x: (flowerB.x + flowerA.x) / 2,
+    y: (flowerB.y + flowerA.y) / 2,
+  };
+
+  const distance = Math.abs(flowerB.x - flowerA.x) + Math.abs(flowerB.y - flowerA.y);
+  const curvatureIntensity = distance * curvatureRelativeIntensity;
+
+  const firstCurvatureShifted = shiftPoint(flowerA, flowerB, firstCurvature, curvatureRelativeIntensity);
+  return `M ${flowerA.x} ${flowerA.y}
+      Q ${firstCurvatureShifted.x}
+        ${firstCurvatureShifted.y},
+        ${flowerB.x} ${flowerB.y}`;
+};
+
+const lastFlowerPosition = ref(null);
+watch(localFlowerLinePositions.value, () => { 
+
+  flowerLines.value = []
+  for (let i = 0; i < flowerData.value.length - 1; i++) {
+    const currentFlower = globalFlowerLinePositions(localFlowerLinePositions.value[i], gridPositions.value[i]);
+    const nextFlower = globalFlowerLinePositions(localFlowerLinePositions.value[i + 1], gridPositions.value[i + 1]);
+    if (!currentFlower || !nextFlower) {
+      return;
+    }
+    flowerLines.value.push(computeLineBetweenFlowers(currentFlower, nextFlower));
+  }
+
+  const lastPosition = localFlowerLinePositions.value[gridPositions.value.length - 1];
+  if (!lastPosition) {
+    return undefined;
+  }
+
+  lastFlowerPosition.value = globalFlowerLinePositions(lastPosition, gridPositions.value[gridPositions.value.length - 1]);
+});
+
 const showSongDetails = ref(false);
-const hoverIndex = ref(null);
-const onHoverFlower = (index: number) => {
-  hoverIndex.value = index
+const hoverSong = ref(null);
+const onHoverSong = (song) => {
+  hoverSong.value = song;
   showSongDetails.value = true;
 }
 const onLeaveFlower = () => {
@@ -259,7 +302,7 @@ const currentSongIndex = computed(() => {
   const currentId = props.session.playlist.currentSong.id
   console.log("current song: ", currentId)
   const currentIndex = props.session.playlist.currentSong
-    ? combinedPlaylist.value.findIndex(
+    ? playlist.value.findIndex(
         song => song.id === props.session.playlist.currentSong.id
       )
     : -1;
@@ -295,43 +338,53 @@ onMounted(() => {
 </script>
 
 <template>
+  <div id="test"></div>
   <div class = main-visualization>
     <div class="zoom-controls">
       <button @click="zoomIn">+</button>
       <button @click="zoomOut">-</button>
     </div>
     <div class= visualization-container>
+      <canvas class="canvas" id="canvas" ref="canvas"></canvas>
       <div class="scroll-wrapper">
         <div v-if="!currentSongPreviewUrl" class="audio-unavailable-message">
           Current song audio not available
         </div>
         <div class="visualization" :style="visualizationStyle">
           <!-- Loop through each flower and apply the styles -->
-          <div
-              v-for="(flower, index) in flowerData"
-              :key="index"
-              :style="flowerStyles[index]"
-              class="flower-wrapper"
-          >
-            <Flower
-                :features="flower"
-                :circleRadius="40"
-                :bloom="index === currentSongIndex"
-                @onPetalClick="(featureCategory) => onPetalClick(index, featureCategory)"
-                @hover="() => onHoverFlower(index)"
+          <svg class="svg-container" width="100vw" height="100vh">
+              <Flower
+                  ref="flowers"
+                  v-for="(flower, index) in flowerData"
+                  :key="index"
+                  :features="flower.features"
+                  :bloom="index === currentSongIndex"
+                  :mostSignificantFeature="flower.mostSignificantFeature"
+                  :circleRadius="40"
+                  :position="flowerPositions[index]"
+                  :class="{queued: flower.isQueued}"
+                  @onPetalClick="(category) => onPetalClick(index, category)"
+                  @hover="() => onHoverSong(playlist[index])"
+                  @leave="onLeaveFlower"
+                  @significantFeaturePosition="(position) => storeFlowerLinePosition(position, index)"
+              />
+              <path
+                v-for="line in flowerLines"
+                class="connecting-path"
+                :d="line" stroke="white" fill="transparent"
+              />
+               <Recommendations
+                v-if="session.isRunning && session.recommendations && session.playlist.queuedSongs.length === 0"
+                :recommendations="session.recommendations"
+                :lastFlowerPosition="lastFlowerPosition"
+                @hover="(song) => onHoverSong(song)"
                 @leave="onLeaveFlower"
-            />
-          </div>
-            <Recommendations
-              v-if="session.isRunning && session.recommendations"
-              :recommendations="session.recommendations"
-              class="recommendations"
-              :style="recommendationsStyle"
-            />
+              />
+          </svg>
+         
         </div>
-      </div>
-      <SongDetailsPopUp v-if="showSongDetails && hoverIndex !== null && combinedPlaylist[hoverIndex]" :song="combinedPlaylist[hoverIndex]" />
       <audio ref="audioPlayer" :src="currentSongPreviewUrl" autoplay />
+      <SongDetailsPopUp v-if="showSongDetails && hoverSong" :song="hoverSong" />
     </div>
   </div>
 </template>
@@ -440,5 +493,14 @@ onMounted(() => {
   text-align: left;
   width: 100%;
   z-index: 1000;
+}
+.svg-container {
+  position: absolute;
+}
+.connecting-path {
+  pointer-events: none;
+}
+.queued {
+  opacity: 0.3;
 }
 </style>

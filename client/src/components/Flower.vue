@@ -1,16 +1,19 @@
 <script setup lang ="ts">
-import { computed, defineProps} from 'vue';
+import { computed, defineProps, useTemplateRef, onMounted } from 'vue';
 import Petal from './Petal.vue';
-import { SongFeature } from '@/types/SongFeature';
+import { SongFeature, SongFeatureCategory } from '@/types/SongFeature';
 
 const props = defineProps<{
   features: SongFeature[];
+  position?: {x: number, y: number};
   size?: number;
   circleRadius?: number;
   bloom?: boolean;
+  mostSignificantFeature?: SongFeatureCategory
 }>();
 
-const emit = defineEmits(['onPetalClick', 'hover', 'leave']);
+const emit = defineEmits(['onPetalClick', 'significantFeaturePosition', 'hover', 'leave']);
+
 
 const size = props.size ?? 80;
 const circleRadius = props.circleRadius ?? 40;
@@ -26,18 +29,33 @@ const rotation = computed(() => {
   return (maxFeatureIndex * 360) / props.features.length;
 });
 
+const flower = useTemplateRef('flower');
+
+const onPetalEndPositionComputed = (position, songFeatureCategory) => {
+  if (songFeatureCategory === props.mostSignificantFeature) {
+    emit('significantFeaturePosition', position);
+  }
+};
+
+onMounted(() => {
+  if (props.mostSignificantFeature === null) {
+    emit('significantFeaturePosition', {x: maxPetalLength.value, y: maxPetalLength.value});
+  }
+  console.log(props.position);
+});
+
 </script>
 
 <template>
   <svg
-      :width="maxPetalLength * 2"
-      :height="maxPetalLength * 2"
-      :viewBox="`0 0 ${maxPetalLength * 2} ${maxPetalLength * 2}`"
-      :style="{ transform: `rotate(${rotation}deg)` }"
-      @mouseenter="() => emit('hover')"
-      @mouseleave="() => emit('leave')"
-  >
-
+    ref="flower"
+    :x="position?.x"
+    :y="position?.y"
+    :width="maxPetalLength * 2"
+    :height="maxPetalLength * 2"
+    @mouseenter="() => emit('hover')"
+    @mouseleave="() => emit('leave')">
+    
     <!-- Define the glowing effect -->
     <defs>
       <filter id="circle-bloom">
@@ -49,7 +67,7 @@ const rotation = computed(() => {
         </feMerge>
       </filter>
     </defs>
-
+    
     <circle
         :cx="maxPetalLength"
         :cy="maxPetalLength"
@@ -62,14 +80,16 @@ const rotation = computed(() => {
     />
     <Petal
         class="petal"
-        v-for="(feature, index) in features"
+        v-for="(feature, index) in features
         :key="index"
         :index="index"
         :feature="feature"
         :center="maxPetalLength"
         :circleRadius="circleRadius"
+        :rotation="rotation"
         @click="() => emit('onPetalClick', feature.category)"
-    />
+        @emitEndPosition="(position) => onPetalEndPositionComputed(position, feature.category)"
+      />
   </svg>
 </template>
 
