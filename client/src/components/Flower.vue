@@ -80,7 +80,7 @@ onMounted(() => {
     />
     <Petal
         class="petal"
-        v-for="(feature, index) in features
+        v-for="(feature, index) in features"
         :key="index"
         :index="index"
         :feature="feature"
