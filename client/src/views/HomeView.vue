@@ -45,6 +45,7 @@ const errorMessage = ref();
 const loading = ref(true);
 const sessionStore = useSession();
 const {session} = storeToRefs(sessionStore);
+const selectedSessionIndex = ref(null);
 
 onMounted(async () => {
   await router.isReady();
@@ -71,8 +72,8 @@ const runningSession = ref();
 
 const startSession = async (newSession) => {
   await sessionStore.createSession(newSession);
+  console.log("Session created");
   createNewSessionFlow.value = false;
-  selectedSessionIndex.value = 0;
 
   showVisualizationAid.value = true;
 };
@@ -233,7 +234,7 @@ function handleFlowerSelected(index, featureCategory) {
   gap: 5px;
   align-items: flex-start;
   justify-content: flex-start;
-  overflow-y: hidden;
+  overflow: hidden;
   box-sizing: border-box;
   border-radius: 18px;
   text-align: left;
@@ -282,9 +283,9 @@ function handleFlowerSelected(index, featureCategory) {
   background-color: #6AA834;
   transform: scale(1.05); /* Slightly enlarge the button on hover */
 }
-.song-feature-dialog .table-scroll {
+.table-scroll {
   overflow-y: auto;
-  overflow-x: auto;
+  overflow-x: hidden;
 }
 
 .popup-overlay {
@@ -306,6 +307,7 @@ function handleFlowerSelected(index, featureCategory) {
   margin: 0 20px 20px;
   gap: 8px;
   justify-content: space-between;
+  overflow-x: hidden;
 }
 
 .song-feature {

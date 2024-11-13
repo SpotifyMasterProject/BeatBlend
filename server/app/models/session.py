@@ -15,10 +15,8 @@ class SessionCore(CamelModel):
     guests: dict[str, User] = {}
     invite_link: Optional[str] = None
     creation_date: Optional[datetime] = None
-    # is_running: bool = False
 
 
 class Session(SessionCore):
     playlist: Playlist
     recommendations: list[Recommendation] = []
-    recommendations_creation_date: Optional[datetime] = None
