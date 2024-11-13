@@ -3,8 +3,7 @@ from typing import Optional
 
 from .camel_model import CamelModel
 from .user import User
-from .recommendation import Recommendation
-from .song import Playlist
+from .song import Song, Playlist
 
 
 class SessionCore(CamelModel):
@@ -19,4 +18,4 @@ class SessionCore(CamelModel):
 
 class Session(SessionCore):
     playlist: Playlist
-    recommendations: list[Recommendation] = []
+    recommendations: list[Song] = []
