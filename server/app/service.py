@@ -431,8 +431,7 @@ class Service:
         curr_rec = next((rec for rec in session.recommendations if rec.id == song_id), None)
         if not curr_rec:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song is not recommended.")
-        previous_rec = next((rec for rec in session.recommendations if guest_id in rec.votes),
-                            None)  # not None if guest has previously voted
+        previous_rec = next((rec for rec in session.recommendations if guest_id in rec.votes), None)  # not None if guest has previously voted
         if previous_rec:
             previous_rec.votes.remove(guest_id)
         if guest_id in curr_rec.votes:
