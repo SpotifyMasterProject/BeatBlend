@@ -453,8 +453,7 @@ class Service:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No vote added prior.")
         curr_rec.votes.remove(guest_id)
         await self.repo.set_session(session)
-        await self.manager.publish(channel=f"recommendations:{session_id}",
-                                   message=SongList(songs=session.recommendations))
+        await self.manager.publish(channel=f"recommendations:{session_id}", message=SongList(songs=session.recommendations))
 
     async def get_matching_songs_from_database(self, pattern: str, limit: int) -> SongList:
         result = await self.repo.get_songs_by_pattern(pattern, limit)
