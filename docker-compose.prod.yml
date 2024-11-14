@@ -1,0 +1,30 @@
+services:
+  server:
+    build:
+      context: server
+      dockerfile: Dockerfile.prod
+    depends_on:
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+  client:
+    build:
+      context: client
+      dockerfile: Dockerfile.prod
+    ports:
+      - "80:5173"
+  redis:
+    image: redis:alpine
+  postgres:
+    image: postgres:alpine
+    volumes:
+      - song-database:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 1s
+      retries: 5
+
+volumes:
+  song-database:
