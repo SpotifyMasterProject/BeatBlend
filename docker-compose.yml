@@ -21,9 +21,9 @@ services:
       - REDIS_HOST=${REDIS_HOST}
       - REDIS_PORT=${REDIS_PORT}
       - REDIS_SSL=${REDIS_SSL}
-      - LOCAL_IP_ADDRESS=${LOCAL_IP_ADDRESS}
       - DISCOGS_API_URL=${DISCOGS_API_URL}
       - DISCOGS_API_TOKEN=${DISCOGS_API_TOKEN}
+      - BASE_URL=${BASE_URL}
     depends_on:
       redis:
         condition: service_started
@@ -41,7 +41,8 @@ services:
       - CHOKIDAR_USEPOLLING=true
       - VITE_SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
       - VITE_SPOTIFY_REDIRECT_URI=${SPOTIFY_REDIRECT_URI}
-      - VITE_LOCAL_IP_ADDRESS=${LOCAL_IP_ADDRESS}
+      - VITE_API_BASE_URL=${API_BASE_URL}
+      - VITE_WS_BASE_URL=${BASE_URL}
   redis:
     image: redis:alpine
     ports:

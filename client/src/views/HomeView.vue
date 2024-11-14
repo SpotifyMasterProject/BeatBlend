@@ -25,8 +25,6 @@ const showAddMoreSongPopup = ref(false);
 
 const showVisualizationAid = ref(false);
 
-const LOCAL_IP_ADDRESS = import.meta.env.VITE_LOCAL_IP_ADDRESS;
-
 const toggleVisibility = () => {
   showSongFeatureDialog.value = !showSongFeatureDialog.value;
   selectedFeature.value = null;

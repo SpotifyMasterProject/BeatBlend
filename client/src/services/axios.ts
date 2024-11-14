@@ -3,7 +3,7 @@ import {useAuthStore} from '@/stores/auth'
 import applyCaseMiddleware from 'axios-case-converter';
 
 const apiClient = axios.create({
-    baseURL: `http://${import.meta.env.VITE_LOCAL_IP_ADDRESS}:8000`
+    baseURL: import.meta.env.VITE_API_BASE_URL
 });
 
 apiClient.interceptors.request.use(
