@@ -49,6 +49,7 @@ async def lifespan(_: FastAPI):
     await manager.disconnect()
     await postgres.disconnect()
 
+# TODO: allow only certain origins
 app = FastAPI(lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
