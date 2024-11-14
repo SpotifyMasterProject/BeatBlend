@@ -59,6 +59,11 @@ app.add_middleware(
 )
 
 
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
+
+
 @app.post("/auth-codes", status_code=status.HTTP_201_CREATED, response_model=Token)
 async def authorize_spotify(host: SpotifyUser) -> Token:
     spotify_token = service.get_spotify_token(host)
