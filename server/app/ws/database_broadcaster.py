@@ -1,16 +1,20 @@
 import asyncio
+import os
 
 from pydantic import BaseModel
 
 from redis.asyncio import Redis
 from ws.event import Event
 
+REDIS_HOST = os.getenv("REDIS_HOST")
+REDIS_PORT = os.getenv("REDIS_PORT")
+
 
 # This WS code is inspired by the encode/broadcaster package.
 # If something needs to be fixed or changed, look at their GitHub repo.
 class DatabaseBroadcaster:
     def __init__(self):
-        self._connection = Redis(host='redis', port=6379, db=0)
+        self._connection = Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
         self._pubsub = self._connection.pubsub()
         self._ready = asyncio.Event()
         self._queue: asyncio.Queue[Event] = asyncio.Queue()
