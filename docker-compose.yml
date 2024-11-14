@@ -1,10 +1,12 @@
 services:
   server:
-    build: server
+    build:
+      context: server
+      dockerfile: Dockerfile.dev
     ports:
       - "8000:8000"
     volumes:
-      - ./server/app:/code/app
+      - ./server/app:/app/code
     environment:
       - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
       - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
@@ -28,7 +30,9 @@ services:
       postgres:
         condition: service_healthy
   client:
-    build: client
+    build:
+      context: client
+      dockerfile: Dockerfile.dev
     ports:
       - "8080:5173"
     volumes:
@@ -55,7 +59,7 @@ services:
       - ./server/db:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 11s
+      interval: 5s
       timeout: 1s
       retries: 5
 
