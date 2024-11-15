@@ -2,8 +2,6 @@
 import {ref, watch, onMounted, computed, nextTick, useTemplateRef} from 'vue';
 import Flower from "@/components/Flower.vue";
 import Recommendations from "@/components/Recommendations.vue";
-import SongFeatureDialog from "@/components/SongFeatureDialog.vue";
-import type { CSSProperties } from 'vue';
 import Button from "primevue/button";
 import { SongFeatureCategory } from '@/types/SongFeature';
 import { Session } from '@/types/Session';
@@ -318,7 +316,7 @@ const currentSongPreviewUrl = computed(() => {
 const audioPlayer = ref<HTMLAudioElement | null>(null);
 
 watch(currentSongPreviewUrl, async (newUrl) => {
-  if (newUrl && newUrl !== oldUrl && audioPlayer.value) {
+  if (newUrl && newUrl !== currentSongPreviewUrl && audioPlayer.value) {
     audioPlayer.value.pause();
     audioPlayer.value.src = newUrl;
 
