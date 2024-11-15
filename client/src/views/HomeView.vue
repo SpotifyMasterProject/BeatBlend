@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import { ref, onMounted, computed } from "vue";
-import { Session } from "@/types/Session";
 import { useAuthStore } from "@/stores/auth";
 import { useSession } from "@/stores/session";
 import { useRouter, useRoute } from 'vue-router';
@@ -228,7 +227,7 @@ function handleFlowerSelected(index, featureCategory) {
 
 .song-feature-dialog{
   background-color: var(--backcore-color1);
-  padding: 0 0 15px 10px;
+  padding: 0 10px 15px 10px;
   display: flex;
   flex-direction: column;
   gap: 5px;
@@ -283,10 +282,6 @@ function handleFlowerSelected(index, featureCategory) {
   background-color: #6AA834;
   transform: scale(1.05); /* Slightly enlarge the button on hover */
 }
-.table-scroll {
-  overflow-y: auto;
-  overflow-x: hidden;
-}
 
 .popup-overlay {
   position: fixed;
@@ -304,7 +299,7 @@ function handleFlowerSelected(index, featureCategory) {
 .footer-section {
   display: flex;
   flex-direction: row;
-  margin: 0 20px 20px;
+  margin: 0 20px 20px 20px;
   gap: 8px;
   justify-content: space-between;
   overflow-x: hidden;
