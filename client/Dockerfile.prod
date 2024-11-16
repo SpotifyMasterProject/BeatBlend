@@ -14,13 +14,15 @@ ENV VITE_SPOTIFY_REDIRECT_URI=${VITE_SPOTIFY_REDIRECT_URI}
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 ENV VITE_WS_BASE_URL=$VITE_WS_BASE_URL
 
-# Need to replace the command since the type-check fails. workaround should normally not be used.
+# Needed to replace the command since the type-check fails. Workaround should normally not be used.
 # RUN npm run build
 RUN npm run build-only
-
 
 FROM nginx:stable-alpine
 
 COPY --from=build-stage /app/dist /usr/share/nginx/html
+
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
