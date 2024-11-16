@@ -29,8 +29,8 @@ REDIS_PORT = os.getenv("REDIS_PORT")
 REDIS_SSL = os.getenv("REDIS_SSL")
 
 manager = WebsocketManager()
-postgres = Database(f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@postgres:{POSTGRES_PORT}/{POSTGRES_DB}")
 redis = Redis(host=REDIS_HOST, port=REDIS_PORT, ssl=REDIS_SSL, ssl_cert_reqs=None, decode_responses=True)
+postgres = Database(f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}")
 repository = Repository(postgres, redis)
 service = Service(repository, manager)
 ws_service = WebSocketService(repository, manager)
@@ -38,14 +38,7 @@ ws_service = WebSocketService(repository, manager)
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     await manager.connect()
-    for attempt in range(10):
-        try:
-            await postgres.connect()
-            break
-        except ConnectionRefusedError as e:
-            if attempt == 9:
-                raise e
-            time.sleep(6)
+    await postgres.connect()
     yield
     await manager.disconnect()
     await postgres.disconnect()
