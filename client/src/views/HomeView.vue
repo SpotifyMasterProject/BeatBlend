@@ -19,6 +19,14 @@ import { Playlist, flattenPlaylist } from "@/types/Playlist";
 import {getSongFeatures, sessionService} from "@/services/sessionService";
 import SongFeatureDialog from "@/components/SongFeatureDialog.vue";
 import {SongFeatureCategory} from "@/types/SongFeature";
+import SessionArtifact from "@/components/SessionArtifact.vue";
+
+const showArtifactPopup = ref(false);
+
+const toggleArtifactPopup = () => {
+  showArtifactPopup.value = !showArtifactPopup.value;
+  console.log("Artifact Popup Toggled:", showArtifactPopup.value);
+};
 
 const showSongFeatureDialog = ref(false);
 const showAddMoreSongPopup = ref(false);
@@ -43,6 +51,7 @@ const errorMessage = ref();
 const loading = ref(true);
 const sessionStore = useSession();
 const {session} = storeToRefs(sessionStore);
+const selectedSessionIndex = ref(null);
 
 onMounted(async () => {
   await router.isReady();
@@ -69,8 +78,8 @@ const runningSession = ref();
 
 const startSession = async (newSession) => {
   await sessionStore.createSession(newSession);
+  console.log("Session created");
   createNewSessionFlow.value = false;
-  selectedSessionIndex.value = 0;
 
   showVisualizationAid.value = true;
 };
@@ -96,6 +105,8 @@ const removeGuest = async (guestId) => {
 const endCurrentSession = async () => {
   await sessionStore.endSession();
   settingsVisible.value = false;
+  sessionEnded.value = true;
+  showArtifactPopup.value = true;
 };
 
 const flowerData = computed(() => {
@@ -111,6 +122,7 @@ function handleFlowerSelected(index, featureCategory) {
   selectedFeature.value = {index, featureCategory};
   showSongFeatureDialog.value = true;
 }
+
 </script>
 
 <template>
@@ -123,7 +135,17 @@ function handleFlowerSelected(index, featureCategory) {
         <logo-intro-screen/>
       </div>
       <i v-if="isHost && session?.isRunning" class="settings-icon pi pi-cog" @click="showSettings()"></i>
+      <i
+          v-if="isHost && sessionEnded"
+          class="artifact-button"
+          :class="{ active: showArtifactPopup }"
+          @click="toggleArtifactPopup"
+          aria-label="Artifact"
+      >
+        Artifact
+      </i>
     </header>
+    <!-- Constant Overview: SessionArtifact component with dummy data -->
     <div class="middle" v-if="!loading">
       <div v-if="errorMessage" class="error">
           {{errorMessage}}
@@ -162,6 +184,7 @@ function handleFlowerSelected(index, featureCategory) {
         </div>
       </div>
     </div>
+
     <!-- Conditionally render VisualizationAid component -->
     <VisualizationAid v-if="showVisualizationAid" @close-popup="closeVisualizationAid" />
     <!-- Popup Overlay -->
@@ -172,6 +195,11 @@ function handleFlowerSelected(index, featureCategory) {
           :sessionId="session.id" />
       </div>
     </div>
+    <SessionArtifact
+        v-if="showArtifactPopup"
+        @close="toggleArtifactPopup"
+        :artifactData="sessionStore.session?.artifacts"
+    />
     <Sidebar v-model:visible="settingsVisible" header="Session Settings" :unstyled="false">
       <div v-if="session && session.isRunning">
         <h3> Join the Session </h3>
@@ -231,7 +259,7 @@ function handleFlowerSelected(index, featureCategory) {
   gap: 5px;
   align-items: flex-start;
   justify-content: flex-start;
-  overflow-y: hidden;
+  overflow: hidden;
   box-sizing: border-box;
   border-radius: 18px;
   text-align: left;
@@ -280,9 +308,9 @@ function handleFlowerSelected(index, featureCategory) {
   background-color: #6AA834;
   transform: scale(1.05); /* Slightly enlarge the button on hover */
 }
-.song-feature-dialog .table-scroll {
+.table-scroll {
   overflow-y: auto;
-  overflow-x: auto;
+  overflow-x: hidden;
 }
 
 .popup-overlay {
@@ -304,6 +332,7 @@ function handleFlowerSelected(index, featureCategory) {
   margin: 0 20px 20px;
   gap: 8px;
   justify-content: space-between;
+  overflow-x: hidden;
 }
 
 .song-feature {
@@ -395,5 +424,34 @@ function handleFlowerSelected(index, featureCategory) {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+.settings-icon {
+  position: absolute;
+  right: 60px;
+  color: var(--logo-highlight-color);
+  font-size: 30px;
+  cursor: pointer;
+}
+
+.artifact-button {
+  position: absolute;
+  top: 10px;
+  right: 20px;
+  font-size: 14px;
+  background-color: #363636;
+  border-radius: 12px;
+  border: none;
+  padding: 8px 20px;
+  cursor: pointer;
+  font-weight: bold;
+  color: white;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+.artifact-button:hover {
+  background-color: var(--logo-highlight-color)
+}
+
+.artifact-button.active {
+  background-color: var(--logo-highlight-color)
 }
 </style>

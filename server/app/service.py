@@ -12,6 +12,7 @@ from jwt import InvalidTokenError
 from spotipy import Spotify
 from spotipy.oauth2 import SpotifyOAuth, SpotifyOauthError
 from typing import Annotated
+
 from models.user import User, SpotifyUser
 from models.token import Token, SpotifyToken
 from models.session import SessionCore, Session
@@ -43,7 +44,9 @@ class Service:
         )
         self.spotify_api_client = Spotify(auth_manager=self.spotify_oauth)
         self.session_lock = asyncio.Lock()
+        self.automation_tasks = {}
 
+    @staticmethod
     def with_session_lock(func):
         async def wrapper(self, *args):
             async with self.session_lock:
@@ -118,6 +121,81 @@ class Service:
         result = await self.repo.get_user_by_id(user_id)
         return User.model_validate_json(result)
 
+    @staticmethod
+    async def get_genre(song: Song) -> None:
+        params = {
+            'release_title': song.album,
+            'artist': ', '.join(song.artists),
+            'type': 'release',  # album/single/EP
+            'token': DISCOGS_API_TOKEN
+        }
+
+        response = requests.get(DISCOGS_API_URL, params=params)
+        if response.status_code == 200:
+            data = response.json()
+            if 'results' in data and len(data['results']) > 0:
+                result = data['results'][0]  # first result is most relevant
+                genres = result.get('genre', [])
+                song.genre = genres
+        else:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Discogs could not be reached")
+
+    async def get_preview_url(self, song: Song) -> None:
+        try:
+            song_info = self.spotify_api_client.track(song.id)
+            song.preview_url = song_info.get('preview_url')
+        except Exception as e:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Request unsuccessful: {repr(e)}")
+
+    async def get_most_popular_recommendation(self, session: Session) -> Song:
+        most_popular_recommendation = max(session.recommendations, key=lambda recommendation: len(recommendation.votes))
+        return await self.get_song_from_database(most_popular_recommendation.id)
+
+    async def generate_session_recommendations(self, session: Session, limit: int = 3) -> None:
+        session.recommendations.clear()
+        result = await self.repo.get_recommendations_by_songs(session.playlist.get_all_songs(), limit)
+        for row in result:
+            song = await self.get_song_from_database(row['id'])
+            await self.get_genre(song)
+            diffs = {
+                'danceability': row['diff_danceability'],
+                'energy': row['diff_energy'],
+                'speechiness': row['diff_speechiness'],
+                'valence': row['diff_valence'],
+                'tempo': row['diff_tempo']
+            }
+            most_significant_feature = max(diffs, key=diffs.get)
+            song.most_significant_feature = most_significant_feature
+            song.similarity_score = (1 - (row['cosine_distance'] / math.sqrt(5)))
+            session.recommendations.append(Recommendation(**song.model_dump()))
+        await self.repo.set_session(session)
+
+    async def advance_playlist(self, session: Session) -> None:
+        if session.playlist.current_song:
+            session.playlist.played_songs.append(session.playlist.current_song)
+            session.playlist.current_song = None
+        if session.playlist.queued_songs:
+            session.playlist.current_song = session.playlist.queued_songs.pop(0)
+            await self.repo.set_session(session)
+        else:
+            session.playlist.current_song = await self.get_most_popular_recommendation(session)
+            await self.generate_session_recommendations(session)
+
+    async def automate(self, session_id: str):
+        session = await self.get_session(session_id)
+        if not session.playlist.queued_songs:
+            await self.manager.publish(
+                channel=f"recommendations:{session.id}",
+                message=RecommendationList(
+                    recommendations=session.recommendations,
+                    voting_start_time=datetime.now()
+                )
+            )
+        await asyncio.sleep(30)
+        await self.advance_playlist(session)
+        await self.manager.publish(channel=f"playlist:{session.id}", message=session.playlist)
+        await self.automate(session.id)
+
     async def create_session(self, host_id: str, session: Session) -> Session:
         host = await self.get_user(host_id)
         session.id = str(uuid.uuid4())
@@ -125,11 +203,14 @@ class Service:
         session.host_name = host.username
         session.creation_date = datetime.now()
         session.invite_link = f'{BASE_URL}/{session.id}/join'
-        # session.playlist = Playlist()
         for song in session.playlist.queued_songs:
             song.added_by = host
             await self.get_genre(song)
+            await self.get_preview_url(song)
         await self.repo.set_session(session)
+        await self.advance_playlist(session)
+        await self.generate_session_recommendations(session)
+        self.automation_tasks[session.id] = asyncio.create_task(self.automate(session.id))
         return session
 
     async def get_session(self, session_id: str) -> Session:
@@ -144,7 +225,11 @@ class Service:
     async def end_session(self, host_id: str, session_id: str):
         session = await self.get_session(session_id)
         self.verify_host_of_session(host_id, session)
-        await self.repo.delete_session_by_id(session_id)
+        automation_task = self.automation_tasks.get(session.id)
+        if automation_task:
+            automation_task.cancel()
+        await self.repo.delete_session_by_id(session.id)
+        del self.automation_tasks[session.id]
         # TODO: create and return session artifact
         return
 
@@ -164,12 +249,11 @@ class Service:
         if guest_id not in session.guests:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Guest not part of session.")
 
+    @with_session_lock
     async def remove_guest_from_session(self, host_id: str, guest_id: str, session_id: str) -> None:
         session = await self.get_session(session_id)
-
         if host_id:
             self.verify_host_of_session(host_id, session)
-
         self.verify_guest_of_session(guest_id, session)
         del session.guests[guest_id]
         await self.repo.set_session(session)
@@ -178,12 +262,8 @@ class Service:
     async def get_song_from_database(self, song_id: str) -> Song:
         result = await self.repo.get_song_by_id(song_id)
         song = Song.model_validate(dict(result))
-        if not song.preview_url:
-            try:
-                song_info = self.spotify_api_client.track(song.id)
-                song.preview_url = song_info.get('preview_url')
-            except Exception as e:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Request unsuccessful: {repr(e)}")
+        await self.get_genre(song)
+        await self.get_preview_url(song)
         return song
 
     async def add_song_to_database(self, song_id: str) -> Song:
@@ -221,7 +301,9 @@ class Service:
 
             await self.repo.add_song_by_info(filtered_song_info)
             filtered_song_info["preview_url"] = combined_info.get('preview_url')
-            return Song(**filtered_song_info)
+            song = Song(**filtered_song_info)
+            await self.get_genre(song)
+            return song
         except Exception as e:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Request unsuccessful: {repr(e)}")
 
@@ -234,25 +316,6 @@ class Service:
         except HTTPException:
             return await self.add_song_to_database(song_id)
 
-    @staticmethod
-    async def get_genre(song: Song) -> None:
-        params = {
-            'release_title': song.album,
-            'artist': ', '.join(song.artists),
-            'type': 'release',  # album/single/EP
-            'token': DISCOGS_API_TOKEN
-        }
-
-        response = requests.get(DISCOGS_API_URL, params=params)
-        if response.status_code == 200:
-            data = response.json()
-            if 'results' in data and len(data['results']) > 0:
-                result = data['results'][0]  # first result is most relevant
-                genres = result.get('genre', [])
-                song.genre = genres
-        else:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Discogs could not be reached")
-
     @with_session_lock
     async def add_song_to_session(self, user_id: str, session_id: str, song_id: str) -> Playlist:
         user = await self.get_user(user_id)
@@ -261,12 +324,11 @@ class Service:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User is not part of session")
         song = await self.get_song(song_id)
         song.added_by = user
-        await self.get_genre(song)
-
         session.playlist.queued_songs.append(song)
-        await self.repo.set_session(session)
-        await self.manager.publish(channel=f"playlist:{session_id}", message=session.playlist)
-
+        await self.generate_session_recommendations(session)
+        await self.manager.publish(channel=f"playlist:{session.id}", message=session.playlist)
+        await self.manager.publish(channel=f"recommendations:{session.id}",
+                                   message=RecommendationList(recommendations=session.recommendations))
         return session.playlist
 
     @with_session_lock
@@ -276,45 +338,20 @@ class Service:
         for idx, song in enumerate(session.playlist.queued_songs):
             if song.id == song_id:
                 del session.playlist.queued_songs[idx]
-                await self.repo.set_session(session)
-                await self.manager.publish(channel=f"playlist:{session_id}", message=session.playlist)
+                await self.generate_session_recommendations(session)
+                await self.manager.publish(channel=f"playlist:{session.id}", message=session.playlist)
+                await self.manager.publish(channel=f"recommendations:{session.id}",
+                                           message=RecommendationList(recommendations=session.recommendations))
                 return
 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song not part of playlist")
 
-    @with_session_lock
-    async def generate_and_get_recommendations_from_database(self, session_id: str, limit: int) -> RecommendationList:
+    async def get_session_recommendations(self, session_id: str) -> RecommendationList:
         session = await self.get_session(session_id)
-        session.recommendations.clear()
-        await self.repo.set_session(session)
-        result = await self.repo.get_recommendations_by_songs(session.playlist.get_all_songs(), limit)
-        for row in result:
-            song = await self.get_song_from_database(row['id'])
-            await self.get_genre(song)
-            diffs = {
-                'danceability': row['diff_danceability'],
-                'energy': row['diff_energy'],
-                'speechiness': row['diff_speechiness'],
-                'valence': row['diff_valence'],
-                'tempo': row['diff_tempo']
-            }
-            most_significant_feature = max(diffs, key=diffs.get)
-            song.most_significant_feature = most_significant_feature
-            song.similarity_score = (1 - (row['cosine_distance'] / math.sqrt(5)))
-            session.recommendations.append(Recommendation(**song.model_dump()))
-        session.recommendations_creation_date = datetime.now()
-        await self.repo.set_session(session)
-        response = RecommendationList(recommendations=session.recommendations, creation_date=session.recommendations_creation_date)
-        await self.manager.publish(channel=f"recommendations:{session_id}", message=response)
-        return response
-
-    async def get_most_popular_recommendation(self, session_id: str) -> Song:
-        session = await self.get_session(session_id)
-        most_popular_recommendation = max(session.recommendations, key=lambda recommendation: len(recommendation.votes))
-        return await self.get_song_from_database(most_popular_recommendation.id)
+        return RecommendationList(recommendations=session.recommendations)
 
     @with_session_lock
-    async def add_vote_to_recommendation(self, guest_id: str, session_id: str, song_id: str) -> RecommendationList:
+    async def add_or_change_vote_to_recommendation(self, guest_id: str, session_id: str, song_id: str) -> RecommendationList:
         session = await self.get_session(session_id)
         self.verify_guest_of_session(guest_id, session)
         curr_rec = next((rec for rec in session.recommendations if rec.id == song_id), None)
@@ -327,7 +364,7 @@ class Service:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Vote already added.")
         curr_rec.votes.append(guest_id)
         await self.repo.set_session(session)
-        response = RecommendationList(recommendations=session.recommendations, creation_date=session.recommendations_creation_date)
+        response = RecommendationList(recommendations=session.recommendations)
         await self.manager.publish(channel=f"recommendations:{session_id}", message=response)
         return response
 
@@ -342,7 +379,7 @@ class Service:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No vote added prior.")
         curr_rec.votes.remove(guest_id)
         await self.repo.set_session(session)
-        await self.manager.publish(channel=f"recommendations:{session_id}", message=RecommendationList(recommendations=session.recommendations, creation_date=session.recommendations_creation_date))
+        await self.manager.publish(channel=f"recommendations:{session_id}", message=RecommendationList(recommendations=session.recommendations))
 
     async def get_matching_songs_from_database(self, pattern: str, limit: int) -> SongList:
         result = await self.repo.get_songs_by_pattern(pattern, limit)

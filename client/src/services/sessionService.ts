@@ -3,6 +3,7 @@ import { Session } from '@/types/Session';
 import { Song } from '@/types/Song';
 import { SongFeatureCategory } from '@/types/SongFeature';
 import type { SongFeature } from '@/types/SongFeature';
+import { Artifacts } from '@/types/Artifact';
 
 export const sessionService = {
 
@@ -19,8 +20,10 @@ export const sessionService = {
             return response.data;
         })
     },
-    async endSession(sessionId: string): Promise<void> {
-        await apiClient.delete(`/sessions/${sessionId}`);
+    async endSession(sessionId: string): Promise<Artifacts> {
+        return apiClient.delete(`/sessions/${sessionId}`).then((response) => {
+            return response.data;
+        });
     },
     async getSessionById(sessionId: string): Promise<Session> {
         return apiClient.get(`/sessions/${sessionId}`).then((response) => {
@@ -40,7 +43,7 @@ export const sessionService = {
         })
     },
     async getRecommendations(sessionId: string): Promise<Song[]> {
-        return apiClient.patch(`/sessions/${sessionId}/recommendations`).then((response) => {
+        return apiClient.get(`/sessions/${sessionId}/recommendations`).then((response) => {
             return response.data['songs'];
         })
     },
@@ -82,4 +85,21 @@ export const getSongFeatures = (song: Song): SongFeature[] => {
             value: song.speechiness
         },
     ];
+}
+
+export const getSongFeatureCategory = (feature: string) => {
+    switch (feature) {
+        case "tempo":
+            return SongFeatureCategory.TEMPO;
+        case "danceability":
+            return SongFeatureCategory.DANCEABILITY;
+        case "energy":
+            return SongFeatureCategory.ENERGY;
+        case "speechiness":
+            return SongFeatureCategory.SPEECHINESS;
+        case "valence":
+            return SongFeatureCategory.VALENCE;
+        default:
+            return null;
+    }
 }
