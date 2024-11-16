@@ -3,6 +3,8 @@ services:
     build:
       context: server
       dockerfile: Dockerfile.prod
+    ports:
+      - "8000:8000"
     environment:
       - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID}
       - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET}
