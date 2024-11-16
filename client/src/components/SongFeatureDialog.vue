@@ -51,13 +51,13 @@ const colorPalettes = {
 };
 
 const chartData = (songFeatureCategory: SongFeatureCategory | null) => {
-  // Adjust the color of the selected feature point.
-  const pointColors = new Array(props.flowerData.length);
-  pointColors.fill('grey');
+  // Default styles for points
+  const pointColors = new Array(props.flowerData.length).fill('grey');
+  const pointRadius = new Array(props.flowerData.length).fill(3);
 
-  // Adjust the size of the selected feature point.
-  const pointRadius = new Array(props.flowerData.length);
-  pointRadius.fill(3);
+  if (props.selectedFeature !== null) {
+    pointRadius[props.selectedFeature.index] = 7;
+  }
 
   if (songFeatureCategory === null) {
     const datasets = Object.keys(SongFeatureCategory).filter((key) => isNaN(key)).map((categoryKey) => {
