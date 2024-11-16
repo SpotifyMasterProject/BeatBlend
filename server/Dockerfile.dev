@@ -5,4 +5,4 @@ COPY ./requirements.txt /app/
 RUN pip install --no-cache-dir --upgrade -r /app/requirements.txt
 
 WORKDIR /app/code
-CMD uvicorn controller:app --host 0.0.0.0 --port 8000 --reload
+CMD uvicorn controller:app --host 0.0.0.0 --port 8000 --reload --log-level debug
