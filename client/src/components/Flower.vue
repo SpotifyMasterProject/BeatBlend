@@ -1,5 +1,7 @@
 <script setup lang ="ts">
-import { computed, defineProps, useTemplateRef, onMounted } from 'vue';
+
+import { computed, defineProps, defineEmits, useTemplateRef, onMounted} from 'vue';
+
 import Petal from './Petal.vue';
 import { SongFeature, SongFeatureCategory } from '@/types/SongFeature';
 
@@ -29,6 +31,11 @@ const rotation = computed(() => {
   return (maxFeatureIndex * 360) / props.features.length;
 });
 
+
+function handleHover(feature: SongFeature) {
+  emit('hover', feature);
+}
+
 const flower = useTemplateRef('flower');
 
 const onPetalEndPositionComputed = (position, songFeatureCategory) => {
@@ -43,6 +50,7 @@ onMounted(() => {
   }
   console.log(props.position);
 });
+
 
 </script>
 
@@ -80,7 +88,7 @@ onMounted(() => {
     />
     <Petal
         class="petal"
-        v-for="(feature, index) in features"
+        v-for="(feature, index) in props.features"
         :key="index"
         :index="index"
         :feature="feature"
@@ -88,8 +96,11 @@ onMounted(() => {
         :circleRadius="circleRadius"
         :rotation="rotation"
         @click="() => emit('onPetalClick', feature.category)"
+        @mouseenter="() => handleHover(feature)"
+        @mouseleave="() => emit('leave')"
         @emitEndPosition="(position) => onPetalEndPositionComputed(position, feature.category)"
       />
+
   </svg>
 </template>
 

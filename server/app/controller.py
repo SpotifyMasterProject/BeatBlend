@@ -96,22 +96,22 @@ async def end_existing_session(host_id: Annotated[str, Depends(service.verify_to
     await service.end_session(host_id, session_id)
     # TODO: change/remove temporary return
     return Artifact(
-        songs_played=69,
-        songs_added_manually=42,
-        most_songs_added_by="de_gueggeli_maa",
-        most_votes_by="haudrauf_hans",
-        most_significant_feature_overall="energy",
-        first_recommendation_vote_percentage=75.5,
-        average_features=AverageFeatures(
-            danceability=0.567568,
-            energy=0.8956756,
-            speechiness=0.0564,
-            valence=0.755,
-            tempo=120.0
-        ),
-        genre_start=["pop", "hip-hop"],
-        genre_end=["jazz", "rock"]
-    )
+    songs_played=69,
+    songs_added_manually=42,
+    most_songs_added_by="de_gueggeli_maa",
+    most_votes_by="haudrauf_hans",
+    most_significant_feature_overall="energy",
+    first_recommendation_vote_percentage=75.5,
+    average_features=AverageFeatures(
+        danceability=0.567568,
+        energy=0.8956756,
+        speechiness=0.0564,
+        valence=0.755,
+        scaled_tempo=0.67
+    ),
+    genre_start=["pop", "hip-hop"],
+    genre_end=["jazz", "rock"]
+)
 
 
 # TODO: used for getting all artifacts

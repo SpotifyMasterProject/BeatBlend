@@ -172,10 +172,10 @@ function closePopup(){
   content: '';
   position: absolute;
   top: 0;
-  right: -50px; /* Position 10px to the right of the column's content */
+  right: -50px;
   width: 1px;
   height: 100%;
-  background-color: white; /* The color of the vertical line */
+  background-color: white;
 }
 
 .flower-ruler-container {
@@ -189,7 +189,7 @@ function closePopup(){
   position: absolute;
   top: 0;
   right: 0px;
-  height: 160px; /* Match SVG height */
+  height: 160px;
 }
 
 .ruler-line {
@@ -241,7 +241,7 @@ function closePopup(){
 }
 
 .petal-description {
-  flex: 1 1 18%; /* Allow each item to grow and shrink equally, with a base of 20% */
+  flex: 1 1 18%;
   display: flex;
   flex-direction: column;
   align-items: center;
