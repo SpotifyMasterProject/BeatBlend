@@ -131,7 +131,7 @@ function handleFlowerSelected(index, featureCategory) {
   <div class="type2">
     <header>
       <div class="function-icon-container" v-if="session?.isRunning">
-        <Button icon="pi pi-search" severity="success" text raised rounded aria-label="Search" @click="toggleAddMoreSongPopup" />
+        <Button icon="pi pi-search" severity="success" raised rounded :unstyled="false" @click="toggleAddMoreSongPopup" />
       </div>
       <div class="logo-nav-container">
         <logo-intro-screen/>
@@ -164,7 +164,7 @@ function handleFlowerSelected(index, featureCategory) {
         <MobileMainViz v-if="!isHost" :session="session" />
       </template>
     </div>
-    <div v-if="session && session.isRunning" class="footer-section">
+    <div v-if="session && session.isRunning && isHost" class="footer-section">
       <div
         class="song-feature-dialog"
         :class="{ minimized: !showSongFeatureDialog }"
@@ -172,7 +172,7 @@ function handleFlowerSelected(index, featureCategory) {
         <div class="table-header-container">
           <h3>Audio Feature Chart</h3>
           <button
-            class="text-sm rounded min-h-[32px] px-3 py-0.5 font-semibold hover:bg-gray-800"
+            class="audio-feature-button text-sm rounded min-h-[32px] px-3 py-0.5 font-semibold hover:bg-gray-800"
             @click="toggleVisibility"
           >
             <i :class="showSongFeatureDialog ? 'pi pi-chevron-down' : 'pi pi-chevron-left' "></i>
@@ -455,5 +455,8 @@ function handleFlowerSelected(index, featureCategory) {
 
 .artifact-button.active {
   background-color: var(--logo-highlight-color)
+}
+.audio-feature-button {
+  margin: 10px;
 }
 </style>

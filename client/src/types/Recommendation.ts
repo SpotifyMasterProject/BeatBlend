@@ -11,10 +11,10 @@ export class Recommendation extends Song {
 
 export class RecommendationList {
     recommendations: Recommendation[];
-    recommendationsCreationDate: Date;
+    votingStartTime: Date;
 
     constructor(data: RecommendationList) {
         this.recommendations = data.recommendations;
-        this.recommendationsCreationDate = data.recommendationsCreationDate
+        this.votingStartTime = data.votingStartTime
     }
 }

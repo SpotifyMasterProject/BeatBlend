@@ -14,9 +14,9 @@ const props = defineProps<{
 
 const countdown = computed(() => {
   console.log(props.session);
-  const millis = Date.now() - new Date(props.session.recommendationsCreationDate);
+  const millis = Date.now() - new Date(props.session.votingStartTime);
   console.log(millis);
-  return Math.max(90 - millis / 1000, 0);
+  return Math.max(30 - millis / 1000, 0);
 });
 
 const isTimeUp = ref(false);
