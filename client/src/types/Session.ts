@@ -1,6 +1,6 @@
 import { User } from './User';
 import { Playlist } from '@/types/Playlist';
-import { Recommendation } from '@/types/Recommendation';
+import { Song } from '@/types/Song';
 
 export class Session {
     id: string
@@ -11,7 +11,7 @@ export class Session {
     guests: {[key: string]: User}
     playlist: Playlist
     creationDate: Date
-    recommendations: Recommendation[]
+    recommendations: Song[]
 
     constructor(data: Session) {
         this.id = data.id

@@ -3,7 +3,7 @@ import {ref} from 'vue'
 import {sessionService} from '@/services/sessionService'
 import {Session} from '@/types/Session'
 import {Playlist} from '@/types/Playlist'
-import {RecommendationList} from '@/types/Recommendation'
+import { SongList } from '@/types/Song'
 import { SessionWebsocketService, PlaylistWebsocketService, RecommendationWebsocketService } from "@/services/websocketService";
 
 export const useSession = defineStore('session', () => {
@@ -35,9 +35,9 @@ export const useSession = defineStore('session', () => {
         session.value.playlist = playlistMessage;
     };
       
-    const handleRecommendationMessages = (recommendationMessage: RecommendationList) => {
-       session.value.recommendations = recommendationMessage.recommendations;
-       session.value.recommendationsCreationDate = recommendationMessage.recommendationsCreationDate;
+    const handleRecommendationMessages = (recommendationMessage: SongList) => {
+       session.value.recommendations = recommendationMessage.songs;
+       session.value.votingStartTime = recommendationMessage.votingStartTime;
     };
 
     const fetchRecommendations = () => {

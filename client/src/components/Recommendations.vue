@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import {ref, watch, onMounted, computed} from 'vue';
 import Flower from "@/components/Flower.vue";
-import { Recommendations } from "@/types/Recommendation";
+import { Song } from "@/types/Song";
 import { getSongFeatures, getSongFeatureCategory } from "@/services/sessionService";
 
 const props = defineProps<{
-  recommendations: Recommendation[],
+  recommendations: Song[],
   lastFlowerPosition?: {
     x: number,
     y: number,

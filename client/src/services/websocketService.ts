@@ -1,6 +1,6 @@
 import { Session } from "@/types/Session";
 import { Playlist } from "@/types/Playlist";
-import { RecommendationList } from "@/types/Recommendation";
+import { SongList } from "@/types/Song";
 
 
 class WebsocketService<Type> {
@@ -88,7 +88,7 @@ export class PlaylistWebsocketService extends WebsocketService<Playlist> {
     }
 }
 
-export class RecommendationWebsocketService extends WebsocketService<RecommendationList> {
+export class RecommendationWebsocketService extends WebsocketService<SongList> {
     constructor() {
         super("recommendations");
     }
