@@ -1,20 +1,20 @@
-class AverageFeatures {
+export class AverageFeatures {
     danceability: number;
     energy: number;
     speechiness: number;
     valence: number;
-    tempo: number;
+    scaledTempo: number;
 
     constructor(data: AverageFeatures) {
-        this.danceability = danceability;
-        this.energy = energy;
-        this.speechiness = speechiness;
-        this.valence = valence;
-        this.tempo = tempo;
+        this.danceability = data.danceability;
+        this.energy = data.energy;
+        this.speechiness = data.speechiness;
+        this.valence = data.valence;
+        this.scaledTempo = data.scaledTempo;
     }
 }
 
-class Artifacts {
+export class Artifacts {
     songsPlayed: number;
     songsAddedManually: number;
     mostSongsAddedBy: string;
@@ -26,14 +26,14 @@ class Artifacts {
     genreEnd: string[];
 
     constructor(data: Artifacts) {
-        this.songsPlayed = songsPlayed;
-        this.songsAddedManually = songsAddedManually;
-        this.mostSongsAddedBy = mostSongsAddedBy;
-        this.mostVotesBy = mostVotesBy;
-        this.mostSignificantFeatureOverall = mostSignificantFeatureOverall;
-        this.firstRecommendationVotePercentage = firstRecommendationVotePercentage;
-        this.averageFeatures = averageFeatures;
-        this.genreStart = genreStart;
-        this.genreEnd = genreEnd;
+        this.songsPlayed = data.songsPlayed;
+        this.songsAddedManually = data.songsAddedManually;
+        this.mostSongsAddedBy = data.mostSongsAddedBy;
+        this.mostVotesBy = data.mostVotesBy;
+        this.mostSignificantFeatureOverall = data.mostSignificantFeatureOverall;
+        this.firstRecommendationVotePercentage = data.firstRecommendationVotePercentage;
+        this.averageFeatures = new AverageFeatures(data.averageFeatures);
+        this.genreStart = data.genreStart;
+        this.genreEnd = data.genreEnd;
     }
 }

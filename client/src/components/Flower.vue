@@ -1,5 +1,7 @@
 <script setup lang ="ts">
-import { computed, defineProps, useTemplateRef, onMounted } from 'vue';
+
+import { computed, defineProps, defineEmits, useTemplateRef, onMounted} from 'vue';
+
 import Petal from './Petal.vue';
 import { SongFeature, SongFeatureCategory } from '@/types/SongFeature';
 
@@ -44,10 +46,13 @@ onMounted(() => {
   console.log(props.position);
 });
 
+
 </script>
 
 <template>
   <svg
+    class="flower"
+    pointer-events="all"
     ref="flower"
     :x="position?.x"
     :y="position?.y"
@@ -80,7 +85,7 @@ onMounted(() => {
     />
     <Petal
         class="petal"
-        v-for="(feature, index) in features"
+        v-for="(feature, index) in props.features"
         :key="index"
         :index="index"
         :feature="feature"
@@ -90,6 +95,7 @@ onMounted(() => {
         @click="() => emit('onPetalClick', feature.category)"
         @emitEndPosition="(position) => onPetalEndPositionComputed(position, feature.category)"
       />
+
   </svg>
 </template>
 
@@ -115,5 +121,8 @@ svg {
 
 .bloom-circle {
   animation: bloom 1s infinite ease-in-out;
+}
+.flower {
+  cursor: pointer;
 }
 </style>

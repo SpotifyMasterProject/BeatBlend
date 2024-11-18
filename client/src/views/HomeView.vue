@@ -18,6 +18,14 @@ import { Playlist, flattenPlaylist } from "@/types/Playlist";
 import {getSongFeatures, sessionService} from "@/services/sessionService";
 import SongFeatureDialog from "@/components/SongFeatureDialog.vue";
 import {SongFeatureCategory} from "@/types/SongFeature";
+import SessionArtifact from "@/components/SessionArtifact.vue";
+
+const showArtifactPopup = ref(false);
+
+const toggleArtifactPopup = () => {
+  showArtifactPopup.value = !showArtifactPopup.value;
+  console.log("Artifact Popup Toggled:", showArtifactPopup.value);
+};
 
 const showSongFeatureDialog = ref(false);
 const showAddMoreSongPopup = ref(false);
@@ -98,6 +106,8 @@ const removeGuest = async (guestId) => {
 const endCurrentSession = async () => {
   await sessionStore.endSession();
   settingsVisible.value = false;
+  sessionEnded.value = true;
+  showArtifactPopup.value = true;
 };
 
 const flowerData = computed(() => {
@@ -113,19 +123,30 @@ function handleFlowerSelected(index, featureCategory) {
   selectedFeature.value = {index, featureCategory};
   showSongFeatureDialog.value = true;
 }
+
 </script>
 
 <template>
   <div class="type2">
     <header>
       <div class="function-icon-container" v-if="session?.isRunning">
-        <Button icon="pi pi-search" severity="success" text raised rounded aria-label="Search" @click="toggleAddMoreSongPopup" />
+        <Button icon="pi pi-search" severity="success" raised rounded :unstyled="false" @click="toggleAddMoreSongPopup" />
       </div>
       <div class="logo-nav-container">
         <logo-intro-screen/>
       </div>
       <i v-if="isHost && session?.isRunning" class="settings-icon pi pi-cog" @click="showSettings()"></i>
+      <i
+          v-if="isHost && sessionEnded"
+          class="artifact-button"
+          :class="{ active: showArtifactPopup }"
+          @click="toggleArtifactPopup"
+          aria-label="Artifact"
+      >
+        Artifact
+      </i>
     </header>
+    <!-- Constant Overview: SessionArtifact component with dummy data -->
     <div class="middle" v-if="!loading">
       <div v-if="errorMessage" class="error">
           {{errorMessage}}
@@ -142,7 +163,7 @@ function handleFlowerSelected(index, featureCategory) {
         <MobileMainViz v-if="!isHost" :session="session" />
       </template>
     </div>
-    <div v-if="session && session.isRunning" class="footer-section">
+    <div v-if="session && session.isRunning && isHost" class="footer-section">
       <div
         class="song-feature-dialog"
         :class="{ minimized: !showSongFeatureDialog }"
@@ -150,7 +171,7 @@ function handleFlowerSelected(index, featureCategory) {
         <div class="table-header-container">
           <h3>Audio Feature Chart</h3>
           <button
-            class="text-sm rounded min-h-[32px] px-3 py-0.5 font-semibold hover:bg-gray-800"
+            class="audio-feature-button text-sm rounded min-h-[32px] px-3 py-0.5 font-semibold hover:bg-gray-800"
             @click="toggleVisibility"
           >
             <i :class="showSongFeatureDialog ? 'pi pi-chevron-down' : 'pi pi-chevron-left' "></i>
@@ -164,6 +185,7 @@ function handleFlowerSelected(index, featureCategory) {
         </div>
       </div>
     </div>
+
     <!-- Conditionally render VisualizationAid component -->
     <VisualizationAid v-if="showVisualizationAid" @close-popup="closeVisualizationAid" />
     <!-- Popup Overlay -->
@@ -174,6 +196,11 @@ function handleFlowerSelected(index, featureCategory) {
           :sessionId="session.id" />
       </div>
     </div>
+    <SessionArtifact
+        v-if="showArtifactPopup"
+        @close="toggleArtifactPopup"
+        :artifactData="sessionStore.session?.artifacts"
+    />
     <Sidebar v-model:visible="settingsVisible" header="Session Settings" :unstyled="false">
       <div v-if="session && session.isRunning">
         <h3> Join the Session </h3>
@@ -394,5 +421,37 @@ function handleFlowerSelected(index, featureCategory) {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+.settings-icon {
+  position: absolute;
+  right: 60px;
+  color: var(--logo-highlight-color);
+  font-size: 30px;
+  cursor: pointer;
+}
+
+.artifact-button {
+  position: absolute;
+  top: 10px;
+  right: 20px;
+  font-size: 14px;
+  background-color: #363636;
+  border-radius: 12px;
+  border: none;
+  padding: 8px 20px;
+  cursor: pointer;
+  font-weight: bold;
+  color: white;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+.artifact-button:hover {
+  background-color: var(--logo-highlight-color)
+}
+
+.artifact-button.active {
+  background-color: var(--logo-highlight-color)
+}
+.audio-feature-button {
+  margin: 10px;
 }
 </style>
