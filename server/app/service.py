@@ -27,9 +27,9 @@ JWT_EXPIRES_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", 60))
 SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 SPOTIFY_REDIRECT_URI = os.getenv("SPOTIFY_REDIRECT_URI")
-LOCAL_IP_ADDRESS = os.getenv("LOCAL_IP_ADDRESS")
 DISCOGS_API_URL = os.getenv("DISCOGS_API_URL")
 DISCOGS_API_TOKEN = os.getenv("DISCOGS_API_TOKEN")
+BASE_URL = os.getenv("BASE_URL")
 
 
 class Service:
@@ -202,8 +202,7 @@ class Service:
         session.host_id = str(host.id)
         session.host_name = host.username
         session.creation_date = datetime.now()
-        # TODO: adjust URL
-        session.invite_link = f'http://{LOCAL_IP_ADDRESS}:8080/{session.id}/join'
+        session.invite_link = f'{BASE_URL}/{session.id}/join'
         for song in session.playlist.queued_songs:
             song.added_by = host
             await self.get_genre(song)
