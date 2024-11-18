@@ -1,7 +1,6 @@
 <script setup lang ="ts">
 import { onMounted, computed } from 'vue';
 import { SongFeatureCategory, SongFeature } from '@/types/SongFeature';
-import Dialog from 'primevue/dialog';
 import Tabs from 'primevue/tabs';
 import Chart from 'primevue/chart';
 import { Chart as ChartJS, registerables } from 'chart.js';
@@ -243,6 +242,22 @@ onMounted(() => {
     }
   });
 });
+
+const chartStyle = computed(() => {
+  if (props.flowerData.length > 20) {
+    const widthPerDataPoint = 75;
+    const totalWidth = props.flowerData.length * widthPerDataPoint;
+    return {
+      width: `${totalWidth}px`,
+      height: '100%',
+    };
+  } else {
+    return {
+      width: '98%',
+      height: '100%',
+    };
+  }
+});
 </script>
 
 <template>
@@ -259,7 +274,9 @@ onMounted(() => {
       <TabPanels>
           <TabPanel :value="'ALL'">
             <div class="chart">
-              <Chart type="line" :data="chartData(null)" :options="chartOptionsAllFeatures" style="width: 100%; height: 100%"/>
+              <div class="chart-wrapper">
+                <Chart type="line" :data="chartData(null)" :options="chartOptionsAllFeatures" :style="chartStyle"/>
+              </div>
             </div>
             <div class="text-container">
               <p class="m-0">
@@ -269,7 +286,9 @@ onMounted(() => {
           </TabPanel>
           <TabPanel :value="SongFeatureCategory.TEMPO">
             <div class="chart">
-              <Chart type="line" :data="chartData(SongFeatureCategory.TEMPO)" :options="chartOptions" style="width: 100%; height: 100%"/>
+              <div class="chart-wrapper">
+                <Chart type="line" :data="chartData(SongFeatureCategory.TEMPO)" :options="chartOptions" :style="chartStyle"/>
+              </div>
             </div>
             <div class="text-container">
               <p class="m-0">
@@ -279,7 +298,9 @@ onMounted(() => {
           </TabPanel>
           <TabPanel :value="SongFeatureCategory.ENERGY">
               <div class="chart">
-                <Chart type="line" :data="chartData(SongFeatureCategory.ENERGY)" :options="chartOptions" style="width: 100%; height: 100%"/>
+                <div class="chart-wrapper">
+                  <Chart type="line" :data="chartData(SongFeatureCategory.ENERGY)" :options="chartOptions" :style="chartStyle"/>
+                </div>
               </div>
               <div class="text-container">
                 <p class="m-0">
@@ -289,7 +310,9 @@ onMounted(() => {
           </TabPanel>
           <TabPanel :value="SongFeatureCategory.VALENCE">
               <div class="chart">
-                <Chart type="line" :data="chartData(SongFeatureCategory.VALENCE)" :options="chartOptions" style="width: 100%; height: 100%"/>
+                <div class="chart-wrapper">
+                  <Chart type="line" :data="chartData(SongFeatureCategory.VALENCE)" :options="chartOptions" :style="chartStyle"/>
+                </div>
               </div>
               <div class="text-container">
                 <p class="m-0">
@@ -298,8 +321,10 @@ onMounted(() => {
               </div>
           </TabPanel>
           <TabPanel :value="SongFeatureCategory.DANCEABILITY">
-            <div class="chart">
-                <Chart type="line" :data="chartData(SongFeatureCategory.DANCEABILITY)" :options="chartOptions" style="width: 100%; height: 100%"/>
+              <div class="chart">
+                <div class="chart-wrapper">
+                  <Chart type="line" :data="chartData(SongFeatureCategory.DANCEABILITY)" :options="chartOptions" :style="chartStyle"/>
+                </div>
               </div>
               <div class="text-container">
                 <p class="m-0">
@@ -309,7 +334,7 @@ onMounted(() => {
           </TabPanel>
           <TabPanel :value="SongFeatureCategory.SPEECHINESS">
               <div class="chart">
-                <Chart type="line" :data="chartData(SongFeatureCategory.SPEECHINESS)" :options="chartOptions" style="width: 100%; height: 100%"/>
+                <Chart type="line" :data="chartData(SongFeatureCategory.SPEECHINESS)" :options="chartOptions" :style="chartStyle"/>
               </div>
               <div class="text-container">
                 <p class="m-0">
@@ -327,6 +352,11 @@ onMounted(() => {
   width: 100%;
   height: 25vh;
   margin-bottom: 10px;
+  overflow-x: auto;
+}
+
+.chart-wrapper {
+  height: 100%;
 }
 
 .text-container {
@@ -348,7 +378,7 @@ onMounted(() => {
 
 /* Specify class 2 times to override default values set by primevue theme. */
 .tabs.tabs {
-  justify-content: center;
+  justify-content: left;
 }
 
 /* Specify class 2 times to override default values set by primevue theme. */
@@ -390,7 +420,7 @@ onMounted(() => {
 }
 
 .p-tab.all.p-tab-active {
-  color: lightsteelblue;
+  color: #FFB3FF;
 }
 
 /* Specify class 2 times to override default values set by primevue theme. */

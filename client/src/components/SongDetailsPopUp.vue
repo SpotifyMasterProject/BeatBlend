@@ -9,7 +9,7 @@
       <p><strong>Album Genres: </strong> {{ formattedGenres }}</p>
       <p><strong>Release Date: </strong> {{ formattedReleaseDate }}</p>
       <p><strong>Duration: </strong> {{ formattedDuration }}</p>
-      <p><strong>Popularity: </strong> {{ song.popularity }}/100 </p>
+      <p><strong>Popularity: </strong> {{ computedPopularity }}/100 </p>
       <div class="add-by">
         <p><strong>Added By: </strong>
           <span v-if="addedByUser">
@@ -53,6 +53,10 @@ const formattedReleaseDate = formatDate(props.song.releaseDate);
 
 const formattedGenres = computed(() => {
   return props.song.genre && props.song.genre.length > 0 ? props.song.genre.join(', ') : 'Unknown';
+});
+
+const computedPopularity = computed(() =>{
+  return props.song.popularity ? props.song.popularity : 0;
 });
 
 console.log("song info", props.song)
