@@ -38,20 +38,17 @@ export const useSession = defineStore('session', () => {
       
     const handleRecommendationMessages = (recommendationMessage: RecommendationList) => {
        session.value.recommendations = recommendationMessage.recommendations;
-       session.value.recommendationsCreationDate = recommendationMessage.recommendationsCreationDate;
+       session.value.votingStartTime = recommendationMessage.votingStartTime;
     };
 
-    const fetchRecommendations = () => {
+    const fetchRecommendations = async () => {
         console.log("Fetching recommendations");
-        sessionService.getRecommendations(session.value.id);
+        handleRecommendationMessages(await sessionService.getRecommendations(session.value.id));
     }
 
     const initialize = async () => {
         session.value.isRunning = true;
-        console.log(session.value);
-        if (session.value.recommendations.length === 0) {
-            fetchRecommendations();
-        }
+        await fetchRecommendations();
 
         localStorage.setItem('sessionId', session.value.id);
 

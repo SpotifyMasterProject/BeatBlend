@@ -4,6 +4,7 @@ import { Song } from '@/types/Song';
 import { SongFeatureCategory } from '@/types/SongFeature';
 import type { SongFeature } from '@/types/SongFeature';
 import { Artifacts } from '@/types/Artifact';
+import { RecommendationList } from '@/types/Recommendation';
 
 export const sessionService = {
 
@@ -42,9 +43,9 @@ export const sessionService = {
             return response.data;
         })
     },
-    async getRecommendations(sessionId: string): Promise<Song[]> {
+    async getRecommendations(sessionId: string): Promise<RecommendationList> {
         return apiClient.get(`/sessions/${sessionId}/recommendations`).then((response) => {
-            return response.data['songs'];
+            return response.data;
         })
     },
     async addSong(sessionId: string, songId: string): Promise<Session> {

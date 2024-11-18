@@ -34,85 +34,46 @@ const zoomLevel = ref(1);
 const minZoom = 0.3;
 const maxZoom = 3;
 
-const visualizationStyle = ref({
-  transform: `scale(${zoomLevel.value})`,
-  transformOrigin: 'bottom left',
-});
 
 const isScrollEnabled = ref(false);
 const flowerRefs = useTemplateRef('flowers');
+const svg = useTemplateRef('svg');
 const lastSongPosition = ref({});
 
 function zoomIn() {
-  zoomLevel.value = Math.min(zoomLevel.value + 0.1, maxZoom)
-  updateZoom();
+  zoomLevel.value = Math.min(zoomLevel.value + 0.1, maxZoom);
+  setTimeout(() => {
+    resizeSVG();
+    scrollToMiddle();
+  }, 0);
 }
 function zoomOut() {
   zoomLevel.value = Math.max(zoomLevel.value - 0.1, minZoom);
-  updateZoom();}
-
-function updateZoom() {
-  console.log('Updating Zoom:', zoomLevel.value);
-
-  if (zoomLevel.value <1){
-    visualizationStyle.value.transformOrigin = 'bottom left';
-  } else {
-    visualizationStyle.value.transformOrigin = 'top left';
-  }
-
-  visualizationStyle.value.transform = `scale(${zoomLevel.value})`;
-  isScrollEnabled.value = zoomLevel.value > 1;
-
-}
-function adjustZoomToFitContainer() {
-  const container = document.querySelector('.visualization-container');
-  if (container) {
-    const containerWidth = container.clientWidth;
-    const containerHeight = container.clientHeight;
-
-    const maxFlowerSize = 240;
-    const numFlowers = flowerData.value.length;
-
-    // Assuming a simple grid layout for calculating total size
-    const totalWidth = maxFlowerSize * Math.sqrt(numFlowers);
-    const totalHeight = maxFlowerSize * Math.sqrt(numFlowers);
-
-    const requiredZoom = Math.min(
-        containerWidth / totalWidth,
-        containerHeight / totalHeight
-    );
-
-    zoomLevel.value = Math.min(requiredZoom, maxZoom);
-    updateZoom();
-
-    if (zoomLevel.value === minZoom) {
-      (visualizationStyle.value as any).left = '0px';
-      (visualizationStyle.value as any).bottom = '0px';
-    }
-  }
+  setTimeout(() => {
+    resizeSVG();
+    scrollToMiddle();
+  }, 0);
 }
 
-watch(flowerData, () => {
-  const flowerCount = flowerData.value.length;
 
-  //needs to be adapted once layout is correct//
-  if (flowerCount > 10) {
-    zoomLevel.value = minZoom;
-    updateZoom();
-  }
-}, { immediate: true });
+function resizeSVG() {
+ 
+  // Get the bounds of the SVG content
+  let bbox = svg.value.getBBox();
+  console.log(bbox);
+  // Update the width and height using the size of the contents
+  svg.value.setAttribute("width", bbox.x + 1.5 * bbox.width + bbox.x);
+  svg.value.setAttribute("height", bbox.y + 1.5 * bbox.height + bbox.y);
+}
 
 // Define a grid size and positions for flowers
-const gridSize = 90;
+const gridSize = 80;
 const maxVerticalMoves = 3;
-const minY = 70;
-
-let containerWidth = 0;
-let containerHeight = 0;
+const minY = 80;
 
 let lastVerticalDirection = 0;
 let currentX = 0;
-let currentY = Math.floor(Math.random() * gridSize * maxVerticalMoves); //Random vertical placement for the first flower
+let currentY = Math.max(Math.floor(Math.random() * gridSize * maxVerticalMoves), minY); //Random vertical placement for the first flower
 let verticalNrFlowers = 1; //Nr of flowers vertically
 
 
@@ -127,7 +88,7 @@ const generateNextRandomGridPosition = () => {
     verticalDirection = Math.random() > 0.5 ? 1 : -1;
   }
   
-  if (verticalDirection === -1 && currentY <= gridSize * 2) {
+  if (verticalDirection === -1 && currentY <= minY) {
     stayInColumn = false;
   }
 
@@ -140,7 +101,7 @@ const generateNextRandomGridPosition = () => {
     const verticalMove = verticalDirection * gridSize * (Math.random() > 0.5 ? 1.5 : 2);
     currentY += verticalMove;
     verticalNrFlowers++;
-    return {x: currentX, y: Math.max(currentY, minY)};
+    return {x: currentX, y: currentY};
   } else {
     const horizontalMove = gridSize * (Math.random() > 0.5 ? 1.5 : 2);
     currentX += horizontalMove;
@@ -150,9 +111,9 @@ const generateNextRandomGridPosition = () => {
 
     // Define first currentY, when moved horizontally
     const randomStartPositions = [0, gridSize * maxVerticalMoves, gridSize * Math.floor(maxVerticalMoves / 2)];
-    currentY = randomStartPositions[Math.floor(Math.random() * randomStartPositions.length)];
+    currentY = Math.max(randomStartPositions[Math.floor(Math.random() * randomStartPositions.length)], minY);
 
-    return { x: currentX, y: Math.max(currentY, minY)};
+    return { x: currentX, y: currentY};
   }
 }
 
@@ -179,31 +140,6 @@ const flowerPositions = computed(() => {
   }
 
   return gridPositions.value;
-});
-
-onMounted(() => {
-  //Container Dimensions
-  const container = document.querySelector('.visualization-container');
-  if (container) {
-    containerWidth = container.clientWidth;
-    containerHeight = container.clientHeight;
-  }
-
-  //Zoom to fit container
-  adjustZoomToFitContainer(); // Fit visualization to container size on mount
-  updateZoom();
-
-  const scrollWrapper = document.querySelector('.scroll-wrapper') as HTMLElement;
-  const visualization = document.querySelector('.visualization') as HTMLElement;
-
-  // Scroll to the bottom left
-  if (scrollWrapper && visualization) {
-    // Set the scroll position to the bottom
-    scrollWrapper.scrollTop = scrollWrapper.scrollHeight - scrollWrapper.clientHeight;
-
-    // Set the scroll position to the left
-    scrollWrapper.scrollLeft = 0;
-  }
 });
 
 const currentSelectedFeature = ref(null);
@@ -267,9 +203,20 @@ const computeLineBetweenFlowers = (flowerA, flowerB) => {
         ${flowerB.x} ${flowerB.y}`;
 };
 
+function scrollToMiddle() {
+  const flowers = flowerRefs.value;
+  flowers[currentSongIndex.value].$el.scrollIntoView({
+            behavior: 'auto',
+            block: 'center',
+            inline: 'center'
+        });
+}
+
 const lastFlowerPosition = ref(null);
 watch(localFlowerLinePositions.value, () => { 
-
+  resizeSVG();
+  scrollToMiddle();
+ 
   flowerLines.value = []
   for (let i = 0; i < flowerData.value.length - 1; i++) {
     const currentFlower = globalFlowerLinePositions(localFlowerLinePositions.value[i], gridPositions.value[i]);
@@ -317,7 +264,7 @@ const currentSongPreviewUrl = computed(() => {
 
 const audioPlayer = ref<HTMLAudioElement | null>(null);
 
-watch(currentSongPreviewUrl, async (newUrl) => {
+watch(currentSongPreviewUrl, async (newUrl, oldUrl) => {
   if (newUrl && newUrl !== oldUrl && audioPlayer.value) {
     audioPlayer.value.pause();
     audioPlayer.value.src = newUrl;
@@ -339,53 +286,51 @@ onMounted(() => {
 
 <template>
   <div id="test"></div>
-  <div class = main-visualization>
+  <div class="main-visualization">
     <div class="zoom-controls">
       <button @click="zoomIn">+</button>
       <button @click="zoomOut">-</button>
     </div>
-    <div class= visualization-container>
-      <canvas class="canvas" id="canvas" ref="canvas"></canvas>
       <div class="scroll-wrapper">
         <div v-if="!currentSongPreviewUrl" class="audio-unavailable-message">
           Current song audio not available
         </div>
-        <div class="visualization" :style="visualizationStyle">
+        <div :style="{transform: `scale(${zoomLevel})`, transformOrigin: '0 0'}">
           <!-- Loop through each flower and apply the styles -->
-          <svg class="svg-container" width="100vw" height="100vh">
-              <Flower
-                  ref="flowers"
-                  v-for="(flower, index) in flowerData"
-                  :key="index"
-                  :features="flower.features"
-                  :bloom="index === currentSongIndex"
-                  :mostSignificantFeature="flower.mostSignificantFeature"
-                  :circleRadius="40"
-                  :position="flowerPositions[index]"
-                  :class="{queued: flower.isQueued}"
-                  @onPetalClick="(category) => onPetalClick(index, category)"
-                  @hover="() => onHoverSong(playlist[index])"
-                  @leave="onLeaveFlower"
-                  @significantFeaturePosition="(position) => storeFlowerLinePosition(position, index)"
-              />
-              <path
-                v-for="line in flowerLines"
-                class="connecting-path"
-                :d="line" stroke="white" fill="transparent"
-              />
-               <Recommendations
-                v-if="session.isRunning && session.recommendations && session.playlist.queuedSongs.length === 0"
-                :recommendations="session.recommendations"
-                :lastFlowerPosition="lastFlowerPosition"
-                @hover="(song) => onHoverSong(song)"
+          <svg class="svg-container" ref="svg" width="100%" height="100%">
+            <Flower
+                ref="flowers"
+                v-for="(flower, index) in flowerData"
+                :key="index"
+                :features="flower.features"
+                :bloom="index === currentSongIndex"
+                :mostSignificantFeature="flower.mostSignificantFeature"
+                :circleRadius="40"
+                :position="flowerPositions[index]"
+                :class="{queued: flower.isQueued}"
+                @onPetalClick="(category) => onPetalClick(index, category)"
+                @hover="() => onHoverSong(playlist[index])"
                 @leave="onLeaveFlower"
-              />
+                @significantFeaturePosition="(position) => storeFlowerLinePosition(position, index)"
+            />
+            <path
+              v-for="line in flowerLines"
+              class="connecting-path"
+              :d="line" stroke="white" fill="transparent"
+            />
+            <Recommendations
+              v-if="session.isRunning && session.recommendations && session.playlist.queuedSongs.length === 0"
+              :zoomLevel="1"
+              :recommendations="session.recommendations"
+              :lastFlowerPosition="lastFlowerPosition"
+              @hover="(song) => onHoverSong(song)"
+              @leave="onLeaveFlower"
+            />
           </svg>
         </div>
       </div>
       <audio ref="audioPlayer" :src="currentSongPreviewUrl" autoplay />
       <SongDetailsPopUp v-if="showSongDetails && hoverSong" :song="hoverSong" />
-    </div>
   </div>
 </template>
 
@@ -397,23 +342,6 @@ onMounted(() => {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-}
-
-.visualization-container{
-  position: relative;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-}
-
-.visualization {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, 80px);
-  grid-template-rows: repeat(auto-fill, 80px);
-  width: 100%;
-  height: 100%;
-  position: relative;
-  overflow: visible;
 }
 
 .scroll-wrapper {
@@ -496,6 +424,7 @@ onMounted(() => {
 }
 .svg-container {
   position: absolute;
+  padding-top: 20px;
 }
 .connecting-path {
   pointer-events: none;

@@ -31,11 +31,6 @@ const rotation = computed(() => {
   return (maxFeatureIndex * 360) / props.features.length;
 });
 
-
-function handleHover(feature: SongFeature) {
-  emit('hover', feature);
-}
-
 const flower = useTemplateRef('flower');
 
 const onPetalEndPositionComputed = (position, songFeatureCategory) => {
@@ -56,6 +51,8 @@ onMounted(() => {
 
 <template>
   <svg
+    class="flower"
+    pointer-events="all"
     ref="flower"
     :x="position?.x"
     :y="position?.y"
@@ -96,8 +93,6 @@ onMounted(() => {
         :circleRadius="circleRadius"
         :rotation="rotation"
         @click="() => emit('onPetalClick', feature.category)"
-        @mouseenter="() => handleHover(feature)"
-        @mouseleave="() => emit('leave')"
         @emitEndPosition="(position) => onPetalEndPositionComputed(position, feature.category)"
       />
 
@@ -126,5 +121,8 @@ svg {
 
 .bloom-circle {
   animation: bloom 1s infinite ease-in-out;
+}
+.flower {
+  cursor: pointer;
 }
 </style>
