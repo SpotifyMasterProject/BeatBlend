@@ -12,6 +12,7 @@ from jwt import InvalidTokenError
 from spotipy import Spotify
 from spotipy.oauth2 import SpotifyOAuth, SpotifyOauthError
 from typing import Annotated
+from databases.interfaces import Record
 from collections import defaultdict
 
 from models.user import User, SpotifyUser
@@ -149,13 +150,20 @@ class Service:
         except Exception as e:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Request unsuccessful: {repr(e)}")
 
-    @staticmethod
-    async def get_most_popular_recommendation(session: Session) -> Song:
-        return max(session.recommendations, key=lambda recommendation: len(recommendation.votes))
+    async def get_session(self, session_id: str) -> Session:
+        result = await self.repo.get_session_by_id(session_id)
+        return Session.model_validate_json(result)
 
-    async def generate_session_recommendations(self, session: Session, limit: int = 3) -> None:
-        session.recommendations.clear()
-        result = await self.repo.get_recommendations_by_songs(session.playlist.get_all_songs(), limit)
+    @with_session_lock
+    async def set_most_popular_recommendation(self, session_id: str) -> None:
+        session = await self.get_session(session_id)
+        session.playlist.current_song = max(session.recommendations, key=lambda recommendation: len(recommendation.votes))
+        await self.repo.set_session(session)
+        await self.manager.publish(channel=f"playlist:{session.id}", message=session.playlist)
+
+    async def generate_recommendations(self, songs: list[Song], limit: int) -> list[Song]:
+        result = await self.repo.get_recommendations_by_songs(songs, limit)
+        recommendations = []
         first_recommendation = True
         for row in result:
             song = await self.get_song_from_database(row['id'])
@@ -173,37 +181,65 @@ class Service:
             if first_recommendation:
                 song.is_first_recommendation = True
                 first_recommendation = False
-            session.recommendations.append(song)
-        await self.repo.set_session(session)
+            recommendations.append(song)
+        return recommendations
 
-    async def advance_playlist(self, session: Session) -> None:
+    @with_session_lock
+    async def set_session_recommendations(self, session_id: str, recommendations: list[Song]) -> Session:
+        session = await self.get_session(session_id)
+        session.recommendations.clear()
+        session.recommendations.extend(recommendations)
+        await self.repo.set_session(session)
+        return session
+
+    @with_session_lock
+    async def start_voting(self, session_id: str) -> Session:
+        session = await self.get_session(session_id)
+        session.voting_start_time = datetime.now()
+        await self.repo.set_session(session)
+        return session
+
+    async def generate_session_recommendations(self, session_id: str, limit: int = 3, voting_start: bool = False) -> None:
+        session = await self.get_session(session_id)
+        recommendations = await self.generate_recommendations(session.playlist.get_all_songs(), limit)
+        session = await self.set_session_recommendations(session.id, recommendations)
+        if voting_start:
+            session = await self.start_voting(session_id)
+        await self.manager.publish(
+            channel=f"recommendations:{session.id}",
+            message=SongList(
+                songs=session.recommendations,
+                voting_start_time=session.voting_start_time
+            )
+        )
+
+    @with_session_lock
+    async def update_current_song_and_queue(self, session_id: str) -> None:
+        session = await self.get_session(session_id)
         session.voting_start_time = None
         if session.playlist.current_song:
             session.playlist.played_songs.append(session.playlist.current_song)
             session.playlist.current_song = None
         if session.playlist.queued_songs:
             session.playlist.current_song = session.playlist.queued_songs.pop(0)
-            await self.repo.set_session(session)
-        else:
-            session.playlist.current_song = await self.get_most_popular_recommendation(session)
-            await self.generate_session_recommendations(session)
+            if session.playlist.queued_songs:
+                await self.manager.publish(channel=f"playlist:{session.id}", message=session.playlist)
+        await self.repo.set_session(session)
 
-    async def automate(self, session_id: str):
+    async def check_for_empty_queue(self, session_id: str) -> None:
         session = await self.get_session(session_id)
         if not session.playlist.queued_songs:
-            session.voting_start_time = datetime.now()
-            await self.manager.publish(
-                channel=f"recommendations:{session.id}",
-                message=SongList(
-                    songs=session.recommendations,
-                    voting_start_time=session.voting_start_time
-                )
-            )
-            await self.repo.set_session(session)
-        await asyncio.sleep(30)
-        await self.advance_playlist(session)
-        await self.manager.publish(channel=f"playlist:{session.id}", message=session.playlist)
-        await self.automate(session.id)
+            await self.set_most_popular_recommendation(session.id)
+            await self.generate_session_recommendations(session.id, voting_start=True)
+
+    async def advance_playlist(self, session_id: str) -> None:
+        await self.update_current_song_and_queue(session_id)
+        await self.check_for_empty_queue(session_id)
+
+    async def automate(self, session_id: str):
+        await asyncio.sleep(20)
+        await self.advance_playlist(session_id)
+        await self.automate(session_id)
 
     async def create_session(self, host_id: str, session: Session) -> Session:
         host = await self.get_user(host_id)
@@ -217,14 +253,10 @@ class Service:
             await self.get_genre(song)
             await self.get_preview_url(song)
         await self.repo.set_session(session)
-        await self.advance_playlist(session)
-        await self.generate_session_recommendations(session)
+        await self.advance_playlist(session.id)
+        asyncio.create_task(self.generate_session_recommendations(session.id))
         self.automation_tasks[session.id] = asyncio.create_task(self.automate(session.id))
         return session
-
-    async def get_session(self, session_id: str) -> Session:
-        result = await self.repo.get_session_by_id(session_id)
-        return Session.model_validate_json(result)
 
     @staticmethod
     def verify_host_of_session(host_id: str, session: Session) -> None:
@@ -297,7 +329,8 @@ class Service:
             genre_end=played_songs[-1].genre
         )
 
-    async def end_session(self, host_id: str, session_id: str) -> Artifact:
+    @with_session_lock
+    async def end_session(self, host_id: str, session_id: str):
         session = await self.get_session(session_id)
         self.verify_host_of_session(host_id, session)
         automation_task = self.automation_tasks.get(session.id)
@@ -401,10 +434,9 @@ class Service:
         song = await self.get_song(song_id)
         song.added_by = user
         session.playlist.queued_songs.append(song)
-        await self.generate_session_recommendations(session)
+        await self.repo.set_session(session)
         await self.manager.publish(channel=f"playlist:{session.id}", message=session.playlist)
-        await self.manager.publish(channel=f"recommendations:{session.id}",
-                                   message=SongList(songs=session.recommendations))
+        asyncio.create_task(self.generate_session_recommendations(session.id))
         return session.playlist
 
     @with_session_lock
@@ -414,10 +446,9 @@ class Service:
         for idx, song in enumerate(session.playlist.queued_songs):
             if song.id == song_id:
                 del session.playlist.queued_songs[idx]
-                await self.generate_session_recommendations(session)
+                await self.repo.set_session(session)
                 await self.manager.publish(channel=f"playlist:{session.id}", message=session.playlist)
-                await self.manager.publish(channel=f"recommendations:{session.id}",
-                                           message=SongList(songs=session.recommendations))
+                asyncio.create_task(self.generate_session_recommendations(session.id))
                 return
 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song not part of playlist")
