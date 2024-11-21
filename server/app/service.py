@@ -157,53 +157,60 @@ class Service:
     @with_session_lock
     async def set_most_popular_recommendation(self, session_id: str) -> None:
         session = await self.get_session(session_id)
-        most_popular_recommendation = max(session.recommendations, key=lambda recommendation: len(recommendation.votes))
-        session.playlist.current_song = await self.get_song_from_database(most_popular_recommendation.id)
+        session.playlist.current_song = max(session.recommendations, key=lambda recommendation: len(recommendation.votes))
         await self.repo.set_session(session)
         await self.manager.publish(channel=f"playlist:{session.id}", message=session.playlist)
 
-    async def generate_recommendations(self, songs: list[Song], limit: int) -> list[Record]:
-        return await self.repo.get_recommendations_by_songs(songs, limit)
-
-    @with_session_lock
-    async def set_session_recommendations(self, session_id: str, recommendations: list[Record]) -> Session:
-        session = await self.get_session(session_id)
-        session.recommendations.clear()
+    async def generate_recommendations(self, songs: list[Song], limit: int) -> list[Song]:
+        result = await self.repo.get_recommendations_by_songs(songs, limit)
+        recommendations = []
         first_recommendation = True
-        for recommendation in recommendations:
-            song = await self.get_song_from_database(recommendation['id'])
+        for row in result:
+            song = await self.get_song_from_database(row['id'])
             await self.get_genre(song)
             await self.get_preview_url(song)
             diffs = {
-                'danceability': recommendation['diff_danceability'],
-                'energy': recommendation['diff_energy'],
-                'speechiness': recommendation['diff_speechiness'],
-                'valence': recommendation['diff_valence'],
-                'tempo': recommendation['diff_tempo']
+                'danceability': row['diff_danceability'],
+                'energy': row['diff_energy'],
+                'speechiness': row['diff_speechiness'],
+                'valence': row['diff_valence'],
+                'tempo': row['diff_tempo']
             }
             song.most_significant_feature = max(diffs, key=diffs.get)
-            song.similarity_score = (1 - (recommendation['cosine_distance'] / math.sqrt(5)))
+            song.similarity_score = (1 - (row['cosine_distance'] / math.sqrt(5)))
             if first_recommendation:
                 song.is_first_recommendation = True
                 first_recommendation = False
-            session.recommendations.append(song)
+            recommendations.append(song)
+        return recommendations
+
+    @with_session_lock
+    async def set_session_recommendations(self, session_id: str, recommendations: list[Song]) -> Session:
+        session = await self.get_session(session_id)
+        session.recommendations.clear()
+        session.recommendations.extend(recommendations)
         await self.repo.set_session(session)
         return session
+
+    @with_session_lock
+    async def start_voting(self, session_id: str) -> None:
+        session = await self.get_session(session_id)
+        session.voting_start_time = datetime.now()
+        await self.manager.publish(
+            channel=f"recommendations:{session.id}",
+            message=SongList(
+                songs=session.recommendations,
+                voting_start_time=session.voting_start_time
+            )
+        )
+        await self.repo.set_session(session)
 
     async def generate_session_recommendations(self, session_id: str, limit: int = 3, voting_start: bool = False) -> None:
         session = await self.get_session(session_id)
         recommendations = await self.generate_recommendations(session.playlist.get_all_songs(), limit)
         session = await self.set_session_recommendations(session.id, recommendations)
         if voting_start:
-            session.voting_start_time = datetime.now()
-            await self.manager.publish(
-                channel=f"recommendations:{session.id}",
-                message=SongList(
-                    songs=session.recommendations,
-                    voting_start_time=session.voting_start_time
-                )
-            )
-            await self.repo.set_session(session)
+            await self.start_voting(session.id)
         else:
             await self.manager.publish(
                 channel=f"recommendations:{session.id}",
