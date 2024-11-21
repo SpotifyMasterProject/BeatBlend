@@ -11,6 +11,7 @@ import { sessionService, getSongFeatures, getSongFeatureCategory } from "@/servi
 
 const props = defineProps<{
   session: Session,
+  sessionEnded: boolean,
 }>();
 
 const playlist = computed(() => {
@@ -141,8 +142,10 @@ const flowerPositions = computed(() => {
 });
 
 const currentSelectedFeature = ref(null);
+const selectedFlowerIndex = ref<number | null>(null);
 const emit = defineEmits(['flowerSelected']);
 const onPetalClick = (index: number, featureCategory: SongFeatureCategory) => {
+  selectedFlowerIndex.value = index;
   currentSelectedFeature.value = {index, featureCategory};
   emit('flowerSelected', index, featureCategory);
 };
@@ -275,6 +278,18 @@ watch(currentSongPreviewUrl, async (newUrl) => {
   }
 });
 
+watch(() => props.sessionEnded, (newVal) => {
+  if (newVal) {
+    // Stop audio playback
+    if (audioPlayer.value) {
+      audioPlayer.value.pause();
+      audioPlayer.value = null;
+    }
+    console.log("Session ended. Audio stopped.");
+    currentSongIndex.value = null;
+  }
+});
+
 onMounted(() => {
   if (audioPlayer.value) {
     audioPlayer.value.autoplay = true;
@@ -305,6 +320,7 @@ onMounted(() => {
                 :mostSignificantFeature="flower.mostSignificantFeature"
                 :circleRadius="40"
                 :position="flowerPositions[index]"
+                :isSelected="index === selectedFlowerIndex"
                 :class="{queued: flower.isQueued}"
                 @onPetalClick="(category) => onPetalClick(index, category)"
                 @hover="() => onHoverSong(playlist[index])"
@@ -327,7 +343,7 @@ onMounted(() => {
           </svg>
         </div>
       </div>
-      <audio ref="audioPlayer" :src="currentSongPreviewUrl" autoplay />
+      <audio v-if="!props.sessionEnded" ref="audioPlayer" :src="currentSongPreviewUrl" autoplay />
       <SongDetailsPopUp v-if="showSongDetails && hoverSong" :song="hoverSong" />
   </div>
 </template>
