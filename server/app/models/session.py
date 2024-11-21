@@ -19,3 +19,4 @@ class SessionCore(CamelModel):
 class Session(SessionCore):
     playlist: Playlist
     recommendations: list[Song] = []
+    voting_start_time: Optional[datetime] = None

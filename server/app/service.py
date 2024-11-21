@@ -177,6 +177,7 @@ class Service:
         await self.repo.set_session(session)
 
     async def advance_playlist(self, session: Session) -> None:
+        session.voting_start_time = None
         if session.playlist.current_song:
             session.playlist.played_songs.append(session.playlist.current_song)
             session.playlist.current_song = None
@@ -190,13 +191,15 @@ class Service:
     async def automate(self, session_id: str):
         session = await self.get_session(session_id)
         if not session.playlist.queued_songs:
+            session.voting_start_time = datetime.now()
             await self.manager.publish(
                 channel=f"recommendations:{session.id}",
                 message=SongList(
                     songs=session.recommendations,
-                    voting_start_time=datetime.now()
+                    voting_start_time=session.voting_start_time
                 )
             )
+            await self.repo.set_session(session)
         await asyncio.sleep(30)
         await self.advance_playlist(session)
         await self.manager.publish(channel=f"playlist:{session.id}", message=session.playlist)
