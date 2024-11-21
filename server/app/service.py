@@ -193,9 +193,18 @@ class Service:
         return session
 
     @with_session_lock
-    async def start_voting(self, session_id: str) -> None:
+    async def start_voting(self, session_id: str) -> Session:
         session = await self.get_session(session_id)
         session.voting_start_time = datetime.now()
+        await self.repo.set_session(session)
+        return session
+
+    async def generate_session_recommendations(self, session_id: str, limit: int = 3, voting_start: bool = False) -> None:
+        session = await self.get_session(session_id)
+        recommendations = await self.generate_recommendations(session.playlist.get_all_songs(), limit)
+        session = await self.set_session_recommendations(session.id, recommendations)
+        if voting_start:
+            session = await self.start_voting(session_id)
         await self.manager.publish(
             channel=f"recommendations:{session.id}",
             message=SongList(
@@ -203,21 +212,6 @@ class Service:
                 voting_start_time=session.voting_start_time
             )
         )
-        await self.repo.set_session(session)
-
-    async def generate_session_recommendations(self, session_id: str, limit: int = 3, voting_start: bool = False) -> None:
-        session = await self.get_session(session_id)
-        recommendations = await self.generate_recommendations(session.playlist.get_all_songs(), limit)
-        session = await self.set_session_recommendations(session.id, recommendations)
-        if voting_start:
-            await self.start_voting(session.id)
-        else:
-            await self.manager.publish(
-                channel=f"recommendations:{session.id}",
-                message=SongList(
-                    songs=session.recommendations
-                )
-            )
 
     @with_session_lock
     async def update_current_song_and_queue(self, session_id: str) -> None:
@@ -228,7 +222,8 @@ class Service:
             session.playlist.current_song = None
         if session.playlist.queued_songs:
             session.playlist.current_song = session.playlist.queued_songs.pop(0)
-            await self.manager.publish(channel=f"playlist:{session.id}", message=session.playlist)
+            if session.playlist.queued_songs:
+                await self.manager.publish(channel=f"playlist:{session.id}", message=session.playlist)
         await self.repo.set_session(session)
 
     async def check_for_empty_queue(self, session_id: str) -> None:
@@ -242,7 +237,7 @@ class Service:
         await self.check_for_empty_queue(session_id)
 
     async def automate(self, session_id: str):
-        await asyncio.sleep(30)
+        await asyncio.sleep(20)
         await self.advance_playlist(session_id)
         await self.automate(session_id)
 
