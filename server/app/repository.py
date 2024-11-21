@@ -2,7 +2,8 @@ from databases import Database
 from databases.interfaces import Record
 from fastapi import HTTPException, status
 from redis.asyncio import Redis
-from sqlalchemy import Column, Table, MetaData, Integer, String, ARRAY, Float, Date, insert, select, func, or_
+from sqlalchemy import Column, Table, MetaData, Integer, String, ARRAY, Float, Date, insert, select, func, or_, case, \
+    desc
 from typing import Optional
 
 from models.session import Session
@@ -100,19 +101,28 @@ class Repository:
         reverse_combined_conditions = [reverse_combined_field.op('~*')(regex) for regex in regex_patterns]
 
         query = (
-            select(songs, songs.c.popularity)  # select songs and their popularity
+            select(songs,
+                   songs.c.popularity,
+                   func.sum(  # compute score of each matched word found
+                       *[case(
+                           (songs.c.track_name.op('~*')(regex), 1),
+                           (func.array_to_string(songs.c.artists, ' ').op('~*')(regex), 1),
+                           else_=0
+                       ).cast(Integer)  # ensure numeric type
+                         for regex in regex_patterns]
+                   ).label('relevance')
+            )  # select songs and their popularity
             .where(or_(  # matches either one of the conditions
                 *track_name_conditions,
                 *artist_conditions,
                 *combined_conditions,
                 *reverse_combined_conditions
             ))
+            .group_by(
+                songs
+            )
             .order_by(
-                func.sum(  # compute score of each matched word found
-                    *[songs.c.track_name.op('~*')(regex) +
-                      func.array_to_string(songs.c.artists, ' ').op('~*')(regex)
-                      for regex in regex_patterns]
-                ).desc(),  # sort in descending score (more words matched = higher score)
+                desc("relevance"),  # sort in descending score (more words matched = higher score)
                 combined_field.op('~*')(pattern).desc(),  # if same scores, sort descending if combined words are found
                 reverse_combined_field.op('~*')(pattern).desc(),
                 songs.c.popularity.desc()  # if same scores, sort by popularity
