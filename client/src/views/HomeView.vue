@@ -157,11 +157,11 @@ function handleFlowerSelected(index, featureCategory) {
         <div class="info-box" :class="{ active: showVisualizationAid }" @click="toggleInfo">
           <div> i </div>
         </div>
-        <MainVisualization v-if="isHost" :session="session" @flowerSelected="handleFlowerSelected"/>
+        <MainVisualization v-if="isHost" :session="session" @flowerSelected="handleFlowerSelected" :sessionEnded="sessionEnded"/>
         <MobileMainViz v-if="!isHost" :session="session" />
       </template>
     </div>
-    <div v-if="session && session.isRunning && isHost" class="footer-section">
+    <div v-if="session && isHost" class="footer-section">
       <div
         class="song-feature-dialog"
         :class="{ minimized: !showSongFeatureDialog }"
