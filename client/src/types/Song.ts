@@ -17,6 +17,7 @@ export class Song {
     genre: string[]
     previewUrl: string
     addedBy: User
+    votes: string[]; 
 
     constructor(data: Song) {
         this.id = data.id
@@ -35,5 +36,16 @@ export class Song {
         this.genre = data.genre
         this.previewUrl = data.previewUrl
         this.addedBy = data.addedBy
+        this.votes = data.votes
+    }
+}
+
+export class SongList {
+    songs: Song[];
+    votingStartTime: Date;
+
+    constructor(data: SongList) {
+        this.songs = data.songs;
+        this.votingStartTime = data.votingStartTime
     }
 }

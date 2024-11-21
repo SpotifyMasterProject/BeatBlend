@@ -8,12 +8,11 @@ from redis.asyncio import Redis
 from starlette.middleware.cors import CORSMiddleware
 from typing import Annotated
 
-from models.artifact import Artifact, AverageFeatures
+from models.artifact import Artifact
 from models.token import Token
 from models.user import User, SpotifyUser
 from models.session import Session
 from models.song import Song, SongList, Playlist
-from models.recommendation import RecommendationList
 from repository import Repository
 from service import Service
 from websocket_service import WebSocketService
@@ -97,25 +96,7 @@ async def get_specific_session(session_id: str) -> Session:
 async def end_existing_session(host_id: Annotated[str, Depends(service.verify_token)], session_id: str) -> Artifact:
     await service.verify_instances(user_ids=host_id, session_id=session_id)
     await ws_service.disconnect(session_id)
-    await service.end_session(host_id, session_id)
-    # TODO: change/remove temporary return
-    return Artifact(
-    songs_played=69,
-    songs_added_manually=42,
-    most_songs_added_by="de_gueggeli_maa",
-    most_votes_by="haudrauf_hans",
-    most_significant_feature_overall="energy",
-    first_recommendation_vote_percentage=75.5,
-    average_features=AverageFeatures(
-        danceability=0.567568,
-        energy=0.8956756,
-        speechiness=0.0564,
-        valence=0.755,
-        scaled_tempo=0.67
-    ),
-    genre_start=["pop", "hip-hop"],
-    genre_end=["jazz", "rock"]
-)
+    return await service.end_session(host_id, session_id)
 
 
 # TODO: used for getting all artifacts
@@ -156,17 +137,17 @@ async def remove_song(host_id: Annotated[str, Depends(service.verify_token)], se
     await service.remove_song_from_session(host_id, session_id, song_id)
 
 
-@app.get("/sessions/{session_id}/recommendations", status_code=status.HTTP_200_OK, response_model=RecommendationList)
+@app.get("/sessions/{session_id}/recommendations", status_code=status.HTTP_200_OK, response_model=SongList)
 async def get_recommendations(user_id: Annotated[str, Depends(service.verify_token)],
-                              session_id: str) -> RecommendationList:
+                              session_id: str) -> SongList:
     await service.verify_instances(user_ids=user_id, session_id=session_id)
     return await service.get_session_recommendations(session_id)
 
 
 @app.patch("/sessions/{session_id}/recommendations/{song_id}/vote", status_code=status.HTTP_200_OK,
-           response_model=RecommendationList)
+           response_model=SongList)
 async def add_or_change_vote(guest_id: Annotated[str, Depends(service.verify_token)], session_id: str,
-                             song_id: str) -> RecommendationList:
+                             song_id: str) -> SongList:
     await service.verify_instances(user_ids=guest_id, session_id=session_id)
     return await service.add_or_change_vote_to_recommendation(guest_id, session_id, song_id)
 

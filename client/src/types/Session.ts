@@ -1,6 +1,6 @@
 import { User } from './User';
 import { Playlist } from '@/types/Playlist';
-import {Recommendation, RecommendationList} from '@/types/Recommendation';
+import { Song } from '@/types/Song';
 import {Artifacts} from "@/types/Artifact";
 
 export class Session {
@@ -10,7 +10,7 @@ export class Session {
     hostName: string;
     guests: { [key: string]: User };
     playlist: Playlist;
-    recommendations: RecommendationList[];
+    recommendations: Song[];
     isRunning: boolean;
     artifacts: Artifacts | null = null; // Ensure artifacts exists from the start
 
