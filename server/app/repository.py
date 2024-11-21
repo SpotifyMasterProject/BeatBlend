@@ -2,7 +2,7 @@ from databases import Database
 from databases.interfaces import Record
 from fastapi import HTTPException, status
 from redis.asyncio import Redis
-from sqlalchemy import Column, Table, MetaData, Integer, String, ARRAY, Float, Date, insert, select, func
+from sqlalchemy import Column, Table, MetaData, Integer, String, ARRAY, Float, Date, insert, select, func, or_
 from typing import Optional
 
 from models.session import Session
@@ -81,14 +81,48 @@ class Repository:
         return result
 
     async def get_songs_by_pattern(self, pattern: str, limit: int) -> list[Record]:
-        regex_pattern = f'\\m{pattern}'
+        words = pattern.split()  # split pattern into separate words
+        regex_patterns = [f'\\m{word}' for word in words]  # add \\m to only match to beginning of words
 
-        query = select(songs).where(
-            songs.c.track_name.op('~*')(regex_pattern) |
-            func.array_to_string(songs.c.artists, ' ').op('~*')(regex_pattern)
-        ).limit(limit)
+        # combine track_name with artists
+        combined_field = func.concat(
+            songs.c.track_name, ' ', func.array_to_string(songs.c.artists, ' ')
+        )
+        # combine artists with track_name
+        reverse_combined_field = func.concat(
+            func.array_to_string(songs.c.artists, ' '), ' ', songs.c.track_name
+        )
+
+        # conditions for matching words (case-insensitive)
+        track_name_conditions = [songs.c.track_name.op('~*')(regex) for regex in regex_patterns]
+        artist_conditions = [func.array_to_string(songs.c.artists, ' ').op('~*')(regex) for regex in regex_patterns]
+        combined_conditions = [combined_field.op('~*')(regex) for regex in regex_patterns]
+        reverse_combined_conditions = [reverse_combined_field.op('~*')(regex) for regex in regex_patterns]
+
+        query = (
+            select(songs, songs.c.popularity)  # select songs and their popularity
+            .where(or_(  # matches either one of the conditions
+                *track_name_conditions,
+                *artist_conditions,
+                *combined_conditions,
+                *reverse_combined_conditions
+            ))
+            .order_by(
+                func.sum(  # compute score of each matched word found
+                    *[songs.c.track_name.op('~*')(regex) +
+                      func.array_to_string(songs.c.artists, ' ').op('~*')(regex)
+                      for regex in regex_patterns]
+                ).desc(),  # sort in descending score (more words matched = higher score)
+                combined_field.op('~*')(pattern).desc(),  # if same scores, sort descending if combined words are found
+                reverse_combined_field.op('~*')(pattern).desc(),
+                songs.c.popularity.desc()  # if same scores, sort by popularity
+            )
+            .limit(limit)
+        )
+
+        # Fetch results
         result = await self.postgres.fetch_all(query)
-        if result is None:
+        if not result:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No matching songs found")
         return result
 
