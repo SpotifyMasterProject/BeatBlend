@@ -3,11 +3,12 @@ import { computed, defineProps } from 'vue';
 import { SongFeature, SongFeatureCategory } from '@/types/SongFeature';
 
 const props = defineProps<{
-  feature: SongFeature;
+  feature: SongFeature | undefined;
   center: number;
   circleRadius: number;
   rotation?: number;
 }>();
+
 
 const emit = defineEmits(['emitEndPosition']);
 const rotation = computed(() => ((props.rotation || 0) + (props.feature.category ?? 0) * 360 / 5));
@@ -99,7 +100,7 @@ const petalColors = computed(() => {
         :d="path"
         :fill="petalColors[i]"
         stroke="rgba(255, 255, 255, 0.3)"
-        :stroke-width="props.feature.category !== undefined ? 0.5 : 2.0"
+        :stroke-width="props.feature && props.feature.category !== undefined ? 0.5 : 2.0"
     />
   </g>
 </template>

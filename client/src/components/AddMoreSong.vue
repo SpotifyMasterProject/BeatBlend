@@ -38,19 +38,13 @@ const addNewSongs = async () => {
   });
 
   status.value = "success";
-
-  // message disappear after 3 sec
-  setTimeout(() => {
-      status.value = "idle";
-      props.onClosePopup();
-  }, 1500);
 }
 
 </script>
 
 <template>
   <div class="playlist-creator">
-    <button class="close-button" @click="props.onClosePopup">X</button>
+    <Button class="close-button" icon="pi pi-times" @click="props.onClosePopup" :unstyled="false" :disabled="status === 'loading'" />
     <div v-if="status !== 'idle'" class="status-screen">
       <div v-if="status === 'loading'" class="spinner"></div>
       <p v-else-if="status === 'success'" class="success-text">
@@ -58,6 +52,7 @@ const addNewSongs = async () => {
       </p>
     </div>
     <SongSelector
+      class="song-selector"
       v-model="selectedSongs"
       headerText="Add more songs to the playlist"
     />
@@ -72,6 +67,9 @@ const addNewSongs = async () => {
 </template>
 
 <style scoped>
+.song-selector {
+  margin-top: 20px;
+}
 .status-screen {
   position: absolute;
   top: 50%;

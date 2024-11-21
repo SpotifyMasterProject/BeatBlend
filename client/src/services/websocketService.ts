@@ -22,7 +22,7 @@ class WebsocketService<Type> {
         sessionId: string,
         handler: ((message: Type) => void)
     ) {
-        this.socket = new WebSocket(`ws://${import.meta.env.VITE_LOCAL_IP_ADDRESS}:8000/${this.typeAddress}/${sessionId}`)
+        this.socket = new WebSocket(`${import.meta.env.VITE_WS_BASE_URL}/${this.typeAddress}/${sessionId}`)
 
         this.socket.onopen = () => {
             console.log('Websocket connection established!')

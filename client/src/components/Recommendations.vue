@@ -6,6 +6,7 @@ import { getSongFeatures, getSongFeatureCategory } from "@/services/sessionServi
 
 const props = defineProps<{
   recommendations: Song[],
+  zoomLevel: number,
   lastFlowerPosition?: {
     x: number,
     y: number,
@@ -52,7 +53,7 @@ const flowerPositions = computed(() => {
   return props.recommendations.map((_, index) => {
     return {
       x: props.lastFlowerPosition.x + horizontalDistance,
-      y: props.lastFlowerPosition.y - 70 + (index - 1) * verticalDistance,
+      y: props.lastFlowerPosition.y - 40 + (index - 1) * verticalDistance,
     }
   })
 });
@@ -115,7 +116,7 @@ const computeLineBetweenFlowers = (flowerA, flowerB) => {
       v-for="(flower, index) in flowerData"
       :features="flower.features"
       :mostSignificantFeature="flower.mostSignificantFeature"
-      :circleRadius="40"
+      :circleRadius="30 * zoomLevel"
       :position="flowerPositions[index]"
       @significantFeaturePosition="(position) => storeFlowerLinePosition(position, index)"
       @hover="() => emit('hover', recommendations[index])"

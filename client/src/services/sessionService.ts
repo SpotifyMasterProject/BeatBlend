@@ -3,6 +3,8 @@ import { Session } from '@/types/Session';
 import { Song } from '@/types/Song';
 import { SongFeatureCategory } from '@/types/SongFeature';
 import type { SongFeature } from '@/types/SongFeature';
+import { Artifacts } from '@/types/Artifact';
+import { RecommendationList } from '@/types/Recommendation';
 
 export const sessionService = {
 
@@ -19,8 +21,10 @@ export const sessionService = {
             return response.data;
         })
     },
-    async endSession(sessionId: string): Promise<void> {
-        await apiClient.delete(`/sessions/${sessionId}`);
+    async endSession(sessionId: string): Promise<Artifacts> {
+        return apiClient.delete(`/sessions/${sessionId}`).then((response) => {
+            return response.data;
+        });
     },
     async getSessionById(sessionId: string): Promise<Session> {
         return apiClient.get(`/sessions/${sessionId}`).then((response) => {
@@ -39,9 +43,9 @@ export const sessionService = {
             return response.data;
         })
     },
-    async getRecommendations(sessionId: string): Promise<Song[]> {
+    async getRecommendations(sessionId: string): Promise<RecommendationList> {
         return apiClient.get(`/sessions/${sessionId}/recommendations`).then((response) => {
-            return response.data['songs'];
+            return response.data;
         })
     },
     async addSong(sessionId: string, songId: string): Promise<Session> {

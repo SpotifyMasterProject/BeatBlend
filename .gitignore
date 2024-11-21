@@ -165,3 +165,10 @@ cython_debug/
 .vscode/
 client/package-lock.json
 .DS_Store
+
+# AWS CDK
+*.swp
+
+# CDK asset staging directory
+.cdk.staging
+cdk.out

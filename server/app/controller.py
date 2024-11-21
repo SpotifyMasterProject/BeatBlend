@@ -20,11 +20,16 @@ from ws.websocket_manager import WebsocketManager
 
 POSTGRES_USER = os.getenv("POSTGRES_USER")
 POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+POSTGRES_HOST = os.getenv("POSTGRES_HOST")
+POSTGRES_PORT = os.getenv("POSTGRES_PORT")
 POSTGRES_DB = os.getenv("POSTGRES_DB")
+REDIS_HOST = os.getenv("REDIS_HOST")
+REDIS_PORT = int(os.getenv("REDIS_PORT"))
+REDIS_SSL = os.getenv("REDIS_SSL", "false") == "true"
 
 manager = WebsocketManager()
-postgres = Database(f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@postgres:5432/{POSTGRES_DB}")
-redis = Redis(host="redis", port=6379, decode_responses=True)
+postgres = Database(f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}")
+redis = Redis(host=REDIS_HOST, port=REDIS_PORT, ssl=REDIS_SSL, decode_responses=True)
 repository = Repository(postgres, redis)
 service = Service(repository, manager)
 ws_service = WebSocketService(repository, manager)
@@ -33,19 +38,13 @@ ws_service = WebSocketService(repository, manager)
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     await manager.connect()
-    for attempt in range(10):
-        try:
-            await postgres.connect()
-            break
-        except ConnectionRefusedError as e:
-            if attempt == 9:
-                raise e
-            time.sleep(6)
+    await postgres.connect()
     yield
     await manager.disconnect()
     await postgres.disconnect()
 
 
+# TODO: allow only certain origins
 app = FastAPI(lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
@@ -54,6 +53,11 @@ app.add_middleware(
     allow_methods=['*'],
     allow_headers=['*']
 )
+
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
 
 
 @app.post("/auth-codes", status_code=status.HTTP_201_CREATED, response_model=Token)

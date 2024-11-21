@@ -7,11 +7,12 @@ import { authService } from '@/services/authService';
 import { useAuthStore } from '@/stores/auth';
 import { sessionService } from '@/services/sessionService';
 import LogoIntroScreen from "@/components/LogoIntroScreen.vue";
-import StartBlendButton from "@/components/StartBlendButton.vue";
-import StartScreen from '@/components/StartScreen.vue';
 import { isMobile } from "@/services/layoutService";
+import svgContent from '@/assets/circle-music-soundwave.svg';
 
 const showStartScreen = ref(true);
+const startAnimation = ref(false);
+const showLogin = ref(false);
 const username = ref<string>('');
 const invitedSession = ref();
 const hostUsername = computed(() => {
@@ -22,6 +23,14 @@ const router = useRouter();
 const route = useRoute();
 
 onMounted(async () => {
+  setTimeout(() => {
+    startAnimation.value = true;
+    setTimeout(() => {
+      showStartScreen.value = false;
+      showLogin.value = true;
+    }, 2000); // 2 seconds for animation before showing login
+  }, 2000);
+
   await router.isReady();
   const sessionId = route.params.sessionId;
   if (sessionId) {
@@ -63,19 +72,30 @@ const joinSession = async (sessionId) => {
 
 <template>
   <div>
-    <transition name="fade">
-      <StartScreen v-if="showStartScreen" @animation-complete="handleComplete" key="start-screen" />
-      <div class="type1" v-else>
-        <header>
-          <LogoIntroScreen/>
+    <transition name="fade" mode="out-in">
+      <!-- Start Screen with SVG and Logo Animation -->
+      <div v-if="showStartScreen" class="visualizer">
+        <div :class="{ 'svg-container': true, 'svg-container-animation': startAnimation }" v-html="svgContent"></div>
+        <div :class="{ 'text-overlay': true, 'text-overlay-animation': startAnimation }">
+          <LogoIntroScreen :class="{ 'logo-animation': startAnimation}" />
+        </div>
+      </div>
+
+      <!-- Login Screen with Logo and Login Button/Prompt -->
+      <div v-else class="type1">
+        <header class="header-container">
+          <LogoIntroScreen class="logo-static" />
         </header>
-        <div class="login-container">
-          <Button v-if="
-            !$route.params.sessionId && !isMobile" class="button spotify-button" @click="redirectToSpotify">
+        <div class="login-container" v-if="showLogin">
+          <Button
+            v-if="!$route.params.sessionId && !isMobile"
+            class="button spotify-button"
+            @click="redirectToSpotify"
+          >
             Login via Spotify
           </Button>
           <div v-else-if="!$route.params.sessionId">
-            Please use computer to login as host
+            Please use a computer to login as the host
           </div>
           <div v-else class="guest-login">
             <p class="invite-text">
@@ -83,13 +103,16 @@ const joinSession = async (sessionId) => {
               <span class="highlight">a new blend!</span>
             </p>
             <p class="host-info">
-              <strong>{{ hostUsername }}</strong>
-              invited you to the blend. Enter username to join.</p>
+              <strong>{{ hostUsername }}</strong> invited you to the blend. Enter your username to join.
+            </p>
             <InputText id="username" v-model="username" placeholder="Username" class="input-default" />
             <Button
               @click="() => joinSession($route.params.sessionId)"
               class="join-button"
-              :disabled="!username.length">Join</Button>
+              :disabled="!username.length"
+            >
+              Join
+            </Button>
           </div>
         </div>
       </div>
@@ -99,18 +122,67 @@ const joinSession = async (sessionId) => {
 
 
 <style scoped>
+.visualizer {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background-color: var(--backcore-color1);
+}
+
+.svg-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: transform 2s ease-in-out;
+}
+
+.svg-container-animation {
+  transform: scale(5);
+}
+
+.text-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 2em;
+  transition: transform 2s ease-in-out;
+}
+
+.text-overlay-animation {
+  transform: translate(-50%, -290%); /* Shift the text upward */
+}
+
+.logo-animation {
+  transition: transform 1s ease-in-out, opacity 1s ease;
+  transform: scale(0.8);
+  position: relative;
+}
+
+.logo-static {
+  transform: none;
+  position: relative;
+  width: auto;
+  height: auto;
+  font-size: 3em;
+}
+
+.header-container {
+  display: flex;
+  justify-content: center;
+}
 
 .login-container {
-  --login-container-height: 200px;
   display: flex;
   flex-direction: column;
   gap: 20px;
-  justify-items: center;
   align-items: center;
   width: 200px;
   position: absolute;
-  height: var(--login-container-height);
-  top: calc(50% - var(--login-container-height) / 2);
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .guest-login {
@@ -121,15 +193,13 @@ const joinSession = async (sessionId) => {
   background-color: var(--backcore-color3);
   border-radius: 10px;
   width: 200px;
-  padding:20px;
+  padding: 20px;
 }
-
 
 .invite-text {
   color: white;
   font-size: 16px;
   font-weight: bold;
-  font-style: italic;
   text-align: center;
 }
 
@@ -163,24 +233,18 @@ const joinSession = async (sessionId) => {
 }
 
 .button {
-  padding: 8px 16px; /* Reduced padding */
+  padding: 8px 16px;
   border: none;
   border-radius: 25px;
-  font-size: 14px; /* Reduced font size */
+  font-size: 22px;
+  font-weight: bold;
   cursor: pointer;
-  height: 40px;
+  width: 220px;
+  height: 50px;
 }
 
 .spotify-button {
-  background-color: #1db954;
+  background-color: var(--logo-highlight-color);
   color: white;
 }
-
-.fade-enter-active, .fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-.fade-enter, .fade-leave-to /* .fade-leave-active in Vue 2 */ {
-  opacity: 0;
-}
-
 </style>
