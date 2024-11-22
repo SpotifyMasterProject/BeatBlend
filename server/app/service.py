@@ -278,7 +278,7 @@ class Service:
         total_energy = 0.0
         total_speechiness = 0.0
         total_valence = 0.0
-        total_tempo = 0.0
+        total_scaled_tempo = 0.0
 
         for song in played_songs:
             if song.added_by:
@@ -286,16 +286,16 @@ class Service:
                 total_songs_added_per_user[song.added_by.id] += 1
             else:
                 total_recommended_songs += 1
-                if song.is_top_recommendation and song.votes:  # TODO: "and song.votes" can be removed if we simply want to count number of top recommendations
+                if song.is_first_recommendation and song.votes:  # TODO: "and song.votes" can be removed if we simply want to count number of top recommendations
                     first_recommendation_wins += 1
 
                 total_per_significant_feature[song.most_significant_feature] += 1
 
-            total_danceability += song.danceability
-            total_energy += song.energy
-            total_speechiness += song.speechiness
-            total_valence += song.valence
-            total_tempo += song.tempo
+            total_danceability += song.danceability or 0.0
+            total_energy += song.energy or 0.0
+            total_speechiness += song.speechiness or 0.0
+            total_valence += song.valence or 0.0
+            total_scaled_tempo += song.scaled_tempo or 0.0
 
             if song.votes:
                 for voter_id in song.votes:
@@ -303,26 +303,28 @@ class Service:
 
         total_songs = len(played_songs)
         average_features = AverageFeatures(
-            danceability=total_danceability / total_songs,
-            energy=total_energy / total_songs,
-            speechiness=total_speechiness / total_songs,
-            valence=total_valence / total_songs,
-            tempo=total_tempo / total_songs
+            danceability=total_danceability / total_songs if total_songs else 0.0,
+            energy=total_energy / total_songs if total_songs else 0.0,
+            speechiness=total_speechiness / total_songs if total_songs else 0.0,
+            valence=total_valence / total_songs if total_songs else 0.0,
+            scaled_tempo=total_scaled_tempo / total_songs if total_songs else 0.0
         )
 
         user_id_most_songs_added = max(total_songs_added_per_user, key=total_songs_added_per_user.get, default=None)
-        most_songs_added_by = await self.get_user(user_id_most_songs_added)
+        most_songs_added_by = await self.get_user(user_id_most_songs_added) if user_id_most_songs_added else None
         user_id_most_votes = max(total_votes_per_user, key=total_votes_per_user.get, default=None)
-        most_votes_by = await self.get_user(user_id_most_votes)
-        most_significant_feature_overall = max(total_per_significant_feature, key=total_per_significant_feature.get, default=None)
+        most_votes_by = await self.get_user(user_id_most_votes) if user_id_most_votes else None
+        most_significant_feature_overall = max(total_per_significant_feature, key=total_per_significant_feature.get, default="")
 
-        first_recommendation_vote_percentage = (first_recommendation_wins / total_recommended_songs) * 100
+        first_recommendation_vote_percentage = (
+            (first_recommendation_wins / total_recommended_songs) * 100 if total_recommended_songs else 0.0
+        )
 
         return Artifact(
             songs_played=total_songs,
             songs_added_manually=total_manually_added_songs,
-            most_songs_added_by=most_songs_added_by.username,
-            most_votes_by=most_votes_by.username,
+            most_songs_added_by=most_songs_added_by.username if most_songs_added_by else "",
+            most_votes_by=most_votes_by.username if most_votes_by else "",
             most_significant_feature_overall=most_significant_feature_overall,
             first_recommendation_vote_percentage=first_recommendation_vote_percentage,
             average_features=average_features,
