@@ -39,6 +39,7 @@ ws_service = WebSocketService(repository, manager)
 async def lifespan(_: FastAPI):
     await manager.connect()
     await postgres.connect()
+    await repository.setup_full_text_search()
     yield
     await manager.disconnect()
     await postgres.disconnect()
