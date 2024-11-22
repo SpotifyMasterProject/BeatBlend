@@ -256,7 +256,7 @@ class Service:
         await self.advance_playlist(session.id)
         asyncio.create_task(self.generate_session_recommendations(session.id))
         self.automation_tasks[session.id] = asyncio.create_task(self.automate(session.id))
-        return session
+        return await self.get_session(session.id)
 
     @staticmethod
     def verify_host_of_session(host_id: str, session: Session) -> None:
