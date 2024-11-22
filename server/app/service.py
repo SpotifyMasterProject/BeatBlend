@@ -238,7 +238,7 @@ class Service:
         await self.check_for_empty_queue(session_id)
 
     async def automate(self, session_id: str):
-        await asyncio.sleep(30)
+        await asyncio.sleep(20)
         await self.advance_playlist(session_id)
         await self.automate(session_id)
 
