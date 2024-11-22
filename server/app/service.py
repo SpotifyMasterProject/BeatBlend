@@ -339,10 +339,9 @@ class Service:
         automation_task = self.automation_tasks.get(session.id)
         if automation_task:
             automation_task.cancel()
-        await self.repo.delete_session_by_id(session.id)
         del self.automation_tasks[session.id]
         session_artifact = await self.create_artifact(session)
-        await self.repo.delete_session_by_id(session_id)
+        await self.repo.delete_session_by_id(session.id)
         return session_artifact
 
     @with_session_lock
