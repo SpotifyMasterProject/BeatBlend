@@ -89,7 +89,8 @@ class Repository:
             """,
             """
             UPDATE songs
-            SET search_vector = to_tsvector('simple', track_name || ' ' || array_to_string(artists, ' '));
+            SET search_vector = to_tsvector('simple', track_name || ' ' || array_to_string(artists, ' '))
+            WHERE search_vector IS NULL;
             """,
             """
             CREATE INDEX IF NOT EXISTS idx_songs_search_vector
