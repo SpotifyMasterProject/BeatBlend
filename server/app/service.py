@@ -278,7 +278,7 @@ class Service:
         total_energy = 0.0
         total_speechiness = 0.0
         total_valence = 0.0
-        total_tempo = 0.0
+        total_scaled_tempo = 0.0
 
         for song in played_songs:
             if song.added_by:
@@ -295,7 +295,7 @@ class Service:
             total_energy += song.energy
             total_speechiness += song.speechiness
             total_valence += song.valence
-            total_tempo += song.tempo
+            total_scaled_tempo += song.scaled_tempo
 
             if song.votes:
                 for voter_id in song.votes:
@@ -307,7 +307,7 @@ class Service:
             energy=total_energy / total_songs,
             speechiness=total_speechiness / total_songs,
             valence=total_valence / total_songs,
-            tempo=total_tempo / total_songs
+            scaled_tempo=total_scaled_tempo / total_songs
         )
 
         user_id_most_songs_added = max(total_songs_added_per_user, key=total_songs_added_per_user.get, default=None)
