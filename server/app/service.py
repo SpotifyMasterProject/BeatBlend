@@ -158,9 +158,8 @@ class Service:
     @with_session_lock
     async def set_most_popular_recommendation(self, session_id: str) -> None:
         session = await self.get_session(session_id)
-        session.playlist.current_song = max(session.recommendations, key=lambda recommendation: len(recommendation.votes))
+        session.playlist.queued_songs.append(max(session.recommendations, key=lambda recommendation: len(recommendation.votes)))
         await self.repo.set_session(session)
-        await self.manager.publish(channel=f"playlist:{session.id}", message=session.playlist)
 
     async def generate_recommendations(self, songs: list[Song], limit: int) -> list[Song]:
         result = await self.repo.get_recommendations_by_songs(songs, limit)
@@ -186,33 +185,23 @@ class Service:
         return recommendations
 
     @with_session_lock
-    async def set_session_recommendations(self, session_id: str, recommendations: list[Song]) -> Session:
+    async def set_session_recommendations(self, session_id: str, recommendations: list[Song]) -> None:
         session = await self.get_session(session_id)
         session.recommendations.clear()
         session.recommendations.extend(recommendations)
         await self.repo.set_session(session)
-        return session
 
-    @with_session_lock
-    async def start_voting(self, session_id: str) -> Session:
-        session = await self.get_session(session_id)
-        session.voting_start_time = datetime.now()
-        await self.repo.set_session(session)
-        return session
-
-    async def generate_session_recommendations(self, session_id: str, limit: int = 3, voting_start: bool = False) -> None:
+    async def generate_session_recommendations(self, session_id: str, limit: int = 3) -> None:
         session = await self.get_session(session_id)
         recommendations = await self.generate_recommendations(session.playlist.get_all_songs(), limit)
-        session = await self.set_session_recommendations(session.id, recommendations)
-        if voting_start:
-            session = await self.start_voting(session_id)
-        await self.manager.publish(
-            channel=f"recommendations:{session.id}",
-            message=SongList(
-                songs=session.recommendations,
-                voting_start_time=session.voting_start_time
-            )
-        )
+        await self.set_session_recommendations(session.id, recommendations)
+        await self.repo.set_session(session)
+
+    async def check_for_empty_queue(self, session_id: str) -> None:
+        session = await self.get_session(session_id)
+        if not session.playlist.queued_songs:
+            await self.set_most_popular_recommendation(session.id)
+            await self.generate_session_recommendations(session.id)
 
     @with_session_lock
     async def update_current_song_and_queue(self, session_id: str) -> None:
@@ -223,19 +212,26 @@ class Service:
             session.playlist.current_song = None
         if session.playlist.queued_songs:
             session.playlist.current_song = session.playlist.queued_songs.pop(0)
-            if session.playlist.queued_songs:
-                await self.manager.publish(channel=f"playlist:{session.id}", message=session.playlist)
-        await self.repo.set_session(session)
+            await self.manager.publish(channel=f"playlist:{session.id}", message=session.playlist)
 
-    async def check_for_empty_queue(self, session_id: str) -> None:
+    @with_session_lock
+    async def check_for_voting_start(self, session_id: str) -> None:
         session = await self.get_session(session_id)
         if not session.playlist.queued_songs:
-            await self.set_most_popular_recommendation(session.id)
-            await self.generate_session_recommendations(session.id, voting_start=True)
+            session.voting_start_time = datetime.now()
+            await self.repo.set_session(session)
+            await self.manager.publish(
+                channel=f"recommendations:{session.id}",
+                message=SongList(
+                    songs=session.recommendations,
+                    voting_start_time=session.voting_start_time
+                )
+            )
 
     async def advance_playlist(self, session_id: str) -> None:
-        await self.update_current_song_and_queue(session_id)
         await self.check_for_empty_queue(session_id)
+        await self.update_current_song_and_queue(session_id)
+        await self.check_for_voting_start(session_id)
 
     async def automate(self, session_id: str):
         await asyncio.sleep(20)
