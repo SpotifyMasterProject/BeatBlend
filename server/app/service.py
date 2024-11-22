@@ -286,7 +286,7 @@ class Service:
                 total_songs_added_per_user[song.added_by.id] += 1
             else:
                 total_recommended_songs += 1
-                if song.is_top_recommendation and song.votes:  # TODO: "and song.votes" can be removed if we simply want to count number of top recommendations
+                if song.is_first_recommendation and song.votes:  # TODO: "and song.votes" can be removed if we simply want to count number of top recommendations
                     first_recommendation_wins += 1
 
                 total_per_significant_feature[song.most_significant_feature] += 1
