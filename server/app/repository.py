@@ -83,7 +83,6 @@ class Repository:
         return result
 
     async def setup_full_text_search(self):
-        # SQL commands to modify the table and create the index
         schema_setup_queries = [
             """
             ALTER TABLE songs ADD COLUMN IF NOT EXISTS search_vector tsvector;
@@ -103,10 +102,7 @@ class Repository:
         print("Full-text search setup completed.")
 
     async def get_songs_by_pattern(self, pattern: str, limit: int) -> list[Record]:
-        # Convert the pattern to a tsquery
         ts_query = func.plainto_tsquery('simple', pattern)
-
-        # Query the precomputed search vector column
         query = select(songs).where(songs.c.search_vector.op('@@')(ts_query)).limit(limit)
 
         result = await self.postgres.fetch_all(query)
