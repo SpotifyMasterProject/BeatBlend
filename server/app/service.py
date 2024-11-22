@@ -311,9 +311,9 @@ class Service:
         )
 
         user_id_most_songs_added = max(total_songs_added_per_user, key=total_songs_added_per_user.get, default=None)
-        most_songs_added_by = await self.get_user(user_id_most_songs_added) if user_id_most_songs_added else ""
+        most_songs_added_by = await self.get_user(user_id_most_songs_added) if user_id_most_songs_added else None
         user_id_most_votes = max(total_votes_per_user, key=total_votes_per_user.get, default=None)
-        most_votes_by = await self.get_user(user_id_most_votes) if user_id_most_votes else ""
+        most_votes_by = await self.get_user(user_id_most_votes) if user_id_most_votes else None
         most_significant_feature_overall = max(total_per_significant_feature, key=total_per_significant_feature.get, default="")
 
         first_recommendation_vote_percentage = (
@@ -323,8 +323,8 @@ class Service:
         return Artifact(
             songs_played=total_songs,
             songs_added_manually=total_manually_added_songs,
-            most_songs_added_by=most_songs_added_by.username,
-            most_votes_by=most_votes_by.username,
+            most_songs_added_by=most_songs_added_by.username if most_songs_added_by else "",
+            most_votes_by=most_votes_by.username if most_votes_by else "",
             most_significant_feature_overall=most_significant_feature_overall,
             first_recommendation_vote_percentage=first_recommendation_vote_percentage,
             average_features=average_features,
