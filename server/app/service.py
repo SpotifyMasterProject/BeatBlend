@@ -195,7 +195,6 @@ class Service:
         session = await self.get_session(session_id)
         recommendations = await self.generate_recommendations(session.playlist.get_all_songs(), limit)
         await self.set_session_recommendations(session.id, recommendations)
-        await self.repo.set_session(session)
 
     async def check_for_empty_queue(self, session_id: str) -> None:
         session = await self.get_session(session_id)
@@ -213,6 +212,7 @@ class Service:
         if session.playlist.queued_songs:
             session.playlist.current_song = session.playlist.queued_songs.pop(0)
             await self.manager.publish(channel=f"playlist:{session.id}", message=session.playlist)
+        await self.repo.set_session(session)
 
     @with_session_lock
     async def check_for_voting_start(self, session_id: str) -> None:
