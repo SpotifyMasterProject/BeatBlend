@@ -26,11 +26,14 @@ class Song(CamelModel):
     duration_ms: Optional[int] = None
     release_date: Optional[datetime] = None
     popularity: Optional[float] = None
+    # below this: added manually (not in database)
     genre: list[str] = []
     preview_url: Optional[str] = None
     added_by: Optional[User] = None
     most_significant_feature: Optional[str] = None
     similarity_score: Optional[float] = -1.0
+    is_first_recommendation: Optional[bool] = False
+    votes: list[str] = []
 
     @model_validator(mode='after')
     def set_scaled_tempo(self) -> 'Song':
@@ -43,6 +46,7 @@ class Song(CamelModel):
 
 class SongList(CamelModel):
     songs: list[Song] = []
+    voting_start_time: Optional[datetime] = None
 
 
 class Playlist(CamelModel):
