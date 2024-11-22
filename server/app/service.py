@@ -209,9 +209,8 @@ class Service:
         if session.playlist.current_song:
             session.playlist.played_songs.append(session.playlist.current_song)
             session.playlist.current_song = None
-        if session.playlist.queued_songs:
-            session.playlist.current_song = session.playlist.queued_songs.pop(0)
-            await self.manager.publish(channel=f"playlist:{session.id}", message=session.playlist)
+        session.playlist.current_song = session.playlist.queued_songs.pop(0)
+        await self.manager.publish(channel=f"playlist:{session.id}", message=session.playlist)
         await self.repo.set_session(session)
 
     @with_session_lock
