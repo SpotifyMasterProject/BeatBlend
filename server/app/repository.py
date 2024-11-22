@@ -3,6 +3,7 @@ from databases.interfaces import Record
 from fastapi import HTTPException, status
 from redis.asyncio import Redis
 from sqlalchemy import Column, Table, MetaData, Integer, String, ARRAY, Float, Date, insert, select, func
+from sqlalchemy.dialects.postgresql import TSVECTOR
 from typing import Optional
 
 from models.session import Session
@@ -26,7 +27,8 @@ songs = Table(
     Column("tempo", Float),
     Column("duration_ms", Integer),
     Column("release_date", Date),
-    Column("popularity", Float, nullable=True)
+    Column("popularity", Float, nullable=True),
+    Column("search_vector", TSVECTOR, nullable=True)
 )
 
 
@@ -80,15 +82,31 @@ class Repository:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song not found")
         return result
 
-    async def get_songs_by_pattern(self, pattern: str, limit: int) -> list[Record]:
-        regex_pattern = f'\\m{pattern}'
+    async def setup_full_text_search(self):
+        schema_setup_queries = [
+            """
+            ALTER TABLE songs ADD COLUMN IF NOT EXISTS search_vector tsvector;
+            """,
+            """
+            UPDATE songs
+            SET search_vector = to_tsvector('simple', track_name || ' ' || array_to_string(artists, ' '));
+            """,
+            """
+            CREATE INDEX IF NOT EXISTS idx_songs_search_vector
+            ON songs USING gin(search_vector);
+            """
+        ]
 
-        query = select(songs).where(
-            songs.c.track_name.op('~*')(regex_pattern) |
-            func.array_to_string(songs.c.artists, ' ').op('~*')(regex_pattern)
-        ).limit(limit)
+        for query in schema_setup_queries:
+            await self.postgres.execute(query)
+        print("Full-text search setup completed.")
+
+    async def get_songs_by_pattern(self, pattern: str, limit: int) -> list[Record]:
+        ts_query = func.plainto_tsquery('simple', pattern)
+        query = select(songs).where(songs.c.search_vector.op('@@')(ts_query)).limit(limit)
+
         result = await self.postgres.fetch_all(query)
-        if result is None:
+        if not result:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No matching songs found")
         return result
 
