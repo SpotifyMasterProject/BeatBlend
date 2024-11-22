@@ -285,8 +285,8 @@ class InfraStack(Stack):
             ),
             database_name="songs",
             credentials=rds.Credentials.from_generated_secret("postgres"),
-            removal_policy=RemovalPolicy.RETAIN,  # Be cautious with this in production
-            deletion_protection=True,  # Be cautious with this in production
+            removal_policy=RemovalPolicy.DESTROY,  # Be cautious with this in production
+            deletion_protection=False,  # Be cautious with this in production
         )
 
         # Grant read access to the secret for the execution role
