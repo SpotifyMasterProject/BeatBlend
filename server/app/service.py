@@ -238,7 +238,7 @@ class Service:
         await self.check_for_empty_queue(session_id)
 
     async def automate(self, session_id: str):
-        await asyncio.sleep(20)
+        await asyncio.sleep(30)
         await self.advance_playlist(session_id)
         await self.automate(session_id)
 
@@ -291,11 +291,11 @@ class Service:
 
                 total_per_significant_feature[song.most_significant_feature] += 1
 
-            total_danceability += song.danceability
-            total_energy += song.energy
-            total_speechiness += song.speechiness
-            total_valence += song.valence
-            total_scaled_tempo += song.scaled_tempo
+            total_danceability += song.danceability or 0.0
+            total_energy += song.energy or 0.0
+            total_speechiness += song.speechiness or 0.0
+            total_valence += song.valence or 0.0
+            total_scaled_tempo += song.scaled_tempo or 0.0
 
             if song.votes:
                 for voter_id in song.votes:
@@ -303,20 +303,22 @@ class Service:
 
         total_songs = len(played_songs)
         average_features = AverageFeatures(
-            danceability=total_danceability / total_songs,
-            energy=total_energy / total_songs,
-            speechiness=total_speechiness / total_songs,
-            valence=total_valence / total_songs,
-            scaled_tempo=total_scaled_tempo / total_songs
+            danceability=total_danceability / total_songs if total_songs else 0.0,
+            energy=total_energy / total_songs if total_songs else 0.0,
+            speechiness=total_speechiness / total_songs if total_songs else 0.0,
+            valence=total_valence / total_songs if total_songs else 0.0,
+            scaled_tempo=total_scaled_tempo / total_songs if total_songs else 0.0
         )
 
         user_id_most_songs_added = max(total_songs_added_per_user, key=total_songs_added_per_user.get, default=None)
-        most_songs_added_by = await self.get_user(user_id_most_songs_added)
+        most_songs_added_by = await self.get_user(user_id_most_songs_added) if user_id_most_songs_added else ""
         user_id_most_votes = max(total_votes_per_user, key=total_votes_per_user.get, default=None)
-        most_votes_by = await self.get_user(user_id_most_votes)
-        most_significant_feature_overall = max(total_per_significant_feature, key=total_per_significant_feature.get, default=None)
+        most_votes_by = await self.get_user(user_id_most_votes) if user_id_most_votes else ""
+        most_significant_feature_overall = max(total_per_significant_feature, key=total_per_significant_feature.get, default="")
 
-        first_recommendation_vote_percentage = (first_recommendation_wins / total_recommended_songs) * 100
+        first_recommendation_vote_percentage = (
+            (first_recommendation_wins / total_recommended_songs) * 100 if total_recommended_songs else 0.0
+        )
 
         return Artifact(
             songs_played=total_songs,
