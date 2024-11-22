@@ -143,10 +143,11 @@ class Service:
         else:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Discogs could not be reached")
 
-    async def get_preview_url(self, song: Song) -> None:
+    async def get_popularity_and_preview_url(self, song: Song) -> None:
         try:
             song_info = self.spotify_api_client.track(song.id)
             song.preview_url = song_info.get('preview_url')
+            song.popularity = song_info.get('popularity')
         except Exception as e:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Request unsuccessful: {repr(e)}")
 
@@ -168,7 +169,7 @@ class Service:
         for row in result:
             song = await self.get_song_from_database(row['id'])
             await self.get_genre(song)
-            await self.get_preview_url(song)
+            await self.get_popularity_and_preview_url(song)
             diffs = {
                 'danceability': row['diff_danceability'],
                 'energy': row['diff_energy'],
@@ -251,7 +252,7 @@ class Service:
         for song in session.playlist.queued_songs:
             song.added_by = host
             await self.get_genre(song)
-            await self.get_preview_url(song)
+            await self.get_popularity_and_preview_url(song)
         await self.repo.set_session(session)
         await self.advance_playlist(session.id)
         asyncio.create_task(self.generate_session_recommendations(session.id))
@@ -372,7 +373,7 @@ class Service:
         result = await self.repo.get_song_by_id(song_id)
         song = Song.model_validate(dict(result))
         await self.get_genre(song)
-        await self.get_preview_url(song)
+        await self.get_popularity_and_preview_url(song)
         return song
 
     async def add_song_to_database(self, song_id: str) -> Song:
