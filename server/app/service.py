@@ -46,7 +46,7 @@ class Service:
         )
         self.spotify_api_client = Spotify(auth_manager=self.spotify_oauth)
         self.session_lock = asyncio.Lock()
-        self.automation_tasks = {}
+        self.asyncio_tasks = defaultdict(list)
 
     @staticmethod
     def with_session_lock(func):
@@ -191,16 +191,18 @@ class Service:
         session.recommendations.extend(recommendations)
         await self.repo.set_session(session)
 
-    async def generate_session_recommendations(self, session_id: str, limit: int = 3) -> None:
+    async def generate_session_recommendations(self, session_id: str, limit: int = 3, automation_task: bool = False) -> None:
         session = await self.get_session(session_id)
         recommendations = await self.generate_recommendations(session.playlist.get_all_songs(), limit)
         await self.set_session_recommendations(session.id, recommendations)
+        if not automation_task:  # generation was not invoked by automation, remove current asyncio task
+            self.asyncio_tasks[session.id].remove(asyncio.current_task())
 
     async def check_for_empty_queue(self, session_id: str) -> None:
         session = await self.get_session(session_id)
         if not session.playlist.queued_songs:
             await self.set_most_popular_recommendation(session.id)
-            await self.generate_session_recommendations(session.id)
+            await self.generate_session_recommendations(session.id, automation_task=True)
 
     @with_session_lock
     async def update_current_song_and_queue(self, session_id: str) -> None:
@@ -250,8 +252,8 @@ class Service:
             await self.get_popularity_and_preview_url(song)
         await self.repo.set_session(session)
         await self.advance_playlist(session.id)
-        asyncio.create_task(self.generate_session_recommendations(session.id))
-        self.automation_tasks[session.id] = asyncio.create_task(self.automate(session.id))
+        self.asyncio_tasks[session.id].append(asyncio.create_task(self.generate_session_recommendations(session.id)))
+        self.asyncio_tasks[session.id].append(asyncio.create_task(self.automate(session.id)))
         return await self.get_session(session.id)
 
     @staticmethod
@@ -331,10 +333,11 @@ class Service:
     async def end_session(self, host_id: str, session_id: str):
         session = await self.get_session(session_id)
         self.verify_host_of_session(host_id, session)
-        automation_task = self.automation_tasks.get(session.id)
+        automation_task = self.asyncio_tasks.get(session.id)
         if automation_task:
-            automation_task.cancel()
-        del self.automation_tasks[session.id]
+            for task in automation_task:
+                task.cancel()
+        del self.asyncio_tasks[session.id]
         session_artifact = await self.create_artifact(session)
         await self.repo.delete_session_by_id(session.id)
         return session_artifact
@@ -433,7 +436,7 @@ class Service:
         session.playlist.queued_songs.append(song)
         await self.repo.set_session(session)
         await self.manager.publish(channel=f"playlist:{session.id}", message=session.playlist)
-        asyncio.create_task(self.generate_session_recommendations(session.id))
+        self.asyncio_tasks[session.id].append(asyncio.create_task(self.generate_session_recommendations(session.id)))
         return session.playlist
 
     @with_session_lock
@@ -445,7 +448,7 @@ class Service:
                 del session.playlist.queued_songs[idx]
                 await self.repo.set_session(session)
                 await self.manager.publish(channel=f"playlist:{session.id}", message=session.playlist)
-                asyncio.create_task(self.generate_session_recommendations(session.id))
+                self.asyncio_tasks[session.id].append(asyncio.create_task(self.generate_session_recommendations(session.id)))
                 return
 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song not part of playlist")
