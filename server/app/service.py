@@ -158,9 +158,8 @@ class Service:
     @with_session_lock
     async def set_most_popular_recommendation(self, session_id: str) -> None:
         session = await self.get_session(session_id)
-        session.playlist.current_song = max(session.recommendations, key=lambda recommendation: len(recommendation.votes))
+        session.playlist.queued_songs.append(max(session.recommendations, key=lambda recommendation: len(recommendation.votes)))
         await self.repo.set_session(session)
-        await self.manager.publish(channel=f"playlist:{session.id}", message=session.playlist)
 
     async def generate_recommendations(self, songs: list[Song], limit: int) -> list[Song]:
         result = await self.repo.get_recommendations_by_songs(songs, limit)
@@ -186,35 +185,24 @@ class Service:
         return recommendations
 
     @with_session_lock
-    async def set_session_recommendations(self, session_id: str, recommendations: list[Song]) -> Session:
+    async def set_session_recommendations(self, session_id: str, recommendations: list[Song]) -> None:
         session = await self.get_session(session_id)
         session.recommendations.clear()
         session.recommendations.extend(recommendations)
         await self.repo.set_session(session)
-        return session
 
-    @with_session_lock
-    async def start_voting(self, session_id: str) -> Session:
-        session = await self.get_session(session_id)
-        session.voting_start_time = datetime.now()
-        await self.repo.set_session(session)
-        return session
-
-    async def generate_session_recommendations(self, session_id: str, limit: int = 3, voting_start: bool = False) -> None:
+    async def generate_session_recommendations(self, session_id: str, limit: int = 3, automation_task: bool = False) -> None:
         session = await self.get_session(session_id)
         recommendations = await self.generate_recommendations(session.playlist.get_all_songs(), limit)
-        session = await self.set_session_recommendations(session.id, recommendations)
-        if voting_start:
-            session = await self.start_voting(session_id)
-        await self.manager.publish(
-            channel=f"recommendations:{session.id}",
-            message=SongList(
-                songs=session.recommendations,
-                voting_start_time=session.voting_start_time
-            )
-        )
-        if not voting_start:  # generation was not invoked by automation, remove current asyncio task
+        await self.set_session_recommendations(session.id, recommendations)
+        if not automation_task:  # generation was not invoked by automation, remove current asyncio task
             self.asyncio_tasks[session.id].remove(asyncio.current_task())
+
+    async def check_for_empty_queue(self, session_id: str) -> None:
+        session = await self.get_session(session_id)
+        if not session.playlist.queued_songs:
+            await self.set_most_popular_recommendation(session.id)
+            await self.generate_session_recommendations(session.id)
 
     @with_session_lock
     async def update_current_song_and_queue(self, session_id: str) -> None:
@@ -223,21 +211,28 @@ class Service:
         if session.playlist.current_song:
             session.playlist.played_songs.append(session.playlist.current_song)
             session.playlist.current_song = None
-        if session.playlist.queued_songs:
-            session.playlist.current_song = session.playlist.queued_songs.pop(0)
-            if session.playlist.queued_songs:
-                await self.manager.publish(channel=f"playlist:{session.id}", message=session.playlist)
+        session.playlist.current_song = session.playlist.queued_songs.pop(0)
+        await self.manager.publish(channel=f"playlist:{session.id}", message=session.playlist)
         await self.repo.set_session(session)
 
-    async def check_for_empty_queue(self, session_id: str) -> None:
+    @with_session_lock
+    async def check_for_voting_start(self, session_id: str) -> None:
         session = await self.get_session(session_id)
         if not session.playlist.queued_songs:
-            await self.set_most_popular_recommendation(session.id)
-            await self.generate_session_recommendations(session.id, voting_start=True)
+            session.voting_start_time = datetime.now()
+            await self.repo.set_session(session)
+            await self.manager.publish(
+                channel=f"recommendations:{session.id}",
+                message=SongList(
+                    songs=session.recommendations,
+                    voting_start_time=session.voting_start_time
+                )
+            )
 
     async def advance_playlist(self, session_id: str) -> None:
-        await self.update_current_song_and_queue(session_id)
         await self.check_for_empty_queue(session_id)
+        await self.update_current_song_and_queue(session_id)
+        await self.check_for_voting_start(session_id)
 
     async def automate(self, session_id: str):
         await asyncio.sleep(20)
@@ -280,7 +275,7 @@ class Service:
         total_energy = 0.0
         total_speechiness = 0.0
         total_valence = 0.0
-        total_tempo = 0.0
+        total_scaled_tempo = 0.0
 
         for song in played_songs:
             if song.added_by:
@@ -288,16 +283,16 @@ class Service:
                 total_songs_added_per_user[song.added_by.id] += 1
             else:
                 total_recommended_songs += 1
-                if song.is_top_recommendation and song.votes:  # TODO: "and song.votes" can be removed if we simply want to count number of top recommendations
+                if song.is_first_recommendation and song.votes:  # TODO: "and song.votes" can be removed if we simply want to count number of top recommendations
                     first_recommendation_wins += 1
 
                 total_per_significant_feature[song.most_significant_feature] += 1
 
-            total_danceability += song.danceability
-            total_energy += song.energy
-            total_speechiness += song.speechiness
-            total_valence += song.valence
-            total_tempo += song.tempo
+            total_danceability += song.danceability or 0.0
+            total_energy += song.energy or 0.0
+            total_speechiness += song.speechiness or 0.0
+            total_valence += song.valence or 0.0
+            total_scaled_tempo += song.scaled_tempo or 0.0
 
             if song.votes:
                 for voter_id in song.votes:
@@ -305,26 +300,28 @@ class Service:
 
         total_songs = len(played_songs)
         average_features = AverageFeatures(
-            danceability=total_danceability / total_songs,
-            energy=total_energy / total_songs,
-            speechiness=total_speechiness / total_songs,
-            valence=total_valence / total_songs,
-            tempo=total_tempo / total_songs
+            danceability=total_danceability / total_songs if total_songs else 0.0,
+            energy=total_energy / total_songs if total_songs else 0.0,
+            speechiness=total_speechiness / total_songs if total_songs else 0.0,
+            valence=total_valence / total_songs if total_songs else 0.0,
+            scaled_tempo=total_scaled_tempo / total_songs if total_songs else 0.0
         )
 
         user_id_most_songs_added = max(total_songs_added_per_user, key=total_songs_added_per_user.get, default=None)
-        most_songs_added_by = await self.get_user(user_id_most_songs_added)
+        most_songs_added_by = await self.get_user(user_id_most_songs_added) if user_id_most_songs_added else None
         user_id_most_votes = max(total_votes_per_user, key=total_votes_per_user.get, default=None)
-        most_votes_by = await self.get_user(user_id_most_votes)
-        most_significant_feature_overall = max(total_per_significant_feature, key=total_per_significant_feature.get, default=None)
+        most_votes_by = await self.get_user(user_id_most_votes) if user_id_most_votes else None
+        most_significant_feature_overall = max(total_per_significant_feature, key=total_per_significant_feature.get, default="")
 
-        first_recommendation_vote_percentage = (first_recommendation_wins / total_recommended_songs) * 100
+        first_recommendation_vote_percentage = (
+            (first_recommendation_wins / total_recommended_songs) * 100 if total_recommended_songs else 0.0
+        )
 
         return Artifact(
             songs_played=total_songs,
             songs_added_manually=total_manually_added_songs,
-            most_songs_added_by=most_songs_added_by.username,
-            most_votes_by=most_votes_by.username,
+            most_songs_added_by=most_songs_added_by.username if most_songs_added_by else "",
+            most_votes_by=most_votes_by.username if most_votes_by else "",
             most_significant_feature_overall=most_significant_feature_overall,
             first_recommendation_vote_percentage=first_recommendation_vote_percentage,
             average_features=average_features,
@@ -340,10 +337,9 @@ class Service:
         if automation_task:
             for task in automation_task:
                 task.cancel()
-        await self.repo.delete_session_by_id(session.id)
         del self.asyncio_tasks[session.id]
         session_artifact = await self.create_artifact(session)
-        await self.repo.delete_session_by_id(session_id)
+        await self.repo.delete_session_by_id(session.id)
         return session_artifact
 
     @with_session_lock
