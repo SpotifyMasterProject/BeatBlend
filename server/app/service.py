@@ -202,7 +202,7 @@ class Service:
         session = await self.get_session(session_id)
         if not session.playlist.queued_songs:
             await self.set_most_popular_recommendation(session.id)
-            await self.generate_session_recommendations(session.id)
+            await self.generate_session_recommendations(session.id, automation_task=True)
 
     @with_session_lock
     async def update_current_song_and_queue(self, session_id: str) -> None:
