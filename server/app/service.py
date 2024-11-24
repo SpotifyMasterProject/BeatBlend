@@ -219,7 +219,7 @@ class Service:
     async def check_for_voting_start(self, session_id: str) -> None:
         session = await self.get_session(session_id)
         if not session.playlist.queued_songs:
-            session.voting_start_time = datetime.now()
+            session.voting_start_time = datetime.now().timestamp()
             await self.repo.set_session(session)
             await self.manager.publish(
                 channel=f"recommendations:{session.id}",

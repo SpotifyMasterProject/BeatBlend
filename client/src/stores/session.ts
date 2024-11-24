@@ -38,7 +38,9 @@ export const useSession = defineStore('session', () => {
       
     const handleRecommendationMessages = (recommendationMessage: SongList) => {
        session.value.recommendations = recommendationMessage.songs;
-       session.value.votingStartTime = recommendationMessage.votingStartTime;
+       if (recommendationMessage.votingStartTime) {
+         session.value.votingStartTime = recommendationMessage.votingStartTime;
+       }
     };
 
     const fetchRecommendations = async () => {
