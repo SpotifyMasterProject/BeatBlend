@@ -12,7 +12,7 @@ from jwt import InvalidTokenError
 from spotipy import Spotify
 from spotipy.oauth2 import SpotifyOAuth, SpotifyOauthError
 from typing import Annotated
-from databases.interfaces import Record
+from asyncio import Task
 from collections import defaultdict
 
 from models.user import User, SpotifyUser
@@ -237,15 +237,19 @@ class Service:
             await self.start_voting(session.id)
         self.asyncio_tasks[session.id].remove(asyncio.current_task())
 
-    async def advance_playlist(self, session_id: str) -> None:
+    async def advance_playlist(self, session_id: str) -> Task:
         await self.set_most_popular_recommendation(session_id)
         await self.update_current_song_and_queue(session_id)
-        self.asyncio_tasks[session_id].append(asyncio.create_task(self.check_for_empty_queue(session_id)))
+        generation_task = asyncio.create_task(self.check_for_empty_queue(session_id))
+        self.asyncio_tasks[session_id].append(generation_task)
+        return generation_task
 
-    async def automate(self, session_id: str):
+    async def automate(self, session_id: str, generation_task: Task = None):
         await asyncio.sleep(30)
-        await self.advance_playlist(session_id)
-        await self.automate(session_id)
+        if generation_task:  # failsafe in case generation hasn't finished after 30 seconds
+            await generation_task
+        generation_task = await self.advance_playlist(session_id)
+        await self.automate(session_id, generation_task)
 
     async def create_session(self, host_id: str, session: Session) -> Session:
         host = await self.get_user(host_id)
