@@ -197,7 +197,7 @@ class Service:
         session = await self.get_session(session_id)
         recommendations = await self.generate_recommendations(session.playlist.get_all_songs(), limit)
         session = await self.set_session_recommendations(session.id, recommendations)
-        if not automation_task:  # generation was not invoked by automation, remove current asyncio task
+        if not automation_task:  # generation was not invoked by automation, remove current asyncio task here
             await self.manager.publish(
                 channel=f"recommendations:{session.id}",
                 message=SongList(
@@ -235,14 +235,15 @@ class Service:
         if not session.playlist.queued_songs:
             await self.generate_session_recommendations(session.id, automation_task=True)
             await self.start_voting(session.id)
+        self.asyncio_tasks[session.id].remove(asyncio.current_task())
 
     async def advance_playlist(self, session_id: str) -> None:
         await self.set_most_popular_recommendation(session_id)
         await self.update_current_song_and_queue(session_id)
-        await self.check_for_empty_queue(session_id)
+        self.asyncio_tasks[session_id].append(asyncio.create_task(self.check_for_empty_queue(session_id)))
 
     async def automate(self, session_id: str):
-        await asyncio.sleep(20)
+        await asyncio.sleep(30)
         await self.advance_playlist(session_id)
         await self.automate(session_id)
 
