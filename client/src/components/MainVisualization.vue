@@ -23,7 +23,8 @@ const flowerData = computed(() => {
     return {
       features: getSongFeatures(song),
       mostSignificantFeature: getSongFeatureCategory(song.mostSignificantFeature),
-      isQueued: song.isQueued
+      isQueued: song.isQueued,
+      similarityScore: song.similarityScore,
     };
   });
 });
@@ -38,19 +39,25 @@ const isScrollEnabled = ref(false);
 const flowerRefs = useTemplateRef('flowers');
 const svg = useTemplateRef('svg');
 const lastSongPosition = ref({});
+const loading = ref(false);
+const similarityScoreIndex = ref(-1);
 
 function zoomIn() {
   zoomLevel.value = Math.min(zoomLevel.value + 0.1, maxZoom);
+  loading.value = true;
   setTimeout(() => {
     resizeSVG();
     scrollToMiddle();
+    loading.value = false;
   }, 0);
 }
 function zoomOut() {
   zoomLevel.value = Math.max(zoomLevel.value - 0.1, minZoom);
+  loading.value = true;
   setTimeout(() => {
     resizeSVG();
     scrollToMiddle();
+    loading.value = false;
   }, 0);
 }
 
@@ -58,7 +65,10 @@ function zoomOut() {
 function resizeSVG() {
  
   // Get the bounds of the SVG content
-  let bbox = svg.value.getBBox();
+  let bbox = svg.value?.getBBox();
+  if (!bbox) {
+    return;
+  }
   console.log(bbox);
   // Update the width and height using the size of the contents
   svg.value.setAttribute("width", bbox.x + 1.5 * bbox.width + bbox.x);
@@ -67,8 +77,8 @@ function resizeSVG() {
 
 // Define a grid size and positions for flowers
 const gridSize = 80;
-const maxVerticalMoves = 3;
-const minY = 80;
+const maxVerticalMoves = 4;
+const minY = 100;
 
 let lastVerticalDirection = 0;
 let currentX = 0;
@@ -86,19 +96,16 @@ const generateNextRandomGridPosition = () => {
   } else {
     verticalDirection = Math.random() > 0.5 ? 1 : -1;
   }
-  
-  if (verticalDirection === -1 && currentY <= minY) {
-    stayInColumn = false;
-  }
 
-  if (verticalDirection === 1 && currentY >= gridSize * maxVerticalMoves) {
+  const verticalMove = verticalDirection * gridSize * (Math.random() > 0.5 ? 1.5 : 2);
+  const nextY = currentY + verticalMove;
+  if (nextY <= minY || nextY >= gridSize * maxVerticalMoves) {
     stayInColumn = false;
   }
 
   if (stayInColumn) {
     lastVerticalDirection = verticalDirection
-    const verticalMove = verticalDirection * gridSize * (Math.random() > 0.5 ? 1.5 : 2);
-    currentY += verticalMove;
+    currentY = nextY;
     verticalNrFlowers++;
     return {x: currentX, y: currentY};
   } else {
@@ -198,15 +205,23 @@ const computeLineBetweenFlowers = (flowerA, flowerB) => {
   const curvatureIntensity = distance * curvatureRelativeIntensity;
 
   const firstCurvatureShifted = shiftPoint(flowerA, flowerB, firstCurvature, curvatureRelativeIntensity);
-  return `M ${flowerA.x} ${flowerA.y}
+  return {
+    line: `M ${flowerA.x} ${flowerA.y}
       Q ${firstCurvatureShifted.x}
         ${firstCurvatureShifted.y},
-        ${flowerB.x} ${flowerB.y}`;
+        ${flowerB.x} ${flowerB.y}`,
+    text: {
+      ...firstCurvatureShifted
+    }
+  };
 };
 
 function scrollToMiddle() {
   const flowers = flowerRefs.value;
-  flowers[currentSongIndex.value].$el.scrollIntoView({
+  if (!flowers || flowers.length <= currentSongIndex.value) {
+    return;
+  }
+  flowers[currentSongIndex.value].$el?.scrollIntoView({
             behavior: 'auto',
             block: 'center',
             inline: 'center'
@@ -225,7 +240,13 @@ watch(localFlowerLinePositions.value, () => {
     if (!currentFlower || !nextFlower) {
       return;
     }
-    flowerLines.value.push(computeLineBetweenFlowers(currentFlower, nextFlower));
+    const positions = computeLineBetweenFlowers(currentFlower, nextFlower);
+    flowerLines.value.push({
+      position: positions.line,
+      width: 300 * (Math.max(flowerData.value[i + 1].similarityScore, 0.98) - 0.98 + 0.001),
+      textPosition: positions.text,
+      similarityScore: Math.max(Math.trunc(flowerData.value[i + 1].similarityScore * 1000) / 1000.0, 0)
+    });
   }
 
   const lastPosition = localFlowerLinePositions.value[gridPositions.value.length - 1];
@@ -295,6 +316,14 @@ onMounted(() => {
     audioPlayer.value.autoplay = true;
   }
 });
+
+function toggleSimilarityScore(index) {
+  if (similarityScoreIndex.value === index) {
+    similarityScoreIndex.value = -1;
+  } else if (similarityScoreIndex.value === -1) {
+    similarityScoreIndex.value = index;
+  }
+}
 </script>
 
 <template>
@@ -308,7 +337,7 @@ onMounted(() => {
         <div v-if="!currentSongPreviewUrl" class="audio-unavailable-message">
           Current song audio not available
         </div>
-        <div :style="{transform: `scale(${zoomLevel})`, transformOrigin: '0 0'}">
+        <div :style="{transform: `scale(${zoomLevel})`, transformOrigin: '0 50%', height: '100%', opacity: `${loading ? '0.0' : '1.0'}`}">
           <!-- Loop through each flower and apply the styles -->
           <svg class="svg-container" ref="svg" width="100%" height="100%">
             <Flower
@@ -327,11 +356,13 @@ onMounted(() => {
                 @leave="onLeaveFlower"
                 @significantFeaturePosition="(position) => storeFlowerLinePosition(position, index)"
             />
-            <path
-              v-for="line in flowerLines"
-              class="connecting-path"
-              :d="line" stroke="white" fill="transparent"
-            />
+            <g v-for="(line, index) in flowerLines" @mouseenter="() => toggleSimilarityScore(index)" @mouseleave="() => toggleSimilarityScore(index)">
+              <path
+                class="connecting-path"
+                :d="line.position" stroke="white" :stroke-width="line.width" fill="transparent"
+              />
+              <text v-if="similarityScoreIndex === index" :x="line.textPosition.x" :y="line.textPosition.y" fill="white">{{line.similarityScore}}</text>
+            </g>
             <Recommendations
               v-if="session.isRunning && session.recommendations && session.playlist.queuedSongs.length === 0"
               :zoomLevel="1"
@@ -441,7 +472,7 @@ onMounted(() => {
   padding-top: 20px;
 }
 .connecting-path {
-  pointer-events: none;
+  cursor: pointer;
 }
 .queued {
   opacity: 0.3;

@@ -11,12 +11,15 @@ const props = defineProps<{
   session: Session,
 }>();
 
+const countdownDelta = ref(0);
 
 const countdown = computed(() => {
   console.log(props.session);
   const millis = Date.now() - new Date(props.session.votingStartTime);
-  console.log(millis);
-  return Math.max(30 - millis / 1000, 0);
+  console.log(millis / 1000);
+  countdownDelta.value = 0;
+  isTimeUp.value = false;
+  return Math.floor(Math.max(20 - millis / 1000, 0));
 });
 
 const isTimeUp = ref(false);
@@ -61,17 +64,10 @@ const handleVote = async (songIndex: number) => {
 // Countdown logic
 onMounted(() => {
   timer = setInterval(() => {
-    if (countdown.value > 0) {
-      countdown.value -= 1;
-    } else if (countdown.value === 0) {
+    if (countdown.value - countdownDelta.value > 0) {
+      countdownDelta.value += 1;
+    } else {
       isTimeUp.value = true; // Show popup when countdown reaches 0
-
-      // Automatically hide popup after 3 seconds
-      setTimeout(() => {
-        isTimeUp.value = false;
-      }, 5000);
-
-      clearInterval(timer);
     }
   }, 1000);
 });
@@ -87,10 +83,15 @@ onUnmounted(() => {
   <div v-if="removedFromSession">
     You were removed from this session.
   </div>
-  <div class="mobile-visualization" v-else>
+  <div v-else-if="!props.session.votingStartTime">
+   <div class="sticky-header">
+      <h2 class="header">No recommendations yet</h2>
+    </div>
+  </div>
+  <div class="mobile-visualization">
     <div class="sticky-header">
       <h2 class="header">Vote for the next song!</h2>
-      <p class="countdown">Time remaining: {{ countdown }}s</p>
+      <p class="countdown">Time remaining: {{ countdown - countdownDelta }}s</p>
     </div>
     <div class="song-list">
       <div v-for="(song, index) in songList" :key="index" class="song-item">

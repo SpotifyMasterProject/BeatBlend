@@ -14,12 +14,14 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits(['hover', 'leave']);
+const similarityScoreIndex = ref(-1);
 
 const flowerData = computed(() => {
   return props.recommendations.map((song) => {
     return {
       features: getSongFeatures(song),
-      mostSignificantFeature: getSongFeatureCategory(song.mostSignificantFeature)
+      mostSignificantFeature: getSongFeatureCategory(song.mostSignificantFeature),
+      similarityScore: song.similarityScore,
     };
   });
 });
@@ -36,7 +38,13 @@ const flowerLines = computed(() => {
     if (!currentFlower || !nextFlower) {
       return [];
     }
-    lines.push(computeLineBetweenFlowers(currentFlower, nextFlower));
+    const positions = computeLineBetweenFlowers(currentFlower, nextFlower);
+    lines.push({
+      position: positions.line,
+      width: 300 * (Math.max(flowerData.value[i].similarityScore, 0.98) - 0.98 + 0.001),
+      textPosition: positions.text,
+      similarityScore: Math.max(Math.trunc(flowerData.value[i].similarityScore * 1000) / 1000.0, 0)
+    });
   }
 
   return lines;
@@ -48,12 +56,12 @@ const flowerPositions = computed(() => {
   }
   const positions = [];
   const verticalDistance = -100;
-  const horizontalDistance = 50;
+  const horizontalDistance = 100;
 
   return props.recommendations.map((_, index) => {
     return {
       x: props.lastFlowerPosition.x + horizontalDistance,
-      y: props.lastFlowerPosition.y - 40 + (index - 1) * verticalDistance,
+      y: props.lastFlowerPosition.y - 40 - (index - 1) * verticalDistance,
     }
   })
 });
@@ -104,11 +112,24 @@ const computeLineBetweenFlowers = (flowerA, flowerB) => {
   const curvatureIntensity = distance * curvatureRelativeIntensity;
 
   const firstCurvatureShifted = shiftPoint(flowerA, flowerB, firstCurvature, curvatureRelativeIntensity);
-  return `M ${flowerA.x} ${flowerA.y}
+  return {
+    line: `M ${flowerA.x} ${flowerA.y}
       Q ${firstCurvatureShifted.x}
         ${firstCurvatureShifted.y},
-        ${flowerB.x} ${flowerB.y}`;
+        ${flowerB.x} ${flowerB.y}`,
+    text: {
+      ...firstCurvatureShifted
+    }
+  };
 };
+
+function toggleSimilarityScore(index) {
+  if (similarityScoreIndex.value === index) {
+    similarityScoreIndex.value = -1;
+  } else if (similarityScoreIndex.value === -1) {
+    similarityScoreIndex.value = index;
+  }
+}
 
 </script>
 <template>
@@ -122,11 +143,13 @@ const computeLineBetweenFlowers = (flowerA, flowerB) => {
       @hover="() => emit('hover', recommendations[index])"
       @leave="emit('leave')"
     />
-    <path
-      v-for="line in flowerLines"
-      class="connecting-path"
-      :d="line" stroke="white" fill="transparent"
-    />
+    <g v-for="(line, index) in flowerLines" @mouseenter="() => toggleSimilarityScore(index)" @mouseleave="() => toggleSimilarityScore(index)">
+      <path
+        class="connecting-path"
+        :d="line.position" stroke="white" :stroke-width="line.width" fill="transparent"
+      />
+      <text v-if="similarityScoreIndex === index" :x="line.textPosition.x" :y="line.textPosition.y" fill="white">{{line.similarityScore}}</text>
+    </g>
 </template>
 <style scoped>
 .flower-wrapper {
@@ -153,6 +176,6 @@ const computeLineBetweenFlowers = (flowerA, flowerB) => {
   flex-direction: row;
 }
 .connecting-path {
-  pointer-events: none;
+  cursor: pointer;
 }
 </style>
