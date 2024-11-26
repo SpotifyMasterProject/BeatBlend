@@ -19,6 +19,16 @@
           <span v-else>Recommendation</span>
         </p>
       </div>
+      <div class="add-by" v-if="votedByUsers.length>0">
+        <p><strong>Votes: </strong>
+          <ul>
+            <li v-for="user in  votedByUsers" :key="user.id">
+              {{ user. username }}
+              <span id="avatar" class="avatar" v-html="user.avatar"></span>
+            </li>
+          </ul>
+        </p>
+      </div>
     </div>
   </div>
 </template>
@@ -77,6 +87,15 @@ const addedByUser = computed(() => {
     return null;
   }
 });
+
+const votedByUsers = computed(() => {
+  if (props.song.votes) {
+    return props.song.votes
+        .map(id => userStore.findUser(id))
+  }
+
+  return [];
+})
 
 
 
