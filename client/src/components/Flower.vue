@@ -41,9 +41,9 @@ const onPetalEndPositionComputed = (position, songFeatureCategory) => {
 };
 
 const bloomClass = computed(() => {
-  if (props.bloom && !props.isSelected) return 'bloom-static'; // bloom
-  if (props.isSelected && !props.bloom) return 'bloom-circle';   // Static bloom
-  if (props.bloom && props.isSelected) return 'bloom-static';  // bloom when both are true
+  if (props.bloom && !props.isSelected) return 'bloom-circle'; // bloom
+  if (props.isSelected && !props.bloom) return 'bloom-static';   // Static bloom
+  if (props.bloom && props.isSelected) return 'bloom-circle';  // bloom when both are true
   return ''; // No bloom effect
 });
 
