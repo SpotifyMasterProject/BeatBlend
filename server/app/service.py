@@ -12,7 +12,7 @@ from jwt import InvalidTokenError
 from spotipy import Spotify
 from spotipy.oauth2 import SpotifyOAuth, SpotifyOauthError
 from typing import Annotated
-from databases.interfaces import Record
+from asyncio import Task
 from collections import defaultdict
 
 from models.user import User, SpotifyUser
@@ -158,8 +158,9 @@ class Service:
     @with_session_lock
     async def set_most_popular_recommendation(self, session_id: str) -> None:
         session = await self.get_session(session_id)
-        session.playlist.queued_songs.append(max(session.recommendations, key=lambda recommendation: len(recommendation.votes)))
-        await self.repo.set_session(session)
+        if not session.playlist.queued_songs:
+            session.playlist.queued_songs.append(max(session.recommendations, key=lambda recommendation: len(recommendation.votes)))
+            await self.repo.set_session(session)
 
     async def generate_recommendations(self, songs: list[Song], limit: int) -> list[Song]:
         result = await self.repo.get_recommendations_by_songs(songs, limit)
@@ -185,24 +186,25 @@ class Service:
         return recommendations
 
     @with_session_lock
-    async def set_session_recommendations(self, session_id: str, recommendations: list[Song]) -> None:
+    async def set_session_recommendations(self, session_id: str, recommendations: list[Song]) -> Session:
         session = await self.get_session(session_id)
         session.recommendations.clear()
         session.recommendations.extend(recommendations)
         await self.repo.set_session(session)
+        return session
 
     async def generate_session_recommendations(self, session_id: str, limit: int = 3, automation_task: bool = False) -> None:
         session = await self.get_session(session_id)
         recommendations = await self.generate_recommendations(session.playlist.get_all_songs(), limit)
-        await self.set_session_recommendations(session.id, recommendations)
-        if not automation_task:  # generation was not invoked by automation, remove current asyncio task
+        session = await self.set_session_recommendations(session.id, recommendations)
+        if not automation_task:  # generation was not invoked by automation, remove current asyncio task here
+            await self.manager.publish(
+                channel=f"recommendations:{session.id}",
+                message=SongList(
+                    songs=session.recommendations
+                )
+            )
             self.asyncio_tasks[session.id].remove(asyncio.current_task())
-
-    async def check_for_empty_queue(self, session_id: str) -> None:
-        session = await self.get_session(session_id)
-        if not session.playlist.queued_songs:
-            await self.set_most_popular_recommendation(session.id)
-            await self.generate_session_recommendations(session.id, automation_task=True)
 
     @with_session_lock
     async def update_current_song_and_queue(self, session_id: str) -> None:
@@ -212,32 +214,42 @@ class Service:
             session.playlist.played_songs.append(session.playlist.current_song)
             session.playlist.current_song = None
         session.playlist.current_song = session.playlist.queued_songs.pop(0)
-        await self.manager.publish(channel=f"playlist:{session.id}", message=session.playlist)
         await self.repo.set_session(session)
+        await self.manager.publish(channel=f"playlist:{session.id}", message=session.playlist)
 
     @with_session_lock
-    async def check_for_voting_start(self, session_id: str) -> None:
+    async def start_voting(self, session_id: str) -> None:
+        session = await self.get_session(session_id)
+        session.voting_start_time = datetime.now().timestamp()
+        await self.repo.set_session(session)
+        await self.manager.publish(
+            channel=f"recommendations:{session.id}",
+            message=SongList(
+                songs=session.recommendations,
+                voting_start_time=session.voting_start_time
+            )
+        )
+
+    async def check_for_empty_queue(self, session_id: str) -> None:
         session = await self.get_session(session_id)
         if not session.playlist.queued_songs:
-            session.voting_start_time = datetime.now().timestamp()
-            await self.repo.set_session(session)
-            await self.manager.publish(
-                channel=f"recommendations:{session.id}",
-                message=SongList(
-                    songs=session.recommendations,
-                    voting_start_time=session.voting_start_time
-                )
-            )
+            await self.generate_session_recommendations(session.id, automation_task=True)
+            await self.start_voting(session.id)
+        self.asyncio_tasks[session.id].remove(asyncio.current_task())
 
-    async def advance_playlist(self, session_id: str) -> None:
-        await self.check_for_empty_queue(session_id)
+    async def advance_playlist(self, session_id: str) -> Task:
+        await self.set_most_popular_recommendation(session_id)
         await self.update_current_song_and_queue(session_id)
-        await self.check_for_voting_start(session_id)
+        generation_task = asyncio.create_task(self.check_for_empty_queue(session_id))
+        self.asyncio_tasks[session_id].append(generation_task)
+        return generation_task
 
-    async def automate(self, session_id: str):
-        await asyncio.sleep(20)
-        await self.advance_playlist(session_id)
-        await self.automate(session_id)
+    async def automate(self, session_id: str, generation_task: Task = None):
+        await asyncio.sleep(30)
+        if generation_task:  # failsafe in case generation hasn't finished after 30 seconds
+            await generation_task
+        generation_task = await self.advance_playlist(session_id)
+        await self.automate(session_id, generation_task)
 
     async def create_session(self, host_id: str, session: Session) -> Session:
         host = await self.get_user(host_id)
