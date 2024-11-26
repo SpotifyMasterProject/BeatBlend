@@ -268,16 +268,21 @@ const onLeaveFlower = () => {
 }
 
 const currentSongIndex = computed(() => {
-  const currentId = props.session.playlist.currentSong.id
-  console.log("current song: ", currentId)
-  const currentIndex = props.session.playlist.currentSong
-    ? playlist.value.findIndex(
-        song => song.id === props.session.playlist.currentSong.id
-      )
-    : -1;
-  console.log("current index: ", currentIndex)
+  if (props.sessionEnded) {
+    return null;
+  }
+  else {
+    const currentId = props.session.playlist.currentSong.id
+    console.log("current song: ", currentId)
+    const currentIndex = props.session.playlist.currentSong
+      ? playlist.value.findIndex(
+          song => song.id === props.session.playlist.currentSong.id
+        )
+      : -1;
+    console.log("current index: ", currentIndex)
 
-  return currentIndex
+    return currentIndex
+  }
 });
 
 const currentSongPreviewUrl = computed(() => {
@@ -308,6 +313,7 @@ watch(() => props.sessionEnded, (newVal) => {
     }
     console.log("Session ended. Audio stopped.");
     currentSongIndex.value = null;
+    console.log("Current Index: ", currentSongIndex.value)
   }
 });
 
@@ -458,13 +464,18 @@ function toggleSimilarityScore(index) {
   margin: auto;
 }
 .audio-unavailable-message {
-  position: absolute;
-  top: 10px;
-  color: red;
-  font-size: 1.2em;
+  position: fixed;
+  top: 12%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 8px 16px;
+  background-color: var(--backcore-color3);
+  border: 2px solid red;
+  color: lightcoral;
+  font-size: 1em;
   font-weight: bold;
-  text-align: left;
-  width: 100%;
+  text-align: center;
+  border-radius: 12px;
   z-index: 1000;
 }
 .svg-container {
