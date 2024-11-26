@@ -415,14 +415,13 @@ function handleFlowerSelected(index, featureCategory) {
 }
 .guests-container {
   height: 60%;
-  overflow: scroll;
+  overflow: auto;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 .settings-icon {
-  position: absolute;
-  right: 60px;
+  margin-left: auto;
   color: var(--logo-highlight-color);
   font-size: 30px;
   cursor: pointer;
