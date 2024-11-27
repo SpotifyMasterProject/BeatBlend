@@ -109,6 +109,9 @@ input:focus {
 }
 .start-session:disabled {
     color: var(--button-disabled-font-color);
+    background-color: var(--backcore-color1);
+    border: 2px solid var(--logo-highlight-color);
+    cursor: not-allowed;
 }
 
 .loading-overlay {
