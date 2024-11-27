@@ -12,6 +12,7 @@ const props = defineProps<{
 }>();
 
 const countdownDelta = ref(0);
+const isTimeUp = ref(false);
 
 const countdown = computed(() => {
   console.log(props.session);
@@ -22,7 +23,6 @@ const countdown = computed(() => {
   return Math.floor(Math.max(20 - millis / 1000, 0));
 });
 
-const isTimeUp = ref(false);
 let timer: NodeJS.Timeout | null = null;
 
 const authStore = useAuthStore();
@@ -88,7 +88,7 @@ onUnmounted(() => {
       <h2 class="header">No recommendations yet</h2>
     </div>
   </div>
-  <div class="mobile-visualization">
+  <div v-else-if="props.session.votingStartTime" class="mobile-visualization">
     <div class="sticky-header">
       <h2 class="header">Vote for the next song!</h2>
       <p class="countdown">Time remaining: {{ countdown - countdownDelta }}s</p>
