@@ -19,9 +19,9 @@
           <span v-else>Recommendation</span>
         </p>
       </div>
-      <div class="add-by" v-if="votedByUsers.length>0">
+      <div class="votes" v-if="votedByUsers.length>0">
         <p><strong>Votes: </strong>
-          <ul>
+          <ul class="voter">
             <li v-for="user in  votedByUsers" :key="user.id">
               {{ user. username }}
               <span id="avatar" class="avatar" v-html="user.avatar"></span>
@@ -93,20 +93,15 @@ const votedByUsers = computed(() => {
     return props.song.votes
         .map(id => userStore.findUser(id))
   }
-
   return [];
 })
-
-
-
-
 </script>
 
 <style scoped>
 .song-detail-modal {
   position: fixed;
-  top: 30%;
-  left: 85%;
+  top: 35%;
+  left: 87%;
   transform: translate(-50%, -50%);
   background-color: #272525;
   border-radius: 15px;
@@ -142,6 +137,21 @@ const votedByUsers = computed(() => {
   display: flex;
   justify-content: space-between;
   margin-top: 10px;
+}
+
+.votes {
+  display: flex;
+}
+
+.voter {
+  display: block;
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+
+.voter li{
+  display: block;
 }
 
 .avatar {
