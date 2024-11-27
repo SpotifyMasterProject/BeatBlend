@@ -21,6 +21,9 @@ function closePopup(){
       </div>
       <div class="popup-body">
         <div class="popup-column column-1">
+          <div class="VizFontHeader" style="font-weight:bold; margin-left: 20px; margin-bottom: 20px;">
+            Audio Features as Petals
+          </div>
           <div class ="flower-ruler-container">
             <svg width="160" height="160">
               <circle cx="80" cy="80" r="40" fill="none" stroke="#FFFFFF" stroke-width="2"/>
@@ -37,7 +40,6 @@ function closePopup(){
                   fill="none"
               />
             </svg>
-            <!-- Ruler -->
             <div class="ruler">
               <div class="ruler-line"></div>
               <div class="horizontal-line" style="top: 0%;"></div>
@@ -48,14 +50,15 @@ function closePopup(){
               <div class="ruler-label" style="top: 50%;">0</div>
             </div>
           </div>
-          <!-- Left Column: Circle and one Petal -->
           <div class="petal-explanation">
-            <p>Each petal represents a feature. The length and width are determined by the feature's value, ranging from 0 (center) to 1 (edge).</p>
+            <p>Each petal represents an audio feature. The length and width are determined by the feature's value, ranging from 0 (center) to 1 (edge).</p>
           </div>
         </div>
         <div class="vertical-line"></div>
         <div class="popup-column column-2">
-          <!-- Right Column: Flower and Audio Features Below -->
+          <div class="VizFontHeader" style="font-weight:bold; margin-bottom: 20px;">
+            Song as Flowers with Audio Feature Colors
+          </div>
           <div class="flower-container">
             <Flower :features="[
               { value: 0.5, category: SongFeatureCategory.TEMPO },
@@ -69,7 +72,7 @@ function closePopup(){
             <div class="petal-description">
               <div class="petal-color energy"></div>
               <p>Energy</p>
-            </div>  
+            </div>
             <div class="petal-description">
               <div class="petal-color danceability"></div>
               <p>Danceability</p>
@@ -86,6 +89,18 @@ function closePopup(){
               <div class="petal-color tempo"></div>
               <p>Tempo</p>
             </div>
+          </div>
+          <div class="horizontalLine"></div>
+          <div class="popup-column column-3">
+            <div class="VizFontHeader" style="font-weight:bold; margin-bottom: 20px;"> Linking of Flowers </div>
+            <div class="popup-body" style="width:100%;">
+              <div class="popup-column column-3">
+                <div class ="petal-explanation">
+                  <p>Flowers are linked by a connective line by their most significant audio features. The width of the line represents the strength of the connection.
+                    By hovering over the line, it is possible to see the exact number. </p>
+                </div>
+                </div>
+              </div>
           </div>
         </div>
       </div>
@@ -160,7 +175,7 @@ function closePopup(){
 }
 
 .column-2 {
-  flex: 3;
+  flex: 2;
   padding-left: 20px;
   padding-right: 10px;
   flex-direction: column;
@@ -168,13 +183,29 @@ function closePopup(){
 
 }
 
+.column-3 {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.VizFontHeader {
+  margin: 5px;
+  text-align: center;
+  font-size: 16px;
+}
+
 .column-1::after {
   content: '';
   position: absolute;
-  top: 0;
+  top: 10px;
   right: -50px;
   width: 1px;
-  height: 100%;
+  height: 130%;
   background-color: white;
 }
 
@@ -254,6 +285,15 @@ function closePopup(){
   height: 20px;
   border-radius: 50%;
 }
+.horizontalLine {
+  width: 80%;
+  height: 1px;
+  margin: 20px 0;
+  background-color: white;
+  position: relative;
+  z-index: 1 ;
+  flex-shrink: 0;
+}
 
 @media (max-width: 840px) {
   .popup-body {
@@ -285,8 +325,17 @@ function closePopup(){
     z-index: 1 ;
     flex-shrink: 0;
   }
+  .horizontalLine {
+    width: 100%;
+    height: 1px;
+    margin: 20px 0;
+    background-color: white;
+    position: relative;
+    z-index: 1 ;
+    flex-shrink: 0;
+  }
   .column-1::after {
-    display: none; /* Hides the line */
+    display: none;
   }
 }
 .tempo {
