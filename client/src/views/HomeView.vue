@@ -229,6 +229,7 @@ function handleFlowerSelected(index, featureCategory) {
 .function-icon-container button {
   width: 40px;
   height: 40px;
+  left: -5px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -291,7 +292,7 @@ function handleFlowerSelected(index, featureCategory) {
 }
 .song-feature-dialog button {
   position: sticky;
-  right: 0;
+  right: 0px;
   z-index: 1001;
   padding: 4px 8px;
   background-color: #6BA149;
@@ -364,9 +365,10 @@ function handleFlowerSelected(index, featureCategory) {
   }
 
   .function-icon-container button {
-    width: 35px;
-    height: 35px;
+    width: 30px;
+    height: 30px;
     font-size: 14px;
+    top: -15px;
   }
 
   .song-feature-dialog {
@@ -450,6 +452,6 @@ function handleFlowerSelected(index, featureCategory) {
   background-color: var(--logo-highlight-color)
 }
 .audio-feature-button {
-  margin: 10px;
+  margin-top: 10px;
 }
 </style>

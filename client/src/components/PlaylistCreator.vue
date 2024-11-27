@@ -34,10 +34,10 @@ const startSession = async () => {
 </script>
 <template>
     <div class="playlist-creator">
-        <InputText class="title" type="text" v-model="title" placeholder="Playlist Title..." />
+        <InputText class="title" type="text" v-model="title" placeholder="BeatBlend Title..." />
         <SongSelector
             v-model="selectedSongs"
-            headerText="Add 3 songs to start the blend" />
+            headerText="Add at least 3 songs to start the blend" />
         <Button class="start-session" :disabled="!canStartSession" @click="startSession">
             Start
         </Button>
