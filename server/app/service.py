@@ -162,8 +162,8 @@ class Service:
             session.playlist.queued_songs.append(max(session.recommendations, key=lambda recommendation: len(recommendation.votes)))
             await self.repo.set_session(session)
 
-    async def generate_recommendations(self, songs: list[Song], limit: int) -> list[Song]:
-        result = await self.repo.get_recommendations_by_songs(songs, limit)
+    async def generate_recommendations(self, session: Session, limit: int) -> list[Song]:
+        result = await self.repo.get_recommendations_by_songs(session.id, session.playlist.get_all_songs(), limit)
         recommendations = []
         first_recommendation = True
         for row in result:
@@ -195,7 +195,7 @@ class Service:
 
     async def generate_session_recommendations(self, session_id: str, limit: int = 3, automation_task: bool = False) -> None:
         session = await self.get_session(session_id)
-        recommendations = await self.generate_recommendations(session.playlist.get_all_songs(), limit)
+        recommendations = await self.generate_recommendations(session, limit)
         session = await self.set_session_recommendations(session.id, recommendations)
         if not automation_task:  # generation was not invoked by automation, remove current asyncio task here
             await self.manager.publish(
