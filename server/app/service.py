@@ -339,8 +339,8 @@ class Service:
             most_significant_feature_overall=most_significant_feature_overall,
             first_recommendation_vote_percentage=first_recommendation_vote_percentage,
             average_features=average_features,
-            genre_start=played_songs[0].genre if played_songs else "no songs played",
-            genre_end=played_songs[-1].genre if played_songs else "no songs played"
+            genre_start=played_songs[0].genre if played_songs else ["no songs played"],
+            genre_end=played_songs[-1].genre if played_songs else ["no songs played"]
         )
 
     @with_session_lock
