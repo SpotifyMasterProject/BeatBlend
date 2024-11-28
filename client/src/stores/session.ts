@@ -20,19 +20,18 @@ export const useSession = defineStore('session', () => {
     const handleSessionMessages = (sessionMessage: Session) => {
         const playlist = sessionMessage.playlist || session.value.playlist;
         const recommendations = sessionMessage.recommendations || session.value.recommendations;
+        const votingStartTime = sessionMessage.recommendations || session.value.votingStartTime;
         session.value = {
             isRunning: session.value.isRunning,
             ...sessionMessage,
             playlist,
-            recommendations
+            recommendations,
+            votingStartTime,
         };
     };
       
     const handlePlaylistMessages = (playlistMessage: Playlist) => {
-        if (session.value.playlist.currentSong?.id !== playlistMessage.currentSong?.id) {
-            session.value.recommendations = [];
-            fetchRecommendations();
-        }
+        session.value.recommendations = [];
         session.value.playlist = playlistMessage;
     };
       

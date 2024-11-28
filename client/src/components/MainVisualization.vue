@@ -71,7 +71,7 @@ function resizeSVG() {
   }
   console.log(bbox);
   // Update the width and height using the size of the contents
-  svg.value.setAttribute("width", bbox.x + 1.5 * bbox.width + bbox.x);
+  svg.value.setAttribute("width", bbox.x + 3 * bbox.width + bbox.x);
   svg.value.setAttribute("height", bbox.y + 1.5 * bbox.height + bbox.y);
 }
 
