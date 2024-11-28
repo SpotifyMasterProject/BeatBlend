@@ -20,14 +20,13 @@
         </p>
       </div>
       <div class="votes" v-if="votedByUsers.length>0">
-        <p><strong>Votes: </strong>
-          <ul class="voter">
-            <li v-for="user in  votedByUsers" :key="user.id">
-              {{ user. username }}
-              <span id="avatar" class="avatar" v-html="user.avatar"></span>
-            </li>
-          </ul>
-        </p>
+        <p><strong>Votes: </strong></p>
+        <ul class="voter">
+          <li v-for="user in  votedByUsers" :key="user.id">
+            {{ user. username }}
+            <span id="avatar" class="avatar" v-html="user.avatar"></span>
+          </li>
+        </ul>
       </div>
     </div>
   </div>
