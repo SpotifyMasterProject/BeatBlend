@@ -334,8 +334,8 @@ class Service:
         return Artifact(
             songs_played=total_songs,
             songs_added_manually=total_manually_added_songs,
-            most_songs_added_by=(", ".join([user.username for user in most_songs_added_by])) if most_songs_added_by else "no songs added",
-            most_votes_by=(", ".join([user.username for user in most_votes_by])) if most_votes_by else "no votes recorded",
+            most_songs_added_by=[user.username for user in most_songs_added_by] if most_songs_added_by else ["no songs added"],
+            most_votes_by=[user.username for user in most_votes_by] if most_votes_by else ["no votes recorded"],
             most_significant_feature_overall=most_significant_feature_overall,
             first_recommendation_vote_percentage=first_recommendation_vote_percentage,
             average_features=average_features,
