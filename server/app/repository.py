@@ -5,6 +5,7 @@ from redis.asyncio import Redis
 from sqlalchemy import Column, Table, MetaData, Integer, String, ARRAY, Float, Date, insert, select, func
 from sqlalchemy.dialects.postgresql import TSVECTOR
 from typing import Optional
+from collections import defaultdict
 
 from models.session import Session
 from models.user import User
@@ -36,6 +37,7 @@ class Repository:
     def __init__(self, postgres: Database, redis: Redis):
         self.redis = redis
         self.postgres = postgres
+        self.marked_recommendations = defaultdict(set)
 
     @staticmethod
     def get_user_key(user_id) -> str:
@@ -100,7 +102,6 @@ class Repository:
 
         for query in schema_setup_queries:
             await self.postgres.execute(query)
-        print("Full-text search setup completed.")
 
     async def get_songs_by_pattern(self, pattern: str, limit: int) -> list[Record]:
         ts_query = func.plainto_tsquery('simple', pattern)
@@ -115,9 +116,11 @@ class Repository:
     #     query = delete(songs).where(songs.c.id == song_id)
     #     await self.postgres.execute(query)
 
-    async def get_recommendations_by_songs(self, playlist: list[Song], limit: int = 3) -> list[Record]:
+    async def get_recommendations_by_songs(self, session_id: str, playlist: list[Song], limit: int = 3) -> list[Record]:
         if not playlist:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Playlist is empty")
+
+        previously_recommended = self.marked_recommendations[session_id]
 
         create_extension_query = "CREATE EXTENSION IF NOT EXISTS cube;"
         await self.postgres.execute(create_extension_query)
@@ -166,6 +169,7 @@ class Repository:
                     ) AS cosine_distance
                 FROM songs s, target_songs t, tempo_stats ts
                 WHERE s.id != ALL(:song_ids)  -- exclude the target songs
+                  AND s.id != ALL(:previously_recommended)  -- exclude already recommended songs
             )
             -- return the 3 closest songs and the feature differences
             SELECT id, diff_danceability, diff_energy, diff_speechiness, diff_valence, diff_tempo, cosine_distance
@@ -174,9 +178,18 @@ class Repository:
             LIMIT :limit;
         """
 
-        result = await self.postgres.fetch_all(query, {"song_ids": song_ids, "limit": limit})
+        params = {
+            "song_ids": song_ids,
+            "previously_recommended": list(previously_recommended),
+            "limit": limit
+        }
+
+        result = await self.postgres.fetch_all(query, params)
         if result is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No recommendations found")
+
+        new_recommended_ids = {song["id"] for song in result}
+        self.marked_recommendations[session_id].update(new_recommended_ids)
         return result
 
     async def delete_session_by_id(self, session_id: str) -> None:
