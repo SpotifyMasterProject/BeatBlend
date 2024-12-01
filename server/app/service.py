@@ -124,32 +124,32 @@ class Service:
         result = await self.repo.get_user_by_id(user_id)
         return User.model_validate_json(result)
 
-    @staticmethod
-    async def get_genre(song: Song) -> None:
-        params = {
-            'release_title': song.album,
-            'artist': ', '.join(song.artists),
-            'type': 'release',  # album/single/EP
-            'token': DISCOGS_API_TOKEN
-        }
+    # @staticmethod
+    # async def get_genre(song: Song) -> None:
+    #     params = {
+    #         'release_title': song.album,
+    #         'artist': ', '.join(song.artists),
+    #         'type': 'release',  # album/single/EP
+    #         'token': DISCOGS_API_TOKEN
+    #     }
+    #
+    #     response = requests.get(DISCOGS_API_URL, params=params)
+    #     if response.status_code == 200:
+    #         data = response.json()
+    #         if 'results' in data and len(data['results']) > 0:
+    #             result = data['results'][0]  # first result is most relevant
+    #             genres = result.get('genre', [])
+    #             song.genre = genres
+    #     else:
+    #         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Discogs could not be reached")
 
-        response = requests.get(DISCOGS_API_URL, params=params)
-        if response.status_code == 200:
-            data = response.json()
-            if 'results' in data and len(data['results']) > 0:
-                result = data['results'][0]  # first result is most relevant
-                genres = result.get('genre', [])
-                song.genre = genres
-        else:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Discogs could not be reached")
-
-    async def get_popularity_and_preview_url(self, song: Song) -> None:
-        try:
-            song_info = self.spotify_api_client.track(song.id)
-            song.preview_url = song_info.get('preview_url')
-            song.popularity = song_info.get('popularity')
-        except Exception as e:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Request unsuccessful: {repr(e)}")
+    # async def get_popularity_and_preview_url(self, song: Song) -> None:
+    #     try:
+    #         song_info = self.spotify_api_client.track(song.id)
+    #         song.preview_url = song_info.get('preview_url')
+    #         song.popularity = song_info.get('popularity')
+    #     except Exception as e:
+    #         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Request unsuccessful: {repr(e)}")
 
     async def get_session(self, session_id: str) -> Session:
         result = await self.repo.get_session_by_id(session_id)
@@ -168,8 +168,8 @@ class Service:
         first_recommendation = True
         for row in result:
             song = await self.get_song_from_database(row['id'])
-            await self.get_genre(song)
-            await self.get_popularity_and_preview_url(song)
+            # await self.get_genre(song)
+            # await self.get_popularity_and_preview_url(song)
             diffs = {
                 'danceability': row['diff_danceability'],
                 'energy': row['diff_energy'],
@@ -260,8 +260,8 @@ class Service:
         session.invite_link = f'{BASE_URL}/{session.id}/join'
         for song in session.playlist.queued_songs:
             song.added_by = host
-            await self.get_genre(song)
-            await self.get_popularity_and_preview_url(song)
+            # await self.get_genre(song)
+            # await self.get_popularity_and_preview_url(song)
         await self.repo.set_session(session)
         await self.advance_playlist(session.id)
         self.asyncio_tasks[session.id].append(asyncio.create_task(self.generate_session_recommendations(session.id)))
@@ -383,50 +383,50 @@ class Service:
     async def get_song_from_database(self, song_id: str) -> Song:
         result = await self.repo.get_song_by_id(song_id)
         song = Song.model_validate(dict(result))
-        await self.get_genre(song)
-        await self.get_popularity_and_preview_url(song)
+        # await self.get_genre(song)
+        # await self.get_popularity_and_preview_url(song)
         return song
 
-    async def add_song_to_database(self, song_id: str) -> Song:
-        try:
-            song_info = self.spotify_api_client.track(song_id)
-            audio_features = self.spotify_api_client.audio_features(song_id)[0]
-            combined_info = {**song_info, **audio_features}
-
-            album_info = combined_info.get('album', {})
-            artists_info = combined_info.get('artists', [])
-            release_date_str = album_info.get('release_date')
-            release_date = None
-            if release_date_str:
-                try:
-                    release_date = datetime.strptime(release_date_str, "%Y-%m-%d").date()
-                except ValueError:
-                    release_date = None
-
-            filtered_song_info = {
-                "id": str(combined_info.get('id', '')),
-                "track_name": str(combined_info.get('name', '')),
-                "album": str(album_info.get('name', '')),
-                "album_id": str(album_info.get('id', '')),
-                "artists": [str(artist['name']) for artist in artists_info],
-                "artist_ids": [str(artist['id']) for artist in artists_info],
-                "danceability": float(combined_info.get('danceability', 0.0)),
-                "energy": float(combined_info.get('energy', 0.0)),
-                "speechiness": float(combined_info.get('speechiness', 0.0)),
-                "valence": float(combined_info.get('valence', 0.0)),
-                "tempo": float(combined_info.get('tempo', 0.0)),
-                "duration_ms": int(combined_info.get('duration_ms', 0)),
-                "release_date": release_date,
-                "popularity": float(combined_info.get('popularity', 0.0))
-            }
-
-            await self.repo.add_song_by_info(filtered_song_info)
-            filtered_song_info["preview_url"] = combined_info.get('preview_url')
-            song = Song(**filtered_song_info)
-            await self.get_genre(song)
-            return song
-        except Exception as e:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Request unsuccessful: {repr(e)}")
+    # async def add_song_to_database(self, song_id: str) -> Song:
+    #     try:
+    #         song_info = self.spotify_api_client.track(song_id)
+    #         audio_features = self.spotify_api_client.audio_features(song_id)[0]
+    #         combined_info = {**song_info, **audio_features}
+    #
+    #         album_info = combined_info.get('album', {})
+    #         artists_info = combined_info.get('artists', [])
+    #         release_date_str = album_info.get('release_date')
+    #         release_date = None
+    #         if release_date_str:
+    #             try:
+    #                 release_date = datetime.strptime(release_date_str, "%Y-%m-%d").date()
+    #             except ValueError:
+    #                 release_date = None
+    #
+    #         filtered_song_info = {
+    #             "id": str(combined_info.get('id', '')),
+    #             "track_name": str(combined_info.get('name', '')),
+    #             "album": str(album_info.get('name', '')),
+    #             "album_id": str(album_info.get('id', '')),
+    #             "artists": [str(artist['name']) for artist in artists_info],
+    #             "artist_ids": [str(artist['id']) for artist in artists_info],
+    #             "danceability": float(combined_info.get('danceability', 0.0)),
+    #             "energy": float(combined_info.get('energy', 0.0)),
+    #             "speechiness": float(combined_info.get('speechiness', 0.0)),
+    #             "valence": float(combined_info.get('valence', 0.0)),
+    #             "tempo": float(combined_info.get('tempo', 0.0)),
+    #             "duration_ms": int(combined_info.get('duration_ms', 0)),
+    #             "release_date": release_date,
+    #             "popularity": float(combined_info.get('popularity', 0.0))
+    #         }
+    #
+    #         await self.repo.add_song_by_info(filtered_song_info)
+    #         filtered_song_info["preview_url"] = combined_info.get('preview_url')
+    #         song = Song(**filtered_song_info)
+    #         # await self.get_genre(song)
+    #         return song
+    #     except Exception as e:
+    #         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Request unsuccessful: {repr(e)}")
 
     # async def delete_song_from_database(self, song_id: str) -> None:
     #     await self.repo.delete_song_by_id(song_id)
@@ -435,7 +435,8 @@ class Service:
         try:
             return await self.get_song_from_database(song_id)
         except HTTPException:
-            return await self.add_song_to_database(song_id)
+            # return await self.add_song_to_database(song_id)
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Song not found")
 
     @with_session_lock
     async def add_song_to_session(self, user_id: str, session_id: str, song_id: str) -> Playlist:
