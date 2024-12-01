@@ -31,6 +31,28 @@ songs = Table(
     Column("search_vector", TSVECTOR, nullable=True)
 )
 
+songs = Table(
+    "songs",
+    metadata,
+    Column("id", String, primary_key=True),
+    Column("track_name", String),
+    Column("album", String),
+    Column("album_id", String, nullable=True), # No more album_id. Migrate all fields to Null
+    Column("artists", ARRAY(String)), # Only one entry. Migrate all fields to list with one entry
+    Column("artist_ids", ARRAY(String)), # Only one entry. Migrate all fields to list with one entry
+    Column("danceability", Float),
+    Column("energy", Float),
+    Column("speechiness", Float),
+    Column("valence", Float),
+    Column("tempo", Float), # TODO: Wait for normalization formula
+    Column("duration_ms", Integer),
+    Column("release_date", Date, nullable=True), # No more release_date. Migrate all fields to Null
+    Column("popularity", Float, nullable=True), # No more popularity. Migrate all fields to Null
+    Column("genres", ARRAY(String)), # Newly available. Could change code to use this instead of DiscogsAPI
+    Column("preview_url", String), # Newly available. Need to change code to use this instead of SpotifyAPI
+    Column("search_vector", TSVECTOR, nullable=True)
+)
+
 
 class Repository:
     def __init__(self, postgres: Database, redis: Redis):
