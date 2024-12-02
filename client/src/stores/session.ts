@@ -90,7 +90,7 @@ export const useSession = defineStore('session', () => {
             session.value.isRunning = false;
             session.value.guests = {};
 
-            sessionSocket.close;
+            sessionSocket.close();
             playlistSocket.close();
             recommendationsSocket.close();
         } catch (error) {
