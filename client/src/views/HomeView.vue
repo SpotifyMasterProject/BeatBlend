@@ -122,11 +122,32 @@ function handleFlowerSelected(index, featureCategory) {
   showSongFeatureDialog.value = true;
 }
 
+const startNewSession = async () => {
+  try {
+    if (session.value?.id) {
+      await sessionStore.endSession();
+      console.log ("Session sucessfully ended.");
+    }
+    sessionEnded.value = false;
+    session.value = null;
+
+    createNewSessionFlow.value = true;
+    console.log("Starting new session flow....");
+  } catch (error){
+    console.error ("Error starting a new session", error);
+  }
+}
+
 </script>
 
 <template>
   <div class="type2">
     <header>
+      <div v-if ="sessionEnded" class="new-session-button-container">
+        <button class="new-session-button" @click="startNewSession">
+          Start a New Session
+        </button>
+      </div>
       <div class="function-icon-container" v-if="session?.isRunning">
         <Button icon="pi pi-search" severity="success" raised rounded :unstyled="false" @click="toggleAddMoreSongPopup" />
       </div>
@@ -452,5 +473,32 @@ function handleFlowerSelected(index, featureCategory) {
 }
 .audio-feature-button {
   margin-top: 10px;
+}
+
+.new-session-button-container {
+  position: absolute;
+  top: 10px;
+  left: 20px;
+  z-index: 1000;
+}
+
+.new-session-button {
+  font-size: 14px;
+  background-color: #363636;
+  border-radius: 12px;
+  border: none;
+  padding: 8px 20px;
+  cursor: pointer;
+  font-weight: bold;
+  color: white;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.new-session-button:hover {
+  background-color: var(--logo-highlight-color);
+}
+
+.new-session-button.active {
+  background-color: var(--logo-highlight-color);
 }
 </style>
