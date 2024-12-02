@@ -229,7 +229,7 @@ function handleFlowerSelected(index, featureCategory) {
 .function-icon-container button {
   width: 40px;
   height: 40px;
-  left: -5px;
+  left: -10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -343,7 +343,7 @@ function handleFlowerSelected(index, featureCategory) {
 
 .settings-icon {
     position: absolute;
-    right: 30px;
+    right: 20px;
     color: var(--logo-highlight-color);
     font-size: 30px;
     cursor: pointer;
