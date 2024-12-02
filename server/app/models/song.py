@@ -4,9 +4,11 @@ from typing import Optional
 from .user import User
 from .camel_model import CamelModel
 
+# scheiss idiotische approach zum arbiträr values setze aber you do you.
+# mit de neue DB hemmer immerhin ermittleti wert womer üs sicher chönd si was max und was min isch
 # Approximate values for maximum and minimum values of tempo.
-MAX_TEMPO = 200
-MIN_TEMPO = 60
+MAX_TEMPO = 236
+MIN_TEMPO = 0
 
 
 class Song(CamelModel):
@@ -21,7 +23,6 @@ class Song(CamelModel):
     speechiness: Optional[float] = None
     valence: Optional[float] = None
     tempo: Optional[float] = None
-    # Scaled tempo between [0, 1].
     scaled_tempo: Optional[float] = None
     duration_ms: Optional[int] = None
     release_date: Optional[datetime] = None
@@ -37,10 +38,10 @@ class Song(CamelModel):
 
     @model_validator(mode='after')
     def set_scaled_tempo(self) -> 'Song':
-        scaled_tempo = (self.tempo - MIN_TEMPO) / (MAX_TEMPO - MIN_TEMPO)
+        # mit de ermittlete wert muesches au nüm so komplett hirngschisse clampe
+        self.scaled_tempo = (self.tempo - MIN_TEMPO) / (MAX_TEMPO - MIN_TEMPO)
         # Clamp between 0 and 1
-        self.scaled_tempo = max(0, min(scaled_tempo, 1))
-
+        # self.scaled_tempo = max(0, min(scaled_tempo, 1))
         return self
 
 
