@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {ref, watch, onMounted, computed, nextTick, useTemplateRef} from 'vue';
+import {ref, watch, onMounted, computed, defineEmits, useTemplateRef} from 'vue';
 import Flower from "@/components/Flower.vue";
 import Recommendations from "@/components/Recommendations.vue";
 import Button from "primevue/button";
@@ -12,6 +12,7 @@ import { sessionService, getSongFeatures, getSongFeatureCategory } from "@/servi
 const props = defineProps<{
   session: Session,
   sessionEnded: boolean,
+  isDialog: boolean,
 }>();
 
 const playlist = computed(() => {
@@ -150,7 +151,7 @@ const flowerPositions = computed(() => {
 
 const currentSelectedFeature = ref(null);
 const selectedFlowerIndex = ref<number | null>(null);
-const emit = defineEmits(['flowerSelected']);
+const emit = defineEmits(['flowerSelected', 'update:isDialog']);
 const onPetalClick = (index: number, featureCategory: SongFeatureCategory) => {
   selectedFlowerIndex.value = index;
   currentSelectedFeature.value = {index, featureCategory};
@@ -267,8 +268,23 @@ const onLeaveFlower = () => {
   showSongDetails.value = false;
 }
 
+const localIsDialog = ref(props.isDialog);
+
+watch(() => props.isDialog, (newValue) => {
+  console.log('props.modelValue updated:', newValue);
+  localIsDialog.value = newValue;
+  if (newValue === false) {
+    selectedFlowerIndex.value = null;
+  }
+});
+
+watch(localIsDialog, (newValue) => {
+  console.log('localIsDialog updated:', newValue);
+  emit('update:isDialog', newValue);
+});
+
 const currentSongIndex = computed(() => {
-  if (props.sessionEnded) {
+  if (props.sessionEnded || !props.isDialog ) {
     return null;
   }
   else {
