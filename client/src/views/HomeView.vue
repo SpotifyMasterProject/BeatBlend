@@ -178,7 +178,7 @@ const startNewSession = async () => {
         <div class="info-box" :class="{ active: showVisualizationAid }" @click="toggleInfo">
           <div> i </div>
         </div>
-        <MainVisualization v-if="isHost" :session="session" @flowerSelected="handleFlowerSelected" :sessionEnded="sessionEnded"/>
+        <MainVisualization v-if="isHost" :session="session" @flowerSelected="handleFlowerSelected" :sessionEnded="sessionEnded" v-model:isDialog="showSongFeatureDialog"/>
         <MobileMainViz v-if="!isHost" :session="session" />
       </template>
     </div>
