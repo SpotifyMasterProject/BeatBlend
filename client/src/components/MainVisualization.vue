@@ -284,7 +284,7 @@ watch(localIsDialog, (newValue) => {
 });
 
 const currentSongIndex = computed(() => {
-  if (props.sessionEnded || !props.isDialog ) {
+  if (props.sessionEnded ) {
     return null;
   }
   else {
