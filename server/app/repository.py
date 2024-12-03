@@ -29,7 +29,7 @@ songs = Table(
     Column("duration_ms", Integer),
     Column("release_date", Date, nullable=True), # No more release_date. Migrate all fields to Null
     Column("popularity", Float, nullable=True), # No more popularity. Migrate all fields to Null
-    Column("genres", ARRAY(String)), # Newly available. Could change code to use this instead of DiscogsAPI
+    Column("genre", ARRAY(String)), # Newly available. Could change code to use this instead of DiscogsAPI
     Column("preview_url", String), # Newly available. Need to change code to use this instead of SpotifyAPI
     Column("search_vector", TSVECTOR, nullable=True)
 )
