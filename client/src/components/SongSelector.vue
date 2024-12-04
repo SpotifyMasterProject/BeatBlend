@@ -66,8 +66,8 @@ const search = async (event) => {
         return;
     } else {
         try {
-          const songs = await sessionService.getSongs(event.query.toLowerCase());
-          const selectedSongsIds = selectedSongs.value.map((song: Song) => song.id);
+            const songs = await sessionService.getSongs(event.query.toLowerCase());
+            const selectedSongsIds = selectedSongs.value.map((song: Song) => song.id);
           filteredSongs.value = songs.filter((song: Song) => !selectedSongsIds.includes(song.id));
         } catch (error) {
             filteredSongs.value = [];
