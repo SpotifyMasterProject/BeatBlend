@@ -17,14 +17,16 @@ const props = defineProps({
   }
 });
 
-const formatGenres = (genres) => {
-  if (!genres || genres.length === 0) return '';
-  if (genres.length === 1) return genres[0];
-  return `${genres.slice(0, -1).join(', ')} & ${genres[genres.length - 1]}`;
+const formatList = (list) => {
+  if (!list || list.length === 0) return '';
+  if (list.length === 1) return list[0];
+  return `${list.slice(0, -1).join(', ')} & ${list[list.length - 1]}`;
 };
 
-const formattedGenreStart = computed(() => formatGenres(artifactDetails.value.genreStart));
-const formattedGenreEnd = computed(() => formatGenres(artifactDetails.value.genreEnd));
+const formattedGenreStart = computed(() => formatList(artifactDetails.value.genreStart));
+const formattedGenreEnd = computed(() => formatList(artifactDetails.value.genreEnd));
+const formattedMostSongsAddedBy = computed(() => formatList(artifactDetails.value.mostSongsAddedBy));
+const formattedMostVotesBy = computed(() => formatList(artifactDetails.value.mostVotesBy));
 
 const flowerData = computed<SongFeature[]>(() => {
   if (props.artifactData?.averageFeatures) {
@@ -100,10 +102,20 @@ const closePopup = () => {
           </div>
           <div class="overview-right">
             <p>You played <span class="highlight">{{ artifactDetails.songsPlayed }}</span> songs</p>
-            <p>Of those, you added <span class="highlight">{{ artifactDetails.songsAddedManually }}</span> manually</p>
-            <p>You started with genre <span class="highlight">{{ formattedGenreStart }}</span> and ended with <span class="highlight">{{ formattedGenreEnd }}</span></p>
-            <p><span class="highlight">{{ artifactDetails.mostSongsAddedBy }}</span> added the most songs</p>
-            <p><span class="highlight">{{ artifactDetails.mostVotesBy }}</span> voted most</p>
+            <template v-if="artifactDetails.songsPlayed > 0">
+              <p>Of those, you added <span class="highlight">{{ artifactDetails.songsAddedManually }}</span> manually</p>
+              <p>You started with genre <span class="highlight">{{ formattedGenreStart }}</span> and ended with <span class="highlight">{{ formattedGenreEnd }}</span></p>
+              <p><span class="highlight">{{ formattedMostSongsAddedBy }}</span> added the most songs</p>
+              <template v-if="artifactDetails.mostVotesBy != null">
+                <p><span class="highlight">{{ formattedMostVotesBy }}</span> voted most</p>
+              </template>
+              <template v-else>
+                <p><span class="highlight">No one</span> voted</p>
+              </template>
+            </template>
+            <template v-else>
+              <p>No further statistics available</p>
+            </template>
           </div>
         </div>
       </div>
