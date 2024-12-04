@@ -25,7 +25,7 @@ from ws.websocket_manager import WebsocketManager
 
 SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 ALGORITHM = os.getenv("JWT_ALGORITHM")
-JWT_EXPIRES_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", 60))
+JWT_EXPIRES_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", 720))
 SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 SPOTIFY_REDIRECT_URI = os.getenv("SPOTIFY_REDIRECT_URI")
@@ -82,8 +82,7 @@ class Service:
         to_encode = {"sub": user.id, "username": user.username}
         if spotify_token:  # additionally encode the spotify token for hosts
             to_encode["spotify_token"] = spotify_token.model_dump()
-        access_token_expires = timedelta(minutes=JWT_EXPIRES_MINUTES)
-        expire = datetime.now(timezone.utc) + (access_token_expires or timedelta(minutes=30))
+        expire = datetime.now(timezone.utc) + timedelta(minutes=JWT_EXPIRES_MINUTES)
         to_encode.update({"exp": expire})
         encoded_jwt = jwt.encode(
             to_encode,
