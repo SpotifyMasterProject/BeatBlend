@@ -336,7 +336,7 @@ class Service:
             most_songs_added_by=[user.username for user in most_songs_added_by] if most_songs_added_by else None,
             most_votes_by=[user.username for user in most_votes_by] if most_votes_by else None,
             most_significant_feature_overall=most_significant_feature_overall,
-            first_recommendation_vote_percentage=first_recommendation_vote_percentage,
+            first_recommendation_vote_percentage=round(first_recommendation_vote_percentage, 1),
             average_features=average_features,
             genre_start=played_songs[0].genre if played_songs else None,
             genre_end=played_songs[-1].genre if played_songs else None
