@@ -200,6 +200,6 @@ input:focus {
 .no-results {
     color: var(--font-color);
     font-style: italic;
-    margin-left: 10px;
+    padding-left: 10px;
 }
 </style>
