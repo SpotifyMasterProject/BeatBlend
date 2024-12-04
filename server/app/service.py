@@ -194,7 +194,11 @@ class Service:
 
     async def generate_session_recommendations(self, session_id: str, limit: int = 3, automation_task: bool = False) -> None:
         session = await self.get_session(session_id)
+        start_generation_duration = datetime.now()
         recommendations = await self.generate_recommendations(session, limit)
+        generation_duration = (datetime.now() - start_generation_duration).total_seconds()
+        if generation_duration < 3:
+            await asyncio.sleep(3)
         session = await self.set_session_recommendations(session.id, recommendations)
         if not automation_task:  # generation was not invoked by automation, remove current asyncio task here
             await self.manager.publish(
