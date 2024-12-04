@@ -1,3 +1,5 @@
+from typing import Optional
+
 from .camel_model import CamelModel
 
 
@@ -12,10 +14,10 @@ class AverageFeatures(CamelModel):
 class Artifact(CamelModel):
     songs_played: int
     songs_added_manually: int
-    most_songs_added_by: list[str]
-    most_votes_by: list[str]
-    most_significant_feature_overall: str
+    most_songs_added_by: Optional[list[str]]
+    most_votes_by: Optional[list[str]]
+    most_significant_feature_overall: Optional[str]
     first_recommendation_vote_percentage: float
     average_features: AverageFeatures
-    genre_start: list[str]
-    genre_end: list[str]
+    genre_start: Optional[list[str]]
+    genre_end: Optional[list[str]]

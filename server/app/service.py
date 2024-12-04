@@ -325,7 +325,7 @@ class Service:
         most_votes = max(total_votes_per_user.values(), default=-1)
         user_id_most_votes = [user_id for user_id, count in total_votes_per_user.items() if count == most_votes]  # check for multiple max counts
         most_votes_by = [await self.get_user(user_id) for user_id in user_id_most_votes]
-        most_significant_feature_overall = max(total_per_significant_feature, key=total_per_significant_feature.get, default="no recommendation added")
+        most_significant_feature_overall = max(total_per_significant_feature, key=total_per_significant_feature.get, default=None)
 
         first_recommendation_vote_percentage = (
             (first_recommendation_wins / total_recommended_songs) * 100 if total_recommended_songs else 0.0
@@ -334,13 +334,13 @@ class Service:
         return Artifact(
             songs_played=total_songs,
             songs_added_manually=total_manually_added_songs,
-            most_songs_added_by=[user.username for user in most_songs_added_by] if most_songs_added_by else ["no songs added"],
-            most_votes_by=[user.username for user in most_votes_by] if most_votes_by else ["no votes recorded"],
+            most_songs_added_by=[user.username for user in most_songs_added_by] if most_songs_added_by else None,
+            most_votes_by=[user.username for user in most_votes_by] if most_votes_by else None,
             most_significant_feature_overall=most_significant_feature_overall,
             first_recommendation_vote_percentage=first_recommendation_vote_percentage,
             average_features=average_features,
-            genre_start=played_songs[0].genre if played_songs else ["no songs played"],
-            genre_end=played_songs[-1].genre if played_songs else ["no songs played"]
+            genre_start=played_songs[0].genre if played_songs else None,
+            genre_end=played_songs[-1].genre if played_songs else None
         )
 
     @with_session_lock
