@@ -19,6 +19,11 @@
                     </div>
                 </div>
             </template>
+            <template #empty>
+                <div class="no-results">
+                    No results found
+                </div>
+            </template>
         </AutoComplete>
         <div class="selected-songs">
             <div class="selected-song" v-for="song in selectedSongs" :key="song.id">
@@ -57,11 +62,16 @@ const combineArtists = (artists: string[]) => {
 // which filters the songs, based on the user query.
 const search = async (event) => {
     if (!event.query.trim().length) {
+        filteredSongs.value = [];
         return;
     } else {
-        const songs = await sessionService.getSongs(event.query.toLowerCase());
-        const selectedSongsIds = selectedSongs.value.map((song: Song) => song.id);
-        filteredSongs.value = songs.filter((song: Song) => !selectedSongsIds.includes(song.id));
+        try {
+          const songs = await sessionService.getSongs(event.query.toLowerCase());
+          const selectedSongsIds = selectedSongs.value.map((song: Song) => song.id);
+          filteredSongs.value = songs.filter((song: Song) => !selectedSongsIds.includes(song.id));
+        } catch (error) {
+            filteredSongs.value = [];
+        }
     }
 };
 
@@ -185,5 +195,11 @@ input:focus {
 
 .selected-songs .selected-song .delete-icon:hover {
     color: red;
+}
+
+.no-results {
+    color: var(--font-color);
+    font-style: italic;
+    margin-left: 10px;
 }
 </style>
