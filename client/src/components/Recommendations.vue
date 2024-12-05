@@ -41,7 +41,7 @@ const flowerLines = computed(() => {
     const positions = computeLineBetweenFlowers(currentFlower, nextFlower);
     lines.push({
       position: positions.line,
-      width: 300 * (Math.max(flowerData.value[i].similarityScore, 0.98) - 0.98 + 0.001),
+      width: 100 * (Math.max(flowerData.value[i].similarityScore, 0.95) - 0.95 + 0.01),
       textPosition: positions.text,
       similarityScore: Math.max(Math.trunc(flowerData.value[i].similarityScore * 1000) / 1000.0, 0)
     });
