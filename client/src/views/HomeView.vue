@@ -223,7 +223,11 @@ const startNewSession = async () => {
     <Sidebar v-model:visible="settingsVisible" header="Session Settings" :unstyled="false">
       <div v-if="session && session.isRunning">
         <h3> Join the Session </h3>
-          <qrcode-vue v-if="isHost" :value="session.inviteLink" />
+          <qrcode-vue
+              v-if="isHost"
+              :value="session.inviteLink"
+              style="padding: 5px; background-color: white; border-radius: 5px;"
+          />
       </div>
        <h3>Guests</h3>
        <div class="guests-container">
