@@ -18,13 +18,13 @@ The project leverages the following technologies:
 - **APIs:** Spotify API, REST API, WebSocket
 - **Infrastructure Tools:** Docker, AWS (Elastic Container Service, Relational Database Service, ElastiCache)
 
-### Workflow
-- **Version Control:** Git with an adapted Git flow
-  - Main branch for production-ready code
-  - Minimum one reviewer for pull requests
-  - Branch naming conventions
-  - Issues tracked via GitHub
-  - Project board for task management and progress tracking
+### Workflow Version Control
+- Git with an adapted Git flow
+- Main branch for production-ready code
+- Minimum one reviewer for pull requests
+- Branch naming conventions
+- Issues tracked via GitHub
+- Project board for task management and progress tracking
 
 ## High-level Components
 
@@ -50,16 +50,16 @@ The infrastructure setup leverages:
 
 ## Installation, Launch & Deployment
 
-### Installation
-Clone the repository:
-```bash
-git clone https://github.com/SpotifyMasterProject/BeatBlend.git
-```
-
 ### Prerequisites
 - Python v3.12
 - Ensure Docker and docker-compose are installed.
 - Ensure Node.js (including npm) v20.15.1 (LTS) is installed.
+
+### Cloning
+Clone the repository:
+```bash
+git clone https://github.com/SpotifyMasterProject/BeatBlend.git
+```
 
 ### Environment Variables
 
@@ -96,7 +96,7 @@ Below is the complete list of environment variables required for running the Bea
 - `API_BASE_URL`: The URL for the backend API. **Default:** `http://localhost:8000`.
 - `WS_BASE_URL`: The WebSocket base URL for real-time features. **Default:** `ws://localhost:8000`.
 
-### Example `.env` File
+#### Example `.env` File
 Below is an example `.env` file with placeholders for required values:
 
 ```env
