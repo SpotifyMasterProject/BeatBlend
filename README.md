@@ -145,38 +145,47 @@ Here is an overview of the application's key screens:
 
 ### Home Screen
 ![Home Screen](./screenshots/home-screen.jpg)
+
 The first screen displayed when visiting the app's URL. Features a short logo animation for "BeatBlend" and a "Login via Spotify" button.
 
 ### Landing Page
 ![Landing Page](./screenshots/landing-page.jpg)
+
 Displayed after successful login. Users can start a "Blend" session to create a collaborative playlist.
 
 ### Blend Creation Page
 ![Blend Creation Page](./screenshots/blend-creation.jpg)
+
 Users input a session title and add at least three songs to address the recommender system's cold-start issue.
 
 ### Visualization Explanation Pop-up
 ![Visualization Explanation Pop-up](./screenshots/visualization-explanation.jpg)
+
 A tutorial pop-up explaining the flower visualization metaphor and how to interpret audio feature data.
 
 ### Main Visualization Page
 ![Main Visualization Page](./screenshots/main-visualization.jpg)
+
 The primary interface showing the flower visualizations and graphs representing audio features over time.
 
 ### Settings Pop-up
 ![Settings Pop-up](./screenshots/settings.jpg)
+
 Allows access to the session's invite QR code, a list of participants, and the option to end the session.
 
 ### Add Song Pop-up
 ![Add Song Pop-up](./screenshots/add-song.jpg)
+
 Enables users to manually add songs to the session playlist.
 
 ### Voting Screen
 ![Voting Screen](./screenshots/voting-screen.jpg)
+
 A mobile-specific interface where guests can vote for their favorite among the top three recommended songs.
 
 ### Artifact
 ![Artifact](./screenshots/artifact.jpg)
+
 A final summary displayed at the end of a session. Aggregates and visualizes audio features from all songs in the session.
 
 ## Authors
