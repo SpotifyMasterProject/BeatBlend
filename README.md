@@ -186,4 +186,4 @@ A final summary displayed at the end of a session. Aggregates and visualizes aud
 ## License
 
 Licensed under GNU General Public License v3.0
-- See ...
+- See [License](LICENSE)
