@@ -125,8 +125,6 @@ WS_BASE_URL=ws://localhost:8000
 
 Follow these steps to initialize and run the BeatBlend application.
 
----
-
 #### Step 1: Build the Docker Images
 
 Before running the application for the first time, or if you have modified any Docker configuration files, you need to build the Docker images. Run `docker compose build`. If you encounter caching issues or suspect outdated dependencies, rebuild the images without cache `docker compose build --no-cache`.
