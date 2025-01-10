@@ -159,7 +159,6 @@ Users input a session title and add at least three songs to address the recommen
 ![Visualization Explanation Pop-up](./screenshots/visualization-explanation.jpg)
 A tutorial pop-up explaining the flower visualization metaphor and how to interpret audio feature data.
 
-
 ### Main Visualization Page
 ![Main Visualization Page](./screenshots/main-visualization.jpg)
 The primary interface showing the flower visualizations and graphs representing audio features over time.
