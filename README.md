@@ -148,7 +148,7 @@ Here is an overview of the application's key screens:
 The first screen displayed when visiting the app's URL. Features a short logo animation for "BeatBlend" and a "Login via Spotify" button.
 
 ### Landing Page
-![Landing Page](./screenshots/landinge-page.jpg)
+![Landing Page](./screenshots/landing-page.jpg)
 Displayed after successful login. Users can start a "Blend" session to create a collaborative playlist.
 
 ### Blend Creation Page
